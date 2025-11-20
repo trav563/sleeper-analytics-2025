@@ -18,6 +18,20 @@ export function useLeagueData(leagueId) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const refresh = () => {
+        setLoading(true);
+        // Force re-run of effect by toggling a trigger or just calling run() if extracted
+        // Ideally, we extract run() but for now, we can just clear state and let effect re-run if we had a dependency.
+        // Since we don't want to change dependencies, let's extract the fetch logic or use a refresh trigger.
+    };
+
+    // Better approach: Add a refresh trigger to dependency array
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const refreshData = () => {
+        setRefreshTrigger(prev => prev + 1);
+    };
+
     useEffect(() => {
         let aborted = false;
 
@@ -64,7 +78,7 @@ export function useLeagueData(leagueId) {
         return () => {
             aborted = true;
         };
-    }, [leagueId]);
+    }, [leagueId, refreshTrigger]);
 
-    return { state, users, rosters, matchups, players, league, loading, error };
+    return { state, users, rosters, matchups, players, league, loading, error, refresh: refreshData };
 }
