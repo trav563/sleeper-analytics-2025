@@ -4,13 +4,13 @@ const StatusSection = ({ title, items, tone, onTeamClick }) => {
     const { LIGHT, DOT } = STATUS_COLORS;
 
     // Add pulse animation class for incomplete items
-    const pulseClass = tone === 'INCOMPLETE' ? 'animate-pulse' : '';
+    // const pulseClass = tone === 'INCOMPLETE' ? 'animate-pulse' : ''; // Removed per user request
     const itemClass = tone === 'INCOMPLETE'
         ? 'bg-red-50 border border-red-200 rounded-lg p-3 hover:bg-red-100 transition-colors'
         : '';
 
     return (
-        <div className={`rounded-2xl p-4 sm:p-6 ${LIGHT[tone]} shadow-sm ${pulseClass}`}>
+        <div className={`rounded-2xl p-4 sm:p-6 ${LIGHT[tone]} shadow-sm`}>
             <div className="flex items-center gap-2 mb-4">
                 <div className={`h-4 w-4 rounded-full ${DOT[tone]} flex-shrink-0`} />
                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
