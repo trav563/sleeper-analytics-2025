@@ -14,6 +14,14 @@ export const BYE_MAP_2025 = {
     14: ["NYG", "NE", "CAR", "SF"],
 };
 
+// List of all 32 NFL teams (Sleeper/Standard abbreviations)
+export const ALL_NFL_TEAMS = [
+    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
+    "DET", "GB", "HOU", "IND", "JAX", "KC", "LAC", "LAR", "LV", "MIA",
+    "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB",
+    "TEN", "WAS"
+];
+
 // Position display order for lineup
 export const POSITION_ORDER = {
     QB: 1,

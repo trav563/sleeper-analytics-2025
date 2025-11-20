@@ -1,12 +1,14 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLeagueData } from '../hooks/useLeagueData';
-import { BYE_MAP_2025, isDSTStarterId, classifyInjury, displayTeamName, avatarUrl } from '../utils/nflData';
+import { isDSTStarterId, classifyInjury, displayTeamName, avatarUrl } from '../utils/nflData';
+import { getTeamsOnBye } from '../services/nflSchedule';
 import StatusSection from './StatusSection';
 import TeamLineupModal from './TeamLineupModal';
 
 const LineupChecker = ({ leagueId }) => {
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [selectedMatchup, setSelectedMatchup] = useState(null);
+    const [byeTeams, setByeTeams] = useState([]);
 
     const { state, users, rosters, matchups, players, league, loading, error } = useLeagueData(leagueId);
 
@@ -14,7 +16,20 @@ const LineupChecker = ({ leagueId }) => {
     const seasonType = state?.season_type || "regular";
     const isPreseason = seasonType === "pre";
 
-    const byeTeamsThisWeek = useMemo(() => new Set((BYE_MAP_2025[Number(week)] || [])), [week]);
+    // Fetch dynamic bye weeks when week changes
+    useEffect(() => {
+        const fetchByes = async () => {
+            if (week && !isPreseason) {
+                const teams = await getTeamsOnBye(week);
+                setByeTeams(teams);
+            } else {
+                setByeTeams([]);
+            }
+        };
+        fetchByes();
+    }, [week, isPreseason]);
+
+    const byeTeamsThisWeek = useMemo(() => new Set(byeTeams), [byeTeams]);
 
     const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
     const rosterById = useMemo(() => new Map(rosters.map((r) => [r.roster_id, r])), [rosters]);
@@ -160,8 +175,7 @@ const LineupChecker = ({ leagueId }) => {
 
             <div className="text-xs text-gray-500 pt-4 border-t border-gray-800">
                 <p>
-                    Injury data and rosters via Sleeper public API. Team BYEs for 2025 are hardcoded
-                    and treated as OUT.
+                    Injury data and rosters via Sleeper public API. Team BYEs are fetched dynamically from ESPN.
                 </p>
             </div>
         </div>
