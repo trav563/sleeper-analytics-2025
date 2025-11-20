@@ -16,6 +16,22 @@ export const SleeperProvider = ({ children }) => {
     const [leagues, setLeagues] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [season, setSeason] = useState(null);
+
+    // Fetch NFL state on mount to get current season
+    useState(() => {
+        const init = async () => {
+            try {
+                const nfl = await import('../utils/sleeper').then(m => m.fetchNFLState());
+                setSeason(nfl.season);
+            } catch (e) {
+                console.error("Failed to fetch NFL state", e);
+                // Fallback to current year if API fails
+                setSeason(new Date().getFullYear().toString());
+            }
+        };
+        init();
+    }, []);
 
     const searchUser = useCallback(async (username) => {
         if (!username) return null;
@@ -36,12 +52,15 @@ export const SleeperProvider = ({ children }) => {
         }
     }, []);
 
-    const getLeagues = useCallback(async (userId, season = '2024') => {
+    const getLeagues = useCallback(async (userId, seasonOverride) => {
         if (!userId) return [];
+        // Use override, or state season, or fallback to '2025'
+        const targetSeason = seasonOverride || season || '2025';
+
         setLoading(true);
         setError(null);
         try {
-            const userLeagues = await fetchUserLeagues(userId, season);
+            const userLeagues = await fetchUserLeagues(userId, targetSeason);
             setLeagues(userLeagues);
             return userLeagues;
         } catch (err) {
@@ -52,13 +71,14 @@ export const SleeperProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [season]);
 
     // Keep fetchLeagueData for backward compatibility or convenience, using the new functions
     const fetchLeagueData = useCallback(async (username) => {
         const userData = await searchUser(username);
         if (userData) {
-            await getLeagues(userData.user_id, '2024');
+            // Wait for season to be set if it's not yet, or just use default
+            await getLeagues(userData.user_id);
         }
     }, [searchUser, getLeagues]);
 
@@ -67,6 +87,7 @@ export const SleeperProvider = ({ children }) => {
         leagues,
         loading,
         error,
+        season,
         searchUser,
         getLeagues,
         fetchLeagueData

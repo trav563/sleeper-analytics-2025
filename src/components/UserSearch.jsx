@@ -105,7 +105,7 @@ const UserSearch = () => {
 
                             <div>
                                 <label htmlFor="league" className="block text-sm font-medium text-slate-300 mb-2">
-                                    Select a League (2024)
+                                    Select a League ({useSleeper().season || '...'})
                                 </label>
                                 <div className="relative">
                                     <select
