@@ -108,11 +108,25 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
 
                     <h3 className="font-semibold text-gray-700 mb-3">Starting Lineup</h3>
 
+                    {/* Debug Info */}
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                        <div className="font-semibold text-blue-900 mb-1">Debug Info:</div>
+                        <div className="text-blue-800">Roster ID: {team.roster_id}</div>
+                        <div className="text-blue-800">Matchup ID: {matchup.matchup_id}</div>
+                        <div className="text-blue-800">Starters Count: {starters.length}</div>
+                        <div className="text-blue-800 font-mono text-[10px] break-all">
+                            Player IDs: {JSON.stringify(starters)}
+                        </div>
+                    </div>
+
                     <ul className="space-y-2">
                         {sortedStarters.map((player) => (
                             <li key={player.pid} className="flex items-center p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
                                 <div className="w-10 text-xs font-medium text-gray-500">{player.position}</div>
-                                <div className="flex-1 font-medium text-gray-900">{player.name}</div>
+                                <div className="flex-1">
+                                    <div className="font-medium text-gray-900">{player.name}</div>
+                                    <div className="text-[10px] text-gray-400 font-mono">ID: {player.pid}</div>
+                                </div>
                                 <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
                                     {player.reason === "Active" ? "Active" :
                                         player.reason ||

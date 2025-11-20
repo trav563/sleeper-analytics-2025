@@ -166,6 +166,18 @@ const LineupChecker = ({ leagueId }) => {
                 </button>
             </div>
 
+            {/* Debug Panel */}
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                <div className="font-semibold text-yellow-900 mb-2">🔍 Debug Information</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-yellow-800">
+                    <div><span className="font-medium">League ID:</span> {leagueId}</div>
+                    <div><span className="font-medium">Current Week:</span> {week ?? "N/A"}</div>
+                    <div><span className="font-medium">Season Type:</span> {seasonType}</div>
+                    <div><span className="font-medium">Matchups Loaded:</span> {matchups.length}</div>
+                    <div className="col-span-full"><span className="font-medium">Data Source:</span> matchups[{week}].starters (weekly lineup)</div>
+                </div>
+            </div>
+
             {loading && (
                 <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
