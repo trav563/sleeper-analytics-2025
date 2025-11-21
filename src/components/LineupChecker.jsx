@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLeagueData } from '../hooks/useLeagueData';
-import { isDSTStarterId, classifyInjury, displayTeamName, avatarUrl, BYE_MAP_2025 } from '../utils/nflData';
+import { isDSTStarterId, classifyInjury, displayTeamName, avatarUrl } from '../utils/nflData';
+import { getTeamsOnBye } from '../services/nflSchedule';
 import StatusSection from './StatusSection';
 import TeamLineupModal from './TeamLineupModal';
 
@@ -14,8 +15,26 @@ const LineupChecker = ({ leagueId }) => {
     const seasonType = state?.season_type || "regular";
     const isPreseason = seasonType === "pre";
 
-    // Use hardcoded bye weeks instead of ESPN API
-    const byeTeamsThisWeek = useMemo(() => new Set(BYE_MAP_2025[week] || []), [week]);
+    // Fetch dynamic bye weeks from ESPN API
+    const [byeTeamsThisWeek, setByeTeamsThisWeek] = useState(new Set());
+
+    useEffect(() => {
+        let mounted = true;
+
+        const fetchByes = async () => {
+            if (!week) return;
+            const teams = await getTeamsOnBye(week);
+            if (mounted) {
+                setByeTeamsThisWeek(new Set(teams));
+            }
+        };
+
+        fetchByes();
+
+        return () => {
+            mounted = false;
+        };
+    }, [week]);
 
     const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
     const rosterById = useMemo(() => new Map(rosters.map((r) => [r.roster_id, r])), [rosters]);

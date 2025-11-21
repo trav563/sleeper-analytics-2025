@@ -20,8 +20,12 @@ export const getTeamsOnBye = async (weekNumber) => {
 
         events.forEach(event => {
             event.competitions[0].competitors.forEach(competitor => {
-                const abbr = competitor.team.abbreviation;
-                // Only add if it's a valid NFL team (ESPN response includes position abbreviations like QB, RB, etc.)
+                let abbr = competitor.team.abbreviation;
+
+                // Normalize ESPN abbreviations to match Sleeper/ALL_NFL_TEAMS
+                if (abbr === 'WSH') abbr = 'WAS';
+
+                // Only add if it's a valid NFL team
                 if (ALL_NFL_TEAMS.includes(abbr)) {
                     playingTeams.add(abbr);
                 }
@@ -31,16 +35,7 @@ export const getTeamsOnBye = async (weekNumber) => {
         // Compare against all teams to find who is missing
         const byeTeams = ALL_NFL_TEAMS.filter(team => !playingTeams.has(team));
 
-        // Map ESPN abbreviations to Sleeper if there are discrepancies
-        // For now, we assume standard abbreviations match mostly.
-        // Known potential diffs: WSH/WAS, JAC/JAX. 
-        // Sleeper uses JAX, WAS. ESPN uses WSH, JAX.
-        // Let's normalize.
-
-        return byeTeams.map(team => {
-            if (team === 'WSH') return 'WAS';
-            return team;
-        });
+        return byeTeams;
 
     } catch (error) {
         console.error("Error fetching bye weeks:", error);
