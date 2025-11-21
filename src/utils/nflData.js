@@ -6,19 +6,19 @@ export const ALL_NFL_TEAMS = [
     "TEN", "WAS"
 ];
 
-// 2025 NFL Bye Weeks map (source: FantasyAlarm, via reference implementation)
+// 2025 NFL Bye Weeks map (source: Official NFL Schedule, May 14, 2025)
 // Team abbreviations match Sleeper's format
 export const BYE_MAP_2025 = {
-    5: ["DET", "SEA"],
-    6: ["GB", "IND", "LV", "MIA"],
-    7: ["BUF", "CIN", "DAL"],
-    8: ["BAL", "CAR", "JAX", "TB"],
-    9: ["CHI", "CLE", "DEN", "LAR", "NE", "NYJ"],
-    10: ["ARI", "MIN", "NO", "NYG"],
-    11: ["ATL", "HOU", "KC", "PHI", "PIT", "TEN"],
-    12: ["LAC", "SF", "WAS"],
-    13: ["DAL", "BAL", "CIN"],
-    14: ["BUF", "CAR", "JAX", "TB"],
+    5: ["CHI", "ATL", "GB", "PIT"],
+    6: ["HOU", "MIN"],
+    7: ["BUF", "BAL"],
+    8: ["TB", "ARI", "JAX", "DET", "LV", "LAR", "SEA"],
+    9: ["CLE", "PHI", "NYJ"],
+    10: ["CIN", "KC", "DAL", "TEN"],
+    11: ["IND", "NO"],
+    12: ["DEN", "LAC", "WAS", "MIA"],
+    13: [], // All 32 teams active
+    14: ["SF", "NYG", "CAR", "NE"],
 };
 
 // Position display order for lineup
