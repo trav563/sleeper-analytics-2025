@@ -90,3 +90,13 @@ export const fetchLeague = async (leagueId) => {
     const timestamp = Date.now();
     return fetchSleeper(`/league/${leagueId}?_=${timestamp}`);
 };
+
+/**
+ * Fetch draft picks for a specific draft
+ * @param {string} draftId 
+ */
+export const fetchDraftPicks = async (draftId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
+};
+

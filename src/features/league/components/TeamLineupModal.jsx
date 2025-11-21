@@ -1,5 +1,5 @@
 
-import { isDSTStarterId, classifyInjury, POSITION_ORDER, STATUS_COLORS } from '../utils/nflData';
+import { classifyInjury, isDSTStarterId } from '../../../utils/nflData';
 
 const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, rosterById, userById, league }) => {
     if (!team || !matchup) return null;

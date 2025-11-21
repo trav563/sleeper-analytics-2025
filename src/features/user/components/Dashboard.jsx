@@ -1,4 +1,4 @@
-import LeagueCard from './LeagueCard';
+import LeagueCard from '../../league/components/LeagueCard';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 
 const Dashboard = ({ user, leagues, onLeagueClick, onLogout }) => {

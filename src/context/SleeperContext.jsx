@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useCallback } from 'react';
 import { fetchUser, fetchUserLeagues } from '../utils/sleeper';
+import { fetchLeagueHistory } from '../services/sleeperEngine';
 
 const SleeperContext = createContext();
 
@@ -14,6 +15,7 @@ export const useSleeper = () => {
 export const SleeperProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [leagues, setLeagues] = useState([]);
+    const [leagueHistory, setLeagueHistory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [season, setSeason] = useState(null);
@@ -82,6 +84,22 @@ export const SleeperProvider = ({ children }) => {
         }
     }, [searchUser, getLeagues]);
 
+    const loadHistory = useCallback(async (currentLeagueId, userId) => {
+        if (!currentLeagueId || !userId) return;
+        setLoading(true);
+        try {
+            const history = await fetchLeagueHistory(currentLeagueId, userId);
+            setLeagueHistory(history);
+            return history;
+        } catch (err) {
+            console.error("Failed to load league history:", err);
+            setError("Failed to load league history");
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const value = {
         user,
         leagues,
@@ -90,7 +108,9 @@ export const SleeperProvider = ({ children }) => {
         season,
         searchUser,
         getLeagues,
-        fetchLeagueData
+        fetchLeagueData,
+        loadHistory,
+        leagueHistory
     };
 
     return (

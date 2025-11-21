@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSleeper } from '../context/SleeperContext';
+import { fetchUserLeagues, fetchSleeperUser } from '../../../utils/sleeper';
+import { useSleeper } from '../../../context/SleeperContext';
 import { Search, ChevronRight, User } from 'lucide-react';
 
 const UserSearch = () => {
@@ -25,7 +26,7 @@ const UserSearch = () => {
     const handleLeagueChange = (e) => {
         const leagueId = e.target.value;
         if (leagueId) {
-            navigate(`/league/${leagueId}`);
+            navigate(`/ league / ${leagueId} `);
         }
     };
 
@@ -103,7 +104,7 @@ const UserSearch = () => {
                                         Change user
                                     </button>
                                 </div>
-                            </div>
+                            </div >
 
                             <div>
                                 <label htmlFor="league" className="block text-sm font-medium text-slate-300 mb-2">
@@ -130,22 +131,26 @@ const UserSearch = () => {
                                 </div>
                             </div>
 
-                            {leagues.length === 0 && (
-                                <p className="text-center text-sm text-slate-400">
-                                    No leagues found for the 2024 season.
-                                </p>
-                            )}
-                        </div>
+                            {
+                                leagues.length === 0 && (
+                                    <p className="text-center text-sm text-slate-400">
+                                        No leagues found for the 2024 season.
+                                    </p>
+                                )
+                            }
+                        </div >
                     )}
 
-                    {error && (
-                        <div className="mt-4 p-3 rounded-md bg-red-900/50 border border-red-800 text-red-200 text-sm flex items-center">
-                            <span className="mr-2">⚠️</span> {error}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+                    {
+                        error && (
+                            <div className="mt-4 p-3 rounded-md bg-red-900/50 border border-red-800 text-red-200 text-sm flex items-center">
+                                <span className="mr-2">⚠️</span> {error}
+                            </div>
+                        )
+                    }
+                </div >
+            </div >
+        </div >
     );
 };
 

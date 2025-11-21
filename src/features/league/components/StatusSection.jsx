@@ -1,4 +1,5 @@
-import { STATUS_COLORS } from '../utils/nflData';
+import { STATUS_COLORS } from '../../../utils/nflData';
+import { avatarUrl } from '../../../utils/nflData';
 
 const StatusSection = ({ title, items, tone, onTeamClick }) => {
     const { LIGHT, DOT } = STATUS_COLORS;

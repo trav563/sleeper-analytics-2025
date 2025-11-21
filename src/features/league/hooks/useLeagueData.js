@@ -6,7 +6,7 @@ import {
     fetchLeagueMatchups,
     fetchNFLPlayers,
     fetchLeague
-} from '../utils/sleeper';
+} from '../../../utils/sleeper';
 
 export function useLeagueData(leagueId) {
     const [state, setState] = useState(null);
