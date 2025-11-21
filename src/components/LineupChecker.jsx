@@ -47,9 +47,9 @@ const LineupChecker = ({ leagueId }) => {
             const roster = rosterById.get(m.roster_id);
             const owner = userById.get(roster?.owner_id);
 
-            // Use roster.starters if available (more up-to-date), otherwise fallback to matchup.starters
-            // The matchups endpoint lags behind, while rosters endpoint updates immediately
-            const rawStarters = (roster?.starters || m.starters || []);
+            // Use matchup.starters as primary source for week-specific lineup
+            // Fallback to roster.starters only if matchup is missing
+            const rawStarters = (m.starters || roster?.starters || []);
             const starters = rawStarters.filter(Boolean); // Filter out empty slots for processing
 
             const hasEmptySlots = rawStarters.some(pid => !pid || pid === "" || pid === null || pid === undefined || pid === "0");
