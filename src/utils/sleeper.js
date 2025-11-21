@@ -33,7 +33,7 @@ export const fetchUser = async (username) => {
  * @param {string} userId 
  * @param {string} season - e.g., '2024'
  */
-export const fetchUserLeagues = async (userId, season = '2024') => {
+export const fetchUserLeagues = async (userId, season = '2025') => {
     return fetchSleeper(`/user/${userId}/leagues/nfl/${season}`);
 };
 

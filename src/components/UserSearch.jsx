@@ -15,7 +15,9 @@ const UserSearch = () => {
 
         const userData = await searchUser(username);
         if (userData) {
-            await getLeagues(userData.user_id, '2024');
+            // Use the season from context (which comes from NFL state)
+            // Do NOT hardcode to 2024
+            await getLeagues(userData.user_id);
             setShowLeagues(true);
         }
     };
