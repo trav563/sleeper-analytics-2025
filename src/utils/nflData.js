@@ -1,19 +1,3 @@
-// --- 2025 NFL Bye Weeks map (teams by Sleeper/standard abbreviations) ---
-// Keep this mapping updated per season. Weeks are NFL regular-season weeks.
-// Source: User provided 2025 NFL Bye Week schedule
-export const BYE_MAP_2025 = {
-    5: ["PIT", "CHI", "GB", "ATL"],
-    6: ["HOU", "MIN"],
-    7: ["BAL", "BUF"],
-    8: ["JAX", "LV", "DET", "ARI", "SEA", "LAR"],
-    9: ["PHI", "CLE", "NYJ", "TB"],
-    10: ["KC", "CIN", "TEN", "DAL"],
-    11: ["IND", "NO"],
-    12: ["MIA", "DEN", "LAC", "WAS"],
-    13: [], // No teams on bye in Week 13
-    14: ["NYG", "NE", "CAR", "SF"],
-};
-
 // List of all 32 NFL teams (Sleeper/Standard abbreviations)
 export const ALL_NFL_TEAMS = [
     "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
@@ -21,6 +5,21 @@ export const ALL_NFL_TEAMS = [
     "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB",
     "TEN", "WAS"
 ];
+
+// 2025 NFL Bye Weeks map (source: FantasyAlarm, via reference implementation)
+// Team abbreviations match Sleeper's format
+export const BYE_MAP_2025 = {
+    5: ["DET", "SEA"],
+    6: ["GB", "IND", "LV", "MIA"],
+    7: ["BUF", "CIN", "DAL"],
+    8: ["BAL", "CAR", "JAX", "TB"],
+    9: ["CHI", "CLE", "DEN", "LAR", "NE", "NYJ"],
+    10: ["ARI", "MIN", "NO", "NYG"],
+    11: ["ATL", "HOU", "KC", "PHI", "PIT", "TEN"],
+    12: ["LAC", "SF", "WAS"],
+    13: ["DAL", "BAL", "CIN"],
+    14: ["BUF", "CAR", "JAX", "TB"],
+};
 
 // Position display order for lineup
 export const POSITION_ORDER = {
