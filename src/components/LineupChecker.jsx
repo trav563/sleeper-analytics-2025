@@ -27,9 +27,13 @@ const LineupChecker = ({ leagueId }) => {
         for (const m of matchups) {
             const roster = rosterById.get(m.roster_id);
             const owner = userById.get(roster?.owner_id);
-            const starters = (m.starters || []);
 
-            const hasEmptySlots = starters.some(pid => !pid || pid === "" || pid === null || pid === undefined || pid === "0");
+            // Use roster.starters if available (more up-to-date), otherwise fallback to matchup.starters
+            // The matchups endpoint lags behind, while rosters endpoint updates immediately
+            const rawStarters = (roster?.starters || m.starters || []);
+            const starters = rawStarters.filter(Boolean); // Filter out empty slots for processing
+
+            const hasEmptySlots = rawStarters.some(pid => !pid || pid === "" || pid === null || pid === undefined || pid === "0");
 
             let status = hasEmptySlots ? "INCOMPLETE" : "OK";
             const flagged = [];
@@ -156,11 +160,17 @@ const LineupChecker = ({ leagueId }) => {
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
                 <div className="font-semibold text-yellow-900 mb-2">🔍 Debug Information</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-yellow-800">
-                    <div><span className="font-medium">League ID:</span> {leagueId}</div>
-                    <div><span className="font-medium">Current Week:</span> {week ?? "N/A"}</div>
-                    <div><span className="font-medium">Season Type:</span> {seasonType}</div>
-                    <div><span className="font-medium">Matchups Loaded:</span> {matchups.length}</div>
-                    <div className="col-span-full"><span className="font-medium">Data Source:</span> matchups[{week}].starters (weekly lineup)</div>
+                    <div className="text-xs text-amber-800 mt-1 font-mono">
+                        League ID: {leagueId}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-amber-700 mt-2 font-mono">
+                        <div>Current Week: {week}</div>
+                        <div>Season Type: {seasonType}</div>
+                        <div>Matchups Loaded: {matchups.length}</div>
+                        <div className="col-span-2 mt-1 border-t border-amber-200 pt-1">
+                            Data Source: roster.starters (live)
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -191,6 +201,8 @@ const LineupChecker = ({ leagueId }) => {
                     players={players}
                     byeTeamsThisWeek={byeTeamsThisWeek}
                     league={league}
+                    rosterById={rosterById}
+                    userById={userById}
                     onClose={handleCloseModal}
                 />
             )}

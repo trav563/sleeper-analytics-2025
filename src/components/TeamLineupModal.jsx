@@ -1,6 +1,7 @@
+
 import { isDSTStarterId, classifyInjury, POSITION_ORDER, STATUS_COLORS } from '../utils/nflData';
 
-const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, league }) => {
+const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, rosterById, userById, league }) => {
     if (!team || !matchup) return null;
 
     const { TEXT } = STATUS_COLORS;
@@ -14,7 +15,7 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
         if (!pid || pid === "" || pid === null || pid === undefined || pid === "0") {
             const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
             return {
-                pid: `empty-${index}`,
+                pid: `empty - ${index} `,
                 name: "EMPTY",
                 position: position,
                 status: "INCOMPLETE",
@@ -29,7 +30,7 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
             const onBye = byeTeamsThisWeek.has(pid);
             return {
                 pid,
-                name: `${pid} D/ST`,
+                name: `${pid} D / ST`,
                 position: "DEF",
                 status: onBye ? "INCOMPLETE" : "OK",
                 reason: onBye ? "BYE" : "Active",
@@ -44,7 +45,7 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
             return { pid, name: "EMPTY", position: position, status: "INCOMPLETE", reason: "Empty Slot", isEmpty: true };
         }
 
-        const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
+        const fullName = `${player.first_name || ""} ${player.last_name || ""} `.trim();
         const position = player.position || (index < rosterPositions.length ? rosterPositions[index] : "FLEX");
 
         // Check for bye week
@@ -84,8 +85,8 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
     });
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
@@ -127,7 +128,7 @@ const TeamLineupModal = ({ team, onClose, matchup, players, byeTeamsThisWeek, le
                                     <div className="font-medium text-gray-900">{player.name}</div>
                                     <div className="text-[10px] text-gray-400 font-mono">ID: {player.pid}</div>
                                 </div>
-                                <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
+                                <div className={`text - sm font - medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]} `}>
                                     {player.reason === "Active" ? "Active" :
                                         player.reason ||
                                         (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : "")}
