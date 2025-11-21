@@ -20,10 +20,11 @@ export const getTeamsOnBye = async (weekNumber) => {
 
         events.forEach(event => {
             event.competitions[0].competitors.forEach(competitor => {
-                // ESPN uses abbreviations like 'BUF', 'NE', etc.
-                // We need to ensure they match our internal format if necessary.
-                // Usually ESPN abbrevs are standard.
-                playingTeams.add(competitor.team.abbreviation);
+                const abbr = competitor.team.abbreviation;
+                // Only add if it's a valid NFL team (ESPN response includes position abbreviations like QB, RB, etc.)
+                if (ALL_NFL_TEAMS.includes(abbr)) {
+                    playingTeams.add(abbr);
+                }
             });
         });
 
