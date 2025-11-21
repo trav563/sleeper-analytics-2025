@@ -77,8 +77,9 @@ export const fetchNFLState = async () => {
  * Fetch all NFL players (large payload, should be cached if possible)
  */
 export const fetchNFLPlayers = async () => {
+    const timestamp = Date.now();
     // Note: This is a large request (~5MB+), consider caching strategies in production
-    return fetchSleeper(`/players/nfl`);
+    return fetchSleeper(`/players/nfl?_=${timestamp}`);
 };
 
 /**
@@ -86,5 +87,6 @@ export const fetchNFLPlayers = async () => {
  * @param {string} leagueId 
  */
 export const fetchLeague = async (leagueId) => {
-    return fetchSleeper(`/league/${leagueId}`);
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}?_=${timestamp}`);
 };
