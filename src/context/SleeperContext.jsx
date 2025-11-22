@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useCallback } from 'react';
+import { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { fetchUser, fetchUserLeagues } from '../utils/sleeper';
 import { fetchLeagueHistory } from '../services/sleeperEngine';
 
@@ -21,10 +21,12 @@ export const SleeperProvider = ({ children }) => {
     const [season, setSeason] = useState(null);
 
     // Fetch NFL state on mount to get current season
-    useState(() => {
+    // Fetch NFL state on mount to get current season
+    useEffect(() => {
         const init = async () => {
             try {
-                const nfl = await import('../utils/sleeper').then(m => m.fetchNFLState());
+                const { fetchNFLState } = await import('../utils/sleeper');
+                const nfl = await fetchNFLState();
                 setSeason(nfl.season);
             } catch (e) {
                 console.error("Failed to fetch NFL state", e);
