@@ -11,6 +11,8 @@ const AnalyticsPage = () => {
 
     // Default to current user's roster ID, or the first roster if user not found
     const [selectedRosterId, setSelectedRosterId] = useState(null);
+    const [comparisonMode, setComparisonMode] = useState('league'); // 'league' | 'h2h'
+    const [opponentRosterId, setOpponentRosterId] = useState(null);
 
     useEffect(() => {
         if (rosters && user && !selectedRosterId) {
@@ -27,28 +29,77 @@ const AnalyticsPage = () => {
         setSelectedRosterId(Number(e.target.value));
     };
 
+    const handleOpponentChange = (e) => {
+        setOpponentRosterId(Number(e.target.value));
+    };
+
+    const selectedUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === selectedRosterId)?.owner_id);
+    const opponentUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === opponentRosterId)?.owner_id);
+
     return (
         <div className="space-y-8">
             {/* Team Selector Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                 <div>
                     <h2 className="text-lg font-semibold text-white">Team Analysis</h2>
                     <p className="text-sm text-slate-400">Select a team to view their positional strength</p>
                 </div>
-                <select
-                    className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-64 p-2.5"
-                    value={selectedRosterId || ''}
-                    onChange={handleTeamChange}
-                >
-                    {rosters?.map(roster => {
-                        const rosterUser = users?.find(u => u.user_id === roster.owner_id);
-                        return (
-                            <option key={roster.roster_id} value={roster.roster_id}>
-                                {displayTeamName(rosterUser)}
-                            </option>
-                        );
-                    })}
-                </select>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    {/* Comparison Mode Toggle */}
+                    <div className="flex bg-slate-700 rounded-lg p-1 self-start sm:self-center">
+                        <button
+                            onClick={() => setComparisonMode('league')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${comparisonMode === 'league' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            vs League
+                        </button>
+                        <button
+                            onClick={() => setComparisonMode('h2h')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${comparisonMode === 'h2h' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Head-to-Head
+                        </button>
+                    </div>
+
+                    <div className="flex gap-2 items-center w-full sm:w-auto">
+                        <select
+                            className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-48 p-2.5"
+                            value={selectedRosterId || ''}
+                            onChange={handleTeamChange}
+                        >
+                            {rosters?.map(roster => {
+                                const rosterUser = users?.find(u => u.user_id === roster.owner_id);
+                                return (
+                                    <option key={roster.roster_id} value={roster.roster_id}>
+                                        {displayTeamName(rosterUser)}
+                                    </option>
+                                );
+                            })}
+                        </select>
+
+                        {comparisonMode === 'h2h' && (
+                            <>
+                                <span className="text-slate-400 font-bold">VS</span>
+                                <select
+                                    className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-48 p-2.5"
+                                    value={opponentRosterId || ''}
+                                    onChange={handleOpponentChange}
+                                >
+                                    <option value="" disabled>Select Opponent</option>
+                                    {rosters?.filter(r => r.roster_id !== selectedRosterId).map(roster => {
+                                        const rosterUser = users?.find(u => u.user_id === roster.owner_id);
+                                        return (
+                                            <option key={roster.roster_id} value={roster.roster_id}>
+                                                {displayTeamName(rosterUser)}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -64,11 +115,17 @@ const AnalyticsPage = () => {
                     rosters={rosters}
                     players={players}
                     userRosterId={selectedRosterId}
+                    opponentRosterId={comparisonMode === 'h2h' ? opponentRosterId : null}
                     users={users}
                 />
             </div>
-            {/* RivalryMatrix handles its own history fetching but needs user ID */}
-            <RivalryMatrix currentUserId={user?.user_id} users={users} />
+
+            <RivalryMatrix
+                currentUserId={user?.user_id}
+                users={users}
+                selectedUser1Id={selectedUser?.user_id}
+                selectedUser2Id={comparisonMode === 'h2h' ? opponentUser?.user_id : null}
+            />
         </div>
     );
 };

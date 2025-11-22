@@ -67,20 +67,33 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                             userSums[pos] += points;
                             userCounts[pos]++;
                         }
+                        if (isOpponent) {
+                            opponentSums[pos] += points;
+                            opponentCounts[pos]++;
+                        }
                     }
                 });
             });
         });
 
         // Calculate Averages
-        return positions.filter(p => p !== 'FLEX').map(pos => ({
-            subject: pos,
-            LeagueAvg: leagueCounts[pos] ? Number((leagueSums[pos] / leagueCounts[pos]).toFixed(2)) : 0,
-            [selectedTeamName]: userCounts[pos] ? Number((userSums[pos] / userCounts[pos]).toFixed(2)) : 0,
-            fullMark: 30 // Arbitrary scale max
-        }));
+        return positions.filter(p => p !== 'FLEX').map(pos => {
+            const item = {
+                subject: pos,
+                [selectedTeamName]: userCounts[pos] ? Number((userSums[pos] / userCounts[pos]).toFixed(2)) : 0,
+                fullMark: 30 // Arbitrary scale max
+            };
 
-    }, [seasonMatchups, players, userRosterId, loading, selectedTeamName]);
+            if (opponentRosterId) {
+                item[opponentTeamName] = opponentCounts[pos] ? Number((opponentSums[pos] / opponentCounts[pos]).toFixed(2)) : 0;
+            } else {
+                item['LeagueAvg'] = leagueCounts[pos] ? Number((leagueSums[pos] / leagueCounts[pos]).toFixed(2)) : 0;
+            }
+
+            return item;
+        });
+
+    }, [seasonMatchups, players, userRosterId, opponentRosterId, loading, selectedTeamName, opponentTeamName]);
 
     if (loading) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Radar...</div>;
 
@@ -97,22 +110,46 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                             contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
                             itemStyle={{ color: '#f8fafc' }}
                         />
-                        <Radar
-                            name="League Avg"
-                            dataKey="LeagueAvg"
-                            stroke="#94a3b8"
-                            strokeWidth={2}
-                            fill="#94a3b8"
-                            fillOpacity={0.3}
-                        />
-                        <Radar
-                            name={selectedTeamName}
-                            dataKey={selectedTeamName}
-                            stroke="#22c55e"
-                            strokeWidth={2}
-                            fill="#22c55e"
-                            fillOpacity={0.5}
-                        />
+
+                        {opponentRosterId ? (
+                            <>
+                                <Radar
+                                    name={selectedTeamName}
+                                    dataKey={selectedTeamName}
+                                    stroke="#22c55e"
+                                    strokeWidth={2}
+                                    fill="#22c55e"
+                                    fillOpacity={0.5}
+                                />
+                                <Radar
+                                    name={opponentTeamName}
+                                    dataKey={opponentTeamName}
+                                    stroke="#ef4444"
+                                    strokeWidth={2}
+                                    fill="#ef4444"
+                                    fillOpacity={0.5}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Radar
+                                    name="League Avg"
+                                    dataKey="LeagueAvg"
+                                    stroke="#94a3b8"
+                                    strokeWidth={2}
+                                    fill="#94a3b8"
+                                    fillOpacity={0.3}
+                                />
+                                <Radar
+                                    name={selectedTeamName}
+                                    dataKey={selectedTeamName}
+                                    stroke="#22c55e"
+                                    strokeWidth={2}
+                                    fill="#22c55e"
+                                    fillOpacity={0.5}
+                                />
+                            </>
+                        )}
                         <Legend wrapperStyle={{ color: '#94a3b8' }} />
                     </RadarChart>
                 </ResponsiveContainer>

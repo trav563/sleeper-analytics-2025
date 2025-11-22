@@ -4,7 +4,7 @@ import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { displayTeamName } from '../../../utils/nflData';
 import { Users, Grid, Trophy, Swords } from 'lucide-react';
 
-const RivalryMatrix = ({ currentUserId, users }) => {
+const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id }) => {
     const { leagueHistory } = useSleeper();
     const [historicalMatchups, setHistoricalMatchups] = useState({}); // league_id -> matchups
     const [loading, setLoading] = useState(false);
@@ -12,11 +12,22 @@ const RivalryMatrix = ({ currentUserId, users }) => {
     const [user1Id, setUser1Id] = useState(currentUserId);
     const [user2Id, setUser2Id] = useState('');
 
+    // Sync with props if provided
     useEffect(() => {
-        if (currentUserId && !user1Id) {
+        if (selectedUser1Id) {
+            setUser1Id(selectedUser1Id);
+        }
+        if (selectedUser2Id) {
+            setUser2Id(selectedUser2Id);
+            setViewMode('h2h');
+        }
+    }, [selectedUser1Id, selectedUser2Id]);
+
+    useEffect(() => {
+        if (currentUserId && !user1Id && !selectedUser1Id) {
             setUser1Id(currentUserId);
         }
-    }, [currentUserId]);
+    }, [currentUserId, user1Id, selectedUser1Id]);
 
     useEffect(() => {
         async function fetchAllHistory() {
@@ -45,7 +56,7 @@ const RivalryMatrix = ({ currentUserId, users }) => {
         }
 
         fetchAllHistory();
-    }, [leagueHistory]);
+    }, [leagueHistory, historicalMatchups]);
 
     // --- Matrix Logic ---
     const matrix = useMemo(() => {
@@ -192,6 +203,7 @@ const RivalryMatrix = ({ currentUserId, users }) => {
                                     className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg p-2.5"
                                     value={user1Id || ''}
                                     onChange={(e) => setUser1Id(e.target.value)}
+                                    disabled={!!selectedUser1Id} // Disable if controlled by parent
                                 >
                                     <option value="" disabled>Select Team A</option>
                                     {users?.map(u => (
@@ -209,6 +221,7 @@ const RivalryMatrix = ({ currentUserId, users }) => {
                                     className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg p-2.5"
                                     value={user2Id || ''}
                                     onChange={(e) => setUser2Id(e.target.value)}
+                                    disabled={!!selectedUser2Id} // Disable if controlled by parent
                                 >
                                     <option value="" disabled>Select Team B</option>
                                     {users?.filter(u => u.user_id !== user1Id).map(u => (
