@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchUserLeagues, fetchSleeperUser } from '../../../utils/sleeper';
 import { useSleeper } from '../../../context/SleeperContext';
 import { Search, ChevronRight, User } from 'lucide-react';
