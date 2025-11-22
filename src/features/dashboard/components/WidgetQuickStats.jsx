@@ -3,7 +3,7 @@ import { Trophy, TrendingUp, BarChart2 } from 'lucide-react';
 
 const WidgetQuickStats = ({ rosters, selectedUserId }) => {
     const stats = useMemo(() => {
-        if (!selectedUserId || !rosters) return null;
+        if (!selectedUserId || !Array.isArray(rosters)) return null;
 
         const roster = rosters.find(r => r.owner_id === selectedUserId);
         if (!roster) return null;

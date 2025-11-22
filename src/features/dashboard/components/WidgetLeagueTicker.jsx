@@ -20,7 +20,6 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
                 // Simplified trade description logic
                 // In a real app, this would be more complex to show who got what
                 const involvedTeams = tx.roster_ids.map(rid => {
-                    const user = users?.find(u => u.user_id === tx.consenter_ids.find(cid => cid === u.user_id)); // This is imperfect mapping but works for now
                     // Better mapping: roster_id -> owner_id -> user
                     // We don't have rosters prop here, but we can try to map if we had it.
                     // For now, let's just say "Team A and Team B traded"

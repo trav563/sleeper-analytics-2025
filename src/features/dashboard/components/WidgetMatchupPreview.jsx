@@ -3,7 +3,7 @@ import { displayTeamName } from '../../../utils/nflData';
 
 const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }) => {
     const matchupData = useMemo(() => {
-        if (!selectedUserId || !matchups || !rosters) return null;
+        if (!selectedUserId || !Array.isArray(matchups) || !Array.isArray(rosters)) return null;
 
         const userRoster = rosters.find(r => r.owner_id === selectedUserId);
         if (!userRoster) return null;
