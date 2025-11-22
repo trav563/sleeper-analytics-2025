@@ -27,7 +27,7 @@ const UserSearch = () => {
     const handleLeagueChange = (e) => {
         const leagueId = e.target.value;
         if (leagueId) {
-            navigate(`/ league / ${leagueId} `);
+            navigate(`/league/${leagueId}`);
         }
     };
 
