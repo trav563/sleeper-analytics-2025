@@ -7,7 +7,7 @@ import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats'
 import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
 
 const DashboardPage = () => {
-    const { users, rosters, matchups, players, state, loading, error } = useOutletContext();
+    const { users, rosters, matchups, players, state, transactions, loading, error } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
 
     // Default to first user if none selected
@@ -81,7 +81,11 @@ const DashboardPage = () => {
                     />
 
                     {/* League Ticker */}
-                    <WidgetLeagueTicker />
+                    <WidgetLeagueTicker
+                        transactions={transactions}
+                        users={users}
+                        players={players}
+                    />
                 </div>
             </div>
         </div>

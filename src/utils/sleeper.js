@@ -100,3 +100,12 @@ export const fetchDraftPicks = async (draftId) => {
     return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
 };
 
+/**
+ * Fetch transactions for a specific round (week)
+ * @param {string} leagueId 
+ * @param {number} round 
+ */
+export const fetchLeagueTransactions = async (leagueId, round) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/transactions/${round}?_=${timestamp}`);
+};

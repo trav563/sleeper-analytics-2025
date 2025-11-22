@@ -1,21 +1,38 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
 import LeagueCard from '../features/league/components/LeagueCard';
 import { ArrowLeft } from 'lucide-react';
+import { fetchLeagueTransactions } from '../utils/sleeper';
 
 const LeagueLayout = () => {
     const { leagueId } = useParams();
     const navigate = useNavigate();
     const { user, loadHistory } = useSleeper();
-    const { league, rosters, users, players, loading, error } = useLeagueData(leagueId);
+    const { league, rosters, users, players, state, matchups, loading, error } = useLeagueData(leagueId);
+    const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
         if (leagueId && user?.user_id) {
             loadHistory(leagueId, user.user_id);
         }
     }, [leagueId, user, loadHistory]);
+
+    // Fetch transactions for the current week
+    useEffect(() => {
+        const getTransactions = async () => {
+            if (leagueId && state?.display_week) {
+                try {
+                    const data = await fetchLeagueTransactions(leagueId, state.display_week);
+                    setTransactions(data);
+                } catch (err) {
+                    console.error("Failed to fetch transactions", err);
+                }
+            }
+        };
+        getTransactions();
+    }, [leagueId, state?.display_week]);
 
     const handleLeagueChange = (e) => {
         if (e.key === "Enter") {
@@ -85,7 +102,11 @@ const LeagueLayout = () => {
                 users,
                 players,
                 user,
-                currentWeek: league?.settings?.leg || 1
+                state,
+                matchups,
+                transactions, // Pass transactions to child routes
+                loading,
+                error
             }} />
         </div>
     );
