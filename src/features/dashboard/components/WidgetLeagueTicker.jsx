@@ -29,7 +29,7 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
 
                 // Try to get player names
                 const playerNames = Object.keys(tx.adds || {}).map(pid => {
-                    const player = players?.find(p => p.player_id === pid);
+                    const player = players?.[pid];
                     return player ? `${player.first_name} ${player.last_name}` : 'Unknown Player';
                 }).join(', ');
 
@@ -48,19 +48,19 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
 
                 if (added.length > 0 && dropped.length > 0) {
                     type = 'add'; // Treat swap as add
-                    const pAdd = players?.find(p => p.player_id === added[0]);
-                    const pDrop = players?.find(p => p.player_id === dropped[0]);
+                    const pAdd = players?.[added[0]];
+                    const pDrop = players?.[dropped[0]];
                     const addName = pAdd ? `${pAdd.first_name} ${pAdd.last_name}` : 'Unknown';
                     const dropName = pDrop ? `${pDrop.first_name} ${pDrop.last_name}` : 'Unknown';
                     desc = `${teamName} added ${addName}, dropped ${dropName}`;
                 } else if (added.length > 0) {
                     type = 'add';
-                    const p = players?.find(p => p.player_id === added[0]);
+                    const p = players?.[added[0]];
                     const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
                     desc = `${teamName} added ${name}`;
                 } else if (dropped.length > 0) {
                     type = 'drop';
-                    const p = players?.find(p => p.player_id === dropped[0]);
+                    const p = players?.[dropped[0]];
                     const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
                     desc = `${teamName} dropped ${name}`;
                 }
@@ -72,7 +72,7 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
 
                 if (added.length > 0) {
                     type = 'add';
-                    const p = players?.find(p => p.player_id === added[0]);
+                    const p = players?.[added[0]];
                     const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
                     desc = `${teamName} claimed ${name} off waivers`;
                 }
