@@ -1,9 +1,18 @@
 import { useMemo } from 'react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
+import { displayTeamName } from '../../../utils/nflData';
 
-const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId }) => {
+const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
+
+    const selectedTeamName = useMemo(() => {
+        if (!rosters || !userRosterId) return 'Selected Team';
+        const roster = rosters.find(r => r.roster_id === userRosterId);
+        if (!roster) return 'Selected Team';
+        const user = users?.find(u => u.user_id === roster.owner_id);
+        return displayTeamName(user);
+    }, [rosters, userRosterId, users]);
 
     const data = useMemo(() => {
         if (loading || !seasonMatchups || !players || !userRosterId) return [];
@@ -66,12 +75,12 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId }) =>
         // Calculate Averages
         return positions.filter(p => p !== 'FLEX').map(pos => ({
             subject: pos,
-            LeagueAvg: leagueCounts[pos] ? (leagueSums[pos] / leagueCounts[pos]).toFixed(2) : 0,
-            MyTeam: userCounts[pos] ? (userSums[pos] / userCounts[pos]).toFixed(2) : 0,
+            LeagueAvg: leagueCounts[pos] ? Number((leagueSums[pos] / leagueCounts[pos]).toFixed(2)) : 0,
+            [selectedTeamName]: userCounts[pos] ? Number((userSums[pos] / userCounts[pos]).toFixed(2)) : 0,
             fullMark: 30 // Arbitrary scale max
         }));
 
-    }, [seasonMatchups, players, userRosterId, loading]);
+    }, [seasonMatchups, players, userRosterId, loading, selectedTeamName]);
 
     if (loading) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Radar...</div>;
 
@@ -84,6 +93,10 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId }) =>
                         <PolarGrid stroke="#475569" />
                         <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                        <Tooltip
+                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                            itemStyle={{ color: '#f8fafc' }}
+                        />
                         <Radar
                             name="League Avg"
                             dataKey="LeagueAvg"
@@ -93,14 +106,14 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId }) =>
                             fillOpacity={0.3}
                         />
                         <Radar
-                            name="My Team"
-                            dataKey="MyTeam"
+                            name={selectedTeamName}
+                            dataKey={selectedTeamName}
                             stroke="#22c55e"
                             strokeWidth={2}
                             fill="#22c55e"
                             fillOpacity={0.5}
                         />
-                        <Legend />
+                        <Legend wrapperStyle={{ color: '#94a3b8' }} />
                     </RadarChart>
                 </ResponsiveContainer>
             </div>
