@@ -95,6 +95,7 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
 
             out.push({
                 roster_id: m.roster_id,
+                owner_id: roster?.owner_id,
                 name: displayTeamName(owner),
                 avatar: avatarUrl(owner?.avatar || null, "thumbs"),
                 status,
