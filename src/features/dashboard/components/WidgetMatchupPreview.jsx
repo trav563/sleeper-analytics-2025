@@ -20,12 +20,39 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const opponentScore = opponentMatchup?.points || 0;
         const totalScore = userScore + opponentScore;
 
-        // Calculate win probability using logistic function
-        // Sigmoid: 1 / (1 + e^-x)
-        // We want a 25 pt lead to be ~90% win prob
-        // Using base 10 for easier mental math: 1 / (1 + 10^(-diff/30))
+        // Check if matchup is complete by looking at players_points
+        // If players_points exists and has scores, we can check completion
+        // For now, use a simpler heuristic: if points > 0 and it's a significant difference
+        // we assume the week might be complete. Better: check if there are projected points remaining
+
+        // Calculate win probability
+        let winProb;
         const diff = userScore - opponentScore;
-        const winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
+
+        // Check if matchup appears complete (heuristic: if both teams have > 50 points, likely week 12+)
+        // A more accurate check would be to see if starters_points adds up to points (meaning all played)
+        const userPlayersPoints = userMatchup.players_points || {};
+        const userStartersPoints = (userMatchup.starters || [])
+            .reduce((sum, pid) => sum + (userPlayersPoints[pid] || 0), 0);
+        const userHasAllScored = Math.abs(userStartersPoints - userScore) < 0.1; // Within 0.1 due to rounding
+
+        const opponentPlayersPoints = opponentMatchup?.players_points || {};
+        const opponentStartersPoints = (opponentMatchup?.starters || [])
+            .reduce((sum, pid) => sum + (opponentPlayersPoints[pid] || 0), 0);
+        const opponentHasAllScored = Math.abs(opponentStartersPoints - opponentScore) < 0.1;
+
+        const matchupComplete = userHasAllScored && opponentHasAllScored && userScore > 0;
+
+        if (matchupComplete) {
+            // If matchup is complete, set to 99% for winner, 1% for loser (accounting for stat corrections)
+            winProb = diff > 0 ? 99 : (diff < 0 ? 1 : 50);
+        } else {
+            // Use logistic function for ongoing matchups
+            // Sigmoid: 1 / (1 + e^-x)
+            // We want a 25 pt lead to be ~90% win prob
+            // Using base 10 for easier mental math: 1 / (1 + 10^(-diff/30))
+            winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
+        }
 
         return {
             userScore,
