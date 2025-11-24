@@ -81,6 +81,7 @@ const DashboardPage = () => {
                         rosters={rosters}
                         matchups={matchups}
                         selectedUserId={selectedUserId}
+                        players={players}
                     />
 
                     {/* League Ticker */}
