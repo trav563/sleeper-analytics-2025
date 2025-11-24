@@ -18,30 +18,21 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
 
         const userScore = userMatchup.points || 0;
         const opponentScore = opponentMatchup?.points || 0;
-        const totalScore = userScore + opponentScore;
-
-        // Check if matchup is complete by looking at players_points
-        // If players_points exists and has scores, we can check completion
-        // For now, use a simpler heuristic: if points > 0 and it's a significant difference
-        // we assume the week might be complete. Better: check if there are projected points remaining
 
         // Calculate win probability
         let winProb;
         const diff = userScore - opponentScore;
 
-        // Check if matchup appears complete (heuristic: if both teams have > 50 points, likely week 12+)
-        // A more accurate check would be to see if starters_points adds up to points (meaning all played)
-        const userPlayersPoints = userMatchup.players_points || {};
-        const userStartersPoints = (userMatchup.starters || [])
-            .reduce((sum, pid) => sum + (userPlayersPoints[pid] || 0), 0);
-        const userHasAllScored = Math.abs(userStartersPoints - userScore) < 0.1; // Within 0.1 due to rounding
+        // Check if matchup is complete by comparing projected vs current points
+        // If custom_points (projected) > points (current), games are still in progress
+        const userProjected = userMatchup.custom_points || userScore;
+        const opponentProjected = opponentMatchup?.custom_points || opponentScore;
 
-        const opponentPlayersPoints = opponentMatchup?.players_points || {};
-        const opponentStartersPoints = (opponentMatchup?.starters || [])
-            .reduce((sum, pid) => sum + (opponentPlayersPoints[pid] || 0), 0);
-        const opponentHasAllScored = Math.abs(opponentStartersPoints - opponentScore) < 0.1;
-
-        const matchupComplete = userHasAllScored && opponentHasAllScored && userScore > 0;
+        // Matchup is complete if projected points equal current points (no more games to play)
+        // Using a small threshold to account for rounding
+        const userGamesComplete = Math.abs(userProjected - userScore) < 0.5;
+        const opponentGamesComplete = Math.abs(opponentProjected - opponentScore) < 0.5;
+        const matchupComplete = userGamesComplete && opponentGamesComplete && userScore > 0;
 
         if (matchupComplete) {
             // If matchup is complete, set to 99% for winner, 1% for loser (accounting for stat corrections)
