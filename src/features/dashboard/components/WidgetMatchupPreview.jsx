@@ -19,31 +19,13 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const userScore = userMatchup.points || 0;
         const opponentScore = opponentMatchup?.points || 0;
 
-        // Get projected scores (custom_points contains projected total if games remain)
-        const userProjected = userMatchup.custom_points || userScore;
-        const opponentProjected = opponentMatchup?.custom_points || opponentScore;
+        // For now, always calculate based on current score difference using logistic function
+        // TODO: Implement proper projected vs current score detection once we understand the API data better
+        const diff = userScore - opponentScore;
 
-        // Matchup is complete if projected points equal current points (no more games to play)
-        // Using a small threshold to account for rounding
-        const userGamesComplete = Math.abs(userProjected - userScore) < 0.5;
-        const opponentGamesComplete = Math.abs(opponentProjected - opponentScore) < 0.5;
-        const matchupComplete = userGamesComplete && opponentGamesComplete && userScore > 0;
-
-        // Calculate win probability
-        let winProb;
-
-        if (matchupComplete) {
-            // If matchup is complete, set to 99% for winner, 1% for loser (accounting for stat corrections)
-            const diff = userScore - opponentScore;
-            winProb = diff > 0 ? 99 : (diff < 0 ? 1 : 50);
-        } else {
-            // Use logistic function based on PROJECTED scores for ongoing matchups
-            // This matches Sleeper's behavior - they calculate probability on what's expected to happen
-            const projectedDiff = userProjected - opponentProjected;
-            // Sigmoid: 1 / (1 + 10^(-diff/30))
-            // 25 pt projected lead = ~90% win prob
-            winProb = (1 / (1 + Math.pow(10, -projectedDiff / 30))) * 100;
-        }
+        // Sigmoid: 1 / (1 + 10^(-diff/30))
+        // 25 pt lead = ~90% win prob, smaller differences give more moderate probabilities
+        const winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
 
         return {
             userScore,
