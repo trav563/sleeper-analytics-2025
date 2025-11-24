@@ -19,12 +19,7 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const userScore = userMatchup.points || 0;
         const opponentScore = opponentMatchup?.points || 0;
 
-        // Calculate win probability
-        let winProb;
-        const diff = userScore - opponentScore;
-
-        // Check if matchup is complete by comparing projected vs current points
-        // If custom_points (projected) > points (current), games are still in progress
+        // Get projected scores (custom_points contains projected total if games remain)
         const userProjected = userMatchup.custom_points || userScore;
         const opponentProjected = opponentMatchup?.custom_points || opponentScore;
 
@@ -34,15 +29,20 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const opponentGamesComplete = Math.abs(opponentProjected - opponentScore) < 0.5;
         const matchupComplete = userGamesComplete && opponentGamesComplete && userScore > 0;
 
+        // Calculate win probability
+        let winProb;
+
         if (matchupComplete) {
             // If matchup is complete, set to 99% for winner, 1% for loser (accounting for stat corrections)
+            const diff = userScore - opponentScore;
             winProb = diff > 0 ? 99 : (diff < 0 ? 1 : 50);
         } else {
-            // Use logistic function for ongoing matchups
-            // Sigmoid: 1 / (1 + e^-x)
-            // We want a 25 pt lead to be ~90% win prob
-            // Using base 10 for easier mental math: 1 / (1 + 10^(-diff/30))
-            winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
+            // Use logistic function based on PROJECTED scores for ongoing matchups
+            // This matches Sleeper's behavior - they calculate probability on what's expected to happen
+            const projectedDiff = userProjected - opponentProjected;
+            // Sigmoid: 1 / (1 + 10^(-diff/30))
+            // 25 pt projected lead = ~90% win prob
+            winProb = (1 / (1 + Math.pow(10, -projectedDiff / 30))) * 100;
         }
 
         return {
