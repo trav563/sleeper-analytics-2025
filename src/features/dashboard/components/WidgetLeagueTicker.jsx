@@ -2,12 +2,20 @@ import { useMemo } from 'react';
 import { ArrowRightLeft, PlusCircle, MinusCircle } from 'lucide-react';
 import { displayTeamName } from '../../../utils/nflData';
 
-const WidgetLeagueTicker = ({ transactions, users, players }) => {
+const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
     const recentActivity = useMemo(() => {
         if (!transactions || transactions.length === 0) return [];
 
-        // Sort by most recent (created)
-        const sorted = [...transactions].sort((a, b) => b.created - a.created).slice(0, 5);
+        // Sort by most recent (created) and take top 20
+        const sorted = [...transactions].sort((a, b) => b.created - a.created).slice(0, 20);
+
+        const getTeamName = (rosterId) => {
+            if (!rosters || !users) return `Team ${rosterId} `;
+            const roster = rosters.find(r => r.roster_id === rosterId);
+            if (!roster) return `Team ${rosterId} `;
+            const user = users.find(u => u.user_id === roster.owner_id);
+            return user ? displayTeamName(user) : `Team ${rosterId} `;
+        };
 
         return sorted.map(tx => {
             const date = new Date(tx.created);
@@ -17,22 +25,15 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
 
             if (tx.type === 'trade') {
                 type = 'trade';
-                // Simplified trade description logic
-                // In a real app, this would be more complex to show who got what
-                const involvedTeams = tx.roster_ids.map(rid => {
-                    // Better mapping: roster_id -> owner_id -> user
-                    // We don't have rosters prop here, but we can try to map if we had it.
-                    // For now, let's just say "Team A and Team B traded"
-                    return `Team ${rid}`;
-                });
+                const involvedTeams = tx.roster_ids.map(rid => getTeamName(rid));
 
                 // Try to get player names
                 const playerNames = Object.keys(tx.adds || {}).map(pid => {
                     const player = players?.[pid];
-                    return player ? `${player.first_name} ${player.last_name}` : 'Unknown Player';
+                    return player ? `${player.first_name} ${player.last_name} ` : 'Unknown Player';
                 }).join(', ');
 
-                desc = `Trade involving ${playerNames}`;
+                desc = `Trade involving ${involvedTeams.join(' & ')}: ${playerNames} `;
             } else if (tx.type === 'free_agent') {
                 // Check if it's an add or drop (or both)
                 const added = tx.adds ? Object.keys(tx.adds) : [];
@@ -40,46 +41,43 @@ const WidgetLeagueTicker = ({ transactions, users, players }) => {
 
                 // Find the user who made the transaction
                 const rosterId = tx.roster_ids[0];
-                // We need rosters to map roster_id to user name correctly. 
-                // Since we don't have rosters prop, we'll use a placeholder or generic name.
-                // Ideally we pass rosters prop too.
-                const teamName = `Team ${rosterId}`;
+                const teamName = getTeamName(rosterId);
 
                 if (added.length > 0 && dropped.length > 0) {
                     type = 'add'; // Treat swap as add
                     const pAdd = players?.[added[0]];
                     const pDrop = players?.[dropped[0]];
-                    const addName = pAdd ? `${pAdd.first_name} ${pAdd.last_name}` : 'Unknown';
-                    const dropName = pDrop ? `${pDrop.first_name} ${pDrop.last_name}` : 'Unknown';
-                    desc = `${teamName} added ${addName}, dropped ${dropName}`;
+                    const addName = pAdd ? `${pAdd.first_name} ${pAdd.last_name} ` : 'Unknown';
+                    const dropName = pDrop ? `${pDrop.first_name} ${pDrop.last_name} ` : 'Unknown';
+                    desc = `${teamName} added ${addName}, dropped ${dropName} `;
                 } else if (added.length > 0) {
                     type = 'add';
                     const p = players?.[added[0]];
-                    const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
-                    desc = `${teamName} added ${name}`;
+                    const name = p ? `${p.first_name} ${p.last_name} ` : 'Unknown';
+                    desc = `${teamName} added ${name} `;
                 } else if (dropped.length > 0) {
                     type = 'drop';
                     const p = players?.[dropped[0]];
-                    const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
-                    desc = `${teamName} dropped ${name}`;
+                    const name = p ? `${p.first_name} ${p.last_name} ` : 'Unknown';
+                    desc = `${teamName} dropped ${name} `;
                 }
             } else if (tx.type === 'waiver') {
                 // Similar logic to free_agent
                 const added = tx.adds ? Object.keys(tx.adds) : [];
                 const rosterId = tx.roster_ids[0];
-                const teamName = `Team ${rosterId}`;
+                const teamName = getTeamName(rosterId);
 
                 if (added.length > 0) {
                     type = 'add';
                     const p = players?.[added[0]];
-                    const name = p ? `${p.first_name} ${p.last_name}` : 'Unknown';
+                    const name = p ? `${p.first_name} ${p.last_name} ` : 'Unknown';
                     desc = `${teamName} claimed ${name} off waivers`;
                 }
             }
 
             return { type, desc, time: timeAgo };
         });
-    }, [transactions, users, players]);
+    }, [transactions, users, rosters, players]);
 
     const getIcon = (type) => {
         switch (type) {

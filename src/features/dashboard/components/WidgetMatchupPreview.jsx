@@ -48,8 +48,8 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
             </div>
 
             <div>
-                <div className="flex justify-between text-xs mb-2">
-                    <span className="text-blue-400 font-medium">Win Probability</span>
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>Score Share</span>
                     <span className="text-white">{matchupData.winProb.toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">

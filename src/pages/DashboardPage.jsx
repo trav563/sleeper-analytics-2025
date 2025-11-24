@@ -84,6 +84,7 @@ const DashboardPage = () => {
                     <WidgetLeagueTicker
                         transactions={transactions}
                         users={users}
+                        rosters={rosters}
                         players={players}
                     />
                 </div>
