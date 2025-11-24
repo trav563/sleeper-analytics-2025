@@ -51,8 +51,15 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
 
             if (!hasEmptySlots) {
                 const nonEmptyStarters = starters.filter(Boolean);
+                const playersPoints = m.players_points || {};
 
                 for (const pid of nonEmptyStarters) {
+                    // Skip checks if player has already played (has points)
+                    const playerPoints = playersPoints[pid] || 0;
+                    if (playerPoints > 0) {
+                        continue;
+                    }
+
                     if (isDSTStarterId(pid)) {
                         if (byeTeamsThisWeek.has(pid)) {
                             status = "INCOMPLETE";
