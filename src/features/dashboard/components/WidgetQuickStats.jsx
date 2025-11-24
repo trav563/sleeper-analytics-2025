@@ -16,12 +16,10 @@ const WidgetQuickStats = ({ rosters, selectedUserId }) => {
 
         const rank = sortedRosters.findIndex(r => r.roster_id === roster.roster_id) + 1;
 
-        // Mock Playoff Odds (Random for demo purposes as requested)
-        const playoffOdds = Math.floor(Math.random() * (99 - 10 + 1) + 10);
-
-        // Determine Streak (Mock logic based on last result)
-        // In real app, would need history
-        const streak = roster.metadata?.streak || 'W1';
+        // Mock data for now - but make it deterministic based on roster ID
+        // In a real app, this would come from an API
+        const playoffOdds = Math.min(99, Math.max(1, (roster.roster_id * 17 + 23) % 100));
+        const streak = Math.max(1, (roster.roster_id * 3) % 5) + 'W';
 
         return {
             rank,
