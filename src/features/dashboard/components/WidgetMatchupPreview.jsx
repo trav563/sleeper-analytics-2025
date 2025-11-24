@@ -19,18 +19,9 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const userScore = userMatchup.points || 0;
         const opponentScore = opponentMatchup?.points || 0;
 
-        // For now, always calculate based on current score difference using logistic function
-        // TODO: Implement proper projected vs current score detection once we understand the API data better
-        const diff = userScore - opponentScore;
-
-        // Sigmoid: 1 / (1 + 10^(-diff/30))
-        // 25 pt lead = ~90% win prob, smaller differences give more moderate probabilities
-        const winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
-
         return {
             userScore,
             opponentScore,
-            winProb,
             opponentName: displayTeamName(opponentUser)
         };
     }, [week, users, rosters, matchups, selectedUserId]);
@@ -41,7 +32,7 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
             <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Week {week} Matchup</h3>
 
-            <div className="flex justify-between items-end mb-2">
+            <div className="flex justify-between items-end">
                 <div>
                     <div className="text-3xl font-bold text-white">{matchupData.userScore.toFixed(2)}</div>
                     <div className="text-xs text-slate-400 mt-1">My Score</div>
@@ -50,19 +41,6 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
                 <div className="text-right">
                     <div className="text-3xl font-bold text-slate-400">{matchupData.opponentScore.toFixed(2)}</div>
                     <div className="text-xs text-slate-400 mt-1">{matchupData.opponentName}</div>
-                </div>
-            </div>
-
-            <div>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                    <span>Win Probability</span>
-                    <span className="text-white">{matchupData.winProb.toFixed(0)}%</span>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                    <div
-                        className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${matchupData.winProb}%` }}
-                    ></div>
                 </div>
             </div>
         </div>
