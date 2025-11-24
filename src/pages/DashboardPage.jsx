@@ -7,16 +7,19 @@ import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats'
 import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
 
 const DashboardPage = () => {
-    const { users, rosters, matchups, players, state, transactions, loading, error } = useOutletContext();
+    const { users, rosters, matchups, players, state, transactions, loading, error, user } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
 
-    // Default to first user if none selected
+    // Default to logged-in user if available, otherwise first user
     useEffect(() => {
         if (users && users.length > 0 && !selectedUserId) {
-            // Try to find current user or default to first
-            setSelectedUserId(users[0].user_id);
+            if (user?.user_id) {
+                setSelectedUserId(user.user_id);
+            } else {
+                setSelectedUserId(users[0].user_id);
+            }
         }
-    }, [users, selectedUserId]);
+    }, [users, user, selectedUserId]);
 
     if (loading) return <div className="p-8 text-center text-slate-400">Loading Dashboard...</div>;
     if (error) return <div className="p-8 text-center text-red-400">Error loading dashboard data.</div>;

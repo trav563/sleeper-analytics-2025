@@ -20,10 +20,12 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const opponentScore = opponentMatchup?.points || 0;
         const totalScore = userScore + opponentScore;
 
-        // Logistic Win Probability based on score difference
-        // A 25 point lead gives ~75% win probability
+        // Calculate win probability using logistic function
+        // Sigmoid: 1 / (1 + e^-x)
+        // We want a 25 pt lead to be ~90% win prob
+        // Using base 10 for easier mental math: 1 / (1 + 10^(-diff/30))
         const diff = userScore - opponentScore;
-        const winProb = (1 / (1 + Math.pow(10, -diff / 50))) * 100;
+        const winProb = (1 / (1 + Math.pow(10, -diff / 30))) * 100;
 
         return {
             userScore,
