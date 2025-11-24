@@ -16,8 +16,8 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const opponentRoster = opponentMatchup ? rosters.find(r => r.roster_id === opponentMatchup.roster_id) : null;
         const opponentUser = opponentRoster ? users.find(u => u.user_id === opponentRoster.owner_id) : null;
 
-        const userScore = userRoster.settings?.fpts || 0;
-        const opponentScore = opponentRoster.settings?.fpts || 0;
+        const userScore = userMatchup.points || 0;
+        const opponentScore = opponentMatchup?.points || 0;
         const totalScore = userScore + opponentScore;
 
         // Logistic Win Probability based on score difference
