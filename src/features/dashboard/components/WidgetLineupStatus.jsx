@@ -15,11 +15,13 @@ const WidgetLineupStatus = ({ week, users, rosters, matchups, players, selectedU
 
         if (isIncomplete) {
             const details = grouped.INCOMPLETE.find(item => item.owner_id === selectedUserId);
-            return { type: 'error', message: 'Lineup Incomplete', details: details?.issues, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+            const issues = (details?.flagged || []).map(f => f.reason === "Empty Slot" ? f.reason : `${f.name} (${f.reason})`);
+            return { type: 'error', message: 'Lineup Incomplete', details: issues, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
         }
         if (isPotential) {
             const details = grouped.POTENTIAL.find(item => item.owner_id === selectedUserId);
-            return { type: 'warning', message: 'Potential Issues', details: details?.issues, icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
+            const issues = (details?.flagged || []).map(f => `${f.name} (${f.reason})`);
+            return { type: 'warning', message: 'Potential Issues', details: issues, icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
         }
         if (isOk) {
             return { type: 'success', message: 'Lineup Set', details: [], icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' };
