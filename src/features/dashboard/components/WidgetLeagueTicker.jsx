@@ -7,8 +7,9 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
         if (!transactions || transactions.length === 0) return [];
 
         // Filter for complete transactions only and sort by most recent
+        // Also ensure 'adds' exists for adds/waivers to avoid ghost claims
         const sorted = [...transactions]
-            .filter(tx => tx.status === 'complete')
+            .filter(tx => tx.status === 'complete' && (tx.type === 'trade' || (tx.adds && Object.keys(tx.adds).length > 0) || (tx.drops && Object.keys(tx.drops).length > 0)))
             .sort((a, b) => b.created - a.created)
             .slice(0, 20);
 
@@ -17,7 +18,8 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
             const roster = rosters.find(r => r.roster_id === rosterId);
             if (!roster) return `Team ${rosterId}`;
             const user = users.find(u => u.user_id === roster.owner_id);
-            return user ? displayTeamName(user) : `Team ${rosterId}`;
+            // Use display_name (Username) instead of displayTeamName (Team Name)
+            return user ? user.display_name : `Team ${rosterId}`;
         };
 
         return sorted.map(tx => {

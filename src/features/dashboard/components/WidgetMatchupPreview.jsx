@@ -16,18 +16,22 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         const opponentRoster = opponentMatchup ? rosters.find(r => r.roster_id === opponentMatchup.roster_id) : null;
         const opponentUser = opponentRoster ? users.find(u => u.user_id === opponentRoster.owner_id) : null;
 
-        // Calculate simple win probability based on current points (mock logic for now)
-        // In a real app, this would use projected points
-        const totalPoints = (userMatchup.points || 0) + (opponentMatchup?.points || 0);
-        const winProb = totalPoints > 0 ? ((userMatchup.points || 0) / totalPoints) * 100 : 50;
+        const userScore = userRoster.settings?.fpts || 0;
+        const opponentScore = opponentRoster.settings?.fpts || 0;
+        const totalScore = userScore + opponentScore;
+
+        // Logistic Win Probability based on score difference
+        // A 25 point lead gives ~75% win probability
+        const diff = userScore - opponentScore;
+        const winProb = (1 / (1 + Math.pow(10, -diff / 50))) * 100;
 
         return {
-            userPoints: userMatchup.points || 0,
-            opponentPoints: opponentMatchup?.points || 0,
-            opponentName: opponentUser ? displayTeamName(opponentUser) : 'Opponent',
-            winProb: Math.min(Math.max(winProb, 5), 95) // Clamp between 5% and 95%
+            userScore,
+            opponentScore,
+            winProb,
+            opponentName: displayTeamName(opponentUser)
         };
-    }, [selectedUserId, matchups, rosters, users]);
+    }, [week, users, rosters, matchups, selectedUserId]);
 
     if (!matchupData) return null;
 
@@ -35,21 +39,21 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId }
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
             <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Week {week} Matchup</h3>
 
-            <div className="flex items-center justify-between mb-6">
-                <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{matchupData.userPoints.toFixed(2)}</div>
-                    <div className="text-xs text-slate-500 mt-1">My Score</div>
+            <div className="flex justify-between items-end mb-2">
+                <div>
+                    <div className="text-3xl font-bold text-white">{matchupData.userScore.toFixed(2)}</div>
+                    <div className="text-xs text-slate-400 mt-1">My Score</div>
                 </div>
-                <div className="text-sm font-bold text-slate-600">VS</div>
-                <div className="text-center">
-                    <div className="text-3xl font-bold text-slate-400">{matchupData.opponentPoints.toFixed(2)}</div>
-                    <div className="text-xs text-slate-500 mt-1">{matchupData.opponentName}</div>
+                <div className="text-sm font-medium text-slate-500 mb-4">VS</div>
+                <div className="text-right">
+                    <div className="text-3xl font-bold text-slate-400">{matchupData.opponentScore.toFixed(2)}</div>
+                    <div className="text-xs text-slate-400 mt-1">{matchupData.opponentName}</div>
                 </div>
             </div>
 
             <div>
                 <div className="flex justify-between text-xs text-slate-400 mb-1">
-                    <span>Score Share</span>
+                    <span>Win Probability</span>
                     <span className="text-white">{matchupData.winProb.toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
