@@ -3,7 +3,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName } from '../../../utils/nflData';
 
-const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users }) => {
+const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users, opponentRosterId, opponentTeamName }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
 
     const selectedTeamName = useMemo(() => {
@@ -22,12 +22,15 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
         const leagueCounts = { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
         const userSums = { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
         const userCounts = { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
+        const opponentSums = { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
+        const opponentCounts = { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
 
         Object.values(seasonMatchups).forEach(weekMatchups => {
             if (!weekMatchups) return;
 
             weekMatchups.forEach(matchup => {
                 const isUser = matchup.roster_id === userRosterId;
+                const isOpponent = opponentRosterId && matchup.roster_id === opponentRosterId;
 
                 matchup.starters.forEach((playerId, index) => {
                     if (!playerId || playerId === "0") return;
