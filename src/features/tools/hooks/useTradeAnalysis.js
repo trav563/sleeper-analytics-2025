@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek) {
-    // 1. Calculate Player Values (Avg points over last 5 weeks)
+    // 1. Calculate Player Values (True PPG - Avg points excluding 0-point games)
     const playerValues = useMemo(() => {
         if (!seasonMatchups || !currentWeek) return {};
 
@@ -16,9 +16,12 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             weekMatchups.forEach(matchup => {
                 if (matchup.players_points) {
                     Object.entries(matchup.players_points).forEach(([playerId, points]) => {
-                        if (!valuesV2[playerId]) valuesV2[playerId] = { totalPoints: 0, games: 0 };
-                        valuesV2[playerId].totalPoints += points;
-                        valuesV2[playerId].games += 1;
+                        // Fix: The Lamar Jackson Rule - Exclude 0.0 games (Injury/Bye)
+                        if (points > 0) {
+                            if (!valuesV2[playerId]) valuesV2[playerId] = { totalPoints: 0, games: 0 };
+                            valuesV2[playerId].totalPoints += points;
+                            valuesV2[playerId].games += 1;
+                        }
                     });
                 }
             });
@@ -210,7 +213,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 }
             });
 
-            // 2. Bench Upgrade Detector
+            // 2. Bench Upgrade Detector (with Dynasty Guardrails)
             opponent.bench.forEach(player => {
                 const myStarters = focusTeam.starters[player.position];
                 if (!myStarters || myStarters.length === 0) return;
@@ -219,10 +222,33 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 const worstStarter = [...myStarters].sort((a, b) => a.value - b.value)[0];
 
                 if (player.value > worstStarter.value) {
+                    // Dynasty Guardrails
+                    const targetAge = player.age || 25;
+                    const currentAge = worstStarter.age || 25;
+                    const isInjured = worstStarter.injury_status === 'IR' || worstStarter.injury_status === 'Out';
+
+                    // IF (TargetPlayer.Age > CurrentPlayer.Age + 3 years)
+                    // AND (CurrentPlayer.Age < 29)
+                    // AND (CurrentPlayer.TruePPG > 15.0)
+                    const isDynastyBadMove = (targetAge > currentAge + 3) && (currentAge < 29) && (worstStarter.value > 15.0);
+
+                    let suggestionType = 'Upgrade';
+
+                    if (isDynastyBadMove) {
+                        if (focusTeam.status === 'Contender' && isInjured) {
+                            // Exception: Win-Now Rental
+                            suggestionType = 'Win-Now Rental';
+                        } else {
+                            // Suppress this suggestion
+                            return;
+                        }
+                    }
+
                     benchUpgrades.push({
                         player,
                         upgradeOver: worstStarter,
-                        diff: player.value - worstStarter.value
+                        diff: player.value - worstStarter.value,
+                        type: suggestionType
                     });
                     score += 20; // Upgrade bonus
                 }

@@ -175,11 +175,30 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                                     💎 Hidden Gems (Bench Upgrades)
                                                 </p>
                                                 <div className="space-y-1">
-                                                    {match.benchUpgrades.map((upgrade, i) => (
-                                                        <div key={i} className="text-xs text-emerald-100">
-                                                            Start <span className="font-bold text-white">{upgrade.player.full_name}</span> <span className="text-emerald-400">(+{upgrade.diff.toFixed(1)})</span> over {upgrade.upgradeOver.full_name}
-                                                        </div>
-                                                    ))}
+                                                    {match.benchUpgrades.map((upgrade, i) => {
+                                                        const isRental = upgrade.type === 'Win-Now Rental';
+                                                        const isInjured = upgrade.upgradeOver.injury_status === 'IR' || upgrade.upgradeOver.injury_status === 'Out';
+
+                                                        return (
+                                                            <div key={i} className="text-xs text-emerald-100">
+                                                                {isRental ? (
+                                                                    <span>
+                                                                        <span className="text-orange-300 font-bold">Win-Now Rental:</span> Acquire <span className="font-bold text-white">{upgrade.player.full_name}</span> to replace injured {upgrade.upgradeOver.full_name}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span>
+                                                                        Start <span className="font-bold text-white">{upgrade.player.full_name}</span> <span className="text-emerald-400">(+{upgrade.diff.toFixed(1)})</span> over {upgrade.upgradeOver.full_name}
+                                                                    </span>
+                                                                )}
+
+                                                                {isInjured && (
+                                                                    <span className="ml-2 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">
+                                                                        {upgrade.upgradeOver.injury_status}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         )}
