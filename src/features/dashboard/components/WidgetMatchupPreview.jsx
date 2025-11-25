@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
 import { getGameStatuses } from '../../../services/nflSchedule';
+import { calculateProjectedScore } from '../../../utils/scoreProjections';
+import { Info } from 'lucide-react';
 
-const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId, players }) => {
+const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId, players, seasonMatchups }) => {
     const [gameStatuses, setGameStatuses] = useState({});
 
     useEffect(() => {
@@ -27,8 +29,15 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId, 
         const opponentRoster = opponentMatchup ? rosters.find(r => r.roster_id === opponentMatchup.roster_id) : null;
         const opponentUser = opponentRoster ? users.find(u => u.user_id === opponentRoster.owner_id) : null;
 
-        const userScore = userMatchup.points || 0;
-        const opponentScore = opponentMatchup?.points || 0;
+        let userScore = userMatchup.points || 0;
+        let opponentScore = opponentMatchup?.points || 0;
+
+        // Calculate Projections if score is 0 (or very low, implying game hasn't started/finished)
+        // Ideally we check game status, but checking score === 0 is a decent proxy for "not started" or "empty"
+        // The user request says "for future/current weeks where official projections are missing"
+        // Let's calculate it always, and decide when to show it in render.
+        const userProjected = calculateProjectedScore(userMatchup.starters, seasonMatchups, players);
+        const opponentProjected = opponentMatchup ? calculateProjectedScore(opponentMatchup.starters, seasonMatchups, players) : 0;
 
         // Calculate remaining players
         const userRemaining = [];
@@ -79,27 +88,84 @@ const WidgetMatchupPreview = ({ week, users, rosters, matchups, selectedUserId, 
         return {
             userScore,
             opponentScore,
+            userProjected,
+            opponentProjected,
             opponentName: displayTeamName(opponentUser),
             userRemaining,
             opponentRemaining
         };
-    }, [week, users, rosters, matchups, selectedUserId, players, gameStatuses]);
+    }, [week, users, rosters, matchups, selectedUserId, players, gameStatuses, seasonMatchups]);
 
     if (!matchupData) return null;
+
+    // Helper to render score with tooltip if projected
+    const ScoreDisplay = ({ score, projected, label }) => {
+        // Show projected if score is 0. This is a simple heuristic.
+        // A better one might be to check if all players have played, but 0 is safe for "future".
+        const showProjected = score === 0 && projected > 0;
+
+        return (
+            <div className={label === 'VS' ? '' : 'text-right'}>
+                <div className={`text-3xl font-bold ${showProjected ? 'text-blue-300' : (label === 'My Score' ? 'text-white' : 'text-slate-400')}`}>
+                    {showProjected ? projected.toFixed(2) : score.toFixed(2)}
+                </div>
+                <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-end">
+                    {label}
+                    {showProjected && (
+                        <div className="group relative">
+                            <Info className="w-3 h-3 text-blue-400 cursor-help" />
+                            <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
+                                Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {showProjected && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
+            </div>
+        );
+    };
 
     return (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
             <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Week {week} Matchup</h3>
 
             <div className="flex justify-between items-end mb-4">
-                <div>
-                    <div className="text-3xl font-bold text-white">{matchupData.userScore.toFixed(2)}</div>
-                    <div className="text-xs text-slate-400 mt-1">My Score</div>
+                <div className="text-left">
+                    <div className={`text-3xl font-bold ${matchupData.userScore === 0 && matchupData.userProjected > 0 ? 'text-blue-300' : 'text-white'}`}>
+                        {matchupData.userScore === 0 && matchupData.userProjected > 0 ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                        My Score
+                        {matchupData.userScore === 0 && matchupData.userProjected > 0 && (
+                            <div className="group relative">
+                                <Info className="w-3 h-3 text-blue-400 cursor-help" />
+                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
+                                    Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {matchupData.userScore === 0 && matchupData.userProjected > 0 && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
                 </div>
+
                 <div className="text-sm font-medium text-slate-500 mb-4">VS</div>
+
                 <div className="text-right">
-                    <div className="text-3xl font-bold text-slate-400">{matchupData.opponentScore.toFixed(2)}</div>
-                    <div className="text-xs text-slate-400 mt-1">{matchupData.opponentName}</div>
+                    <div className={`text-3xl font-bold ${matchupData.opponentScore === 0 && matchupData.opponentProjected > 0 ? 'text-blue-300' : 'text-slate-400'}`}>
+                        {matchupData.opponentScore === 0 && matchupData.opponentProjected > 0 ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-end">
+                        {matchupData.opponentName}
+                        {matchupData.opponentScore === 0 && matchupData.opponentProjected > 0 && (
+                            <div className="group relative">
+                                <Info className="w-3 h-3 text-blue-400 cursor-help" />
+                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
+                                    Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {matchupData.opponentScore === 0 && matchupData.opponentProjected > 0 && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
                 </div>
             </div>
 

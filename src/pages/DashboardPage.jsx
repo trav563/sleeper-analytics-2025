@@ -5,10 +5,14 @@ import WidgetLineupStatus from '../features/dashboard/components/WidgetLineupSta
 import WidgetMatchupPreview from '../features/dashboard/components/WidgetMatchupPreview';
 import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats';
 import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
+import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 
 const DashboardPage = () => {
     const { users, rosters, matchups, players, state, transactions, loading, error, user, league } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
+
+    const week = state?.display_week || state?.week || 1;
+    const { seasonMatchups } = useSeasonMatchups(league?.league_id, week);
 
     // Default to logged-in user if available, otherwise first user
     useEffect(() => {
@@ -23,8 +27,6 @@ const DashboardPage = () => {
 
     if (loading) return <div className="p-8 text-center text-slate-400">Loading Dashboard...</div>;
     if (error) return <div className="p-8 text-center text-red-400">Error loading dashboard data.</div>;
-
-    const week = state?.display_week || state?.week || 1;
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -84,6 +86,7 @@ const DashboardPage = () => {
                         matchups={matchups}
                         selectedUserId={selectedUserId}
                         players={players}
+                        seasonMatchups={seasonMatchups}
                     />
 
                     {/* League Ticker */}
