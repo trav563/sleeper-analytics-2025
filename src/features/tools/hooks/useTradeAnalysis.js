@@ -125,6 +125,31 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             thresholds[pos] = scores[cutoffIndex];
         });
 
+        // Calculate Starter Baselines (The score needed to be a starter in this league)
+        const starterBaselines = {};
+        validPositions.forEach(pos => {
+            // Collect all starter scores for this position
+            const allStarterScores = [];
+            Object.values(analysis).forEach(team => {
+                team.starters[pos].forEach(p => allStarterScores.push(p.value));
+            });
+            // Sort descending
+            allStarterScores.sort((a, b) => b - a);
+
+            // The baseline is the score of the lowest ranked starter
+            // If we have 12 teams and 2 WRs, we look at the top 24 scores.
+            // But since we already filtered "starters" in the previous step based on slots,
+            // `allStarterScores` should contain exactly the number of starters in the league.
+            // So the last player in this list is the "worst starter".
+            // Let's use the value at the 80th percentile (bottom 20%) to be safe?
+            // Or just the median?
+            // Let's stick to the prompt: "would be starters on an average team".
+            // An average team has average starters.
+            // Let's use the Median of the starter scores.
+            const medianIndex = Math.floor(allStarterScores.length / 2);
+            starterBaselines[pos] = allStarterScores[medianIndex] || 0;
+        });
+
         // Identify Needs and Surplus
         Object.values(analysis).forEach(team => {
             // Needs
@@ -136,8 +161,9 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
 
             // Surplus: Bench players performing like average starters
             validPositions.forEach(pos => {
-                const avgStarterVal = leaguePositionScores[pos].reduce((a, b) => a + b, 0) / leaguePositionScores[pos].length;
-                const surplusPlayers = team.bench.filter(p => p.position === pos && p.value >= avgStarterVal);
+                // Use the calculated baseline (Median starter score)
+                const baseline = starterBaselines[pos];
+                const surplusPlayers = team.bench.filter(p => p.position === pos && p.value >= baseline);
 
                 if (surplusPlayers.length > 0) {
                     team.surplus.push({
@@ -237,10 +263,13 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             }
 
             if (score > 0) {
+                // Correct Perfect Match Logic: Must have BOTH mutual needs and mutual surplus
+                const isPerfect = mutualNeeds.length > 0 && mutualSurplus.length > 0;
+
                 matches.push({
                     opponent,
-                    type: mutualSurplus.length > 0 ? 'Perfect Match' : 'Potential Partner',
-                    score,
+                    type: isPerfect ? 'Perfect Match' : 'Potential Partner',
+                    score: score + (isPerfect ? 50 : 0), // Bonus for perfect match
                     receiving: mutualNeeds,
                     giving: mutualSurplus,
                     benchUpgrades,

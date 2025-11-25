@@ -185,25 +185,27 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                         )}
 
                                         {/* They Have (Target) */}
-                                        <div>
-                                            <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (Their Surplus)</p>
-                                            <div className="space-y-2">
-                                                {match.receiving.map(item => (
-                                                    <div key={item.position} className="flex flex-wrap gap-2">
-                                                        {item.assets.map(player => (
-                                                            <div key={player.id} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
-                                                                <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
-                                                                <span className="text-sm text-white">
-                                                                    {player.full_name || player.first_name + ' ' + player.last_name}
-                                                                    {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
-                                                                </span>
-                                                                <span className="text-xs text-green-400 ml-auto">{player.value.toFixed(1)} ppg</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ))}
+                                        {match.receiving.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (Their Surplus)</p>
+                                                <div className="space-y-2">
+                                                    {match.receiving.map(item => (
+                                                        <div key={item.position} className="flex flex-wrap gap-2">
+                                                            {item.assets.map(player => (
+                                                                <div key={player.id} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
+                                                                    <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
+                                                                    <span className="text-sm text-white">
+                                                                        {player.full_name || player.first_name + ' ' + player.last_name}
+                                                                        {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
+                                                                    </span>
+                                                                    <span className="text-xs text-green-400 ml-auto">{player.value.toFixed(1)} ppg</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
 
                                         {/* You Have (Offer) */}
                                         {match.giving.length > 0 && (
