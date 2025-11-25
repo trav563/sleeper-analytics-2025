@@ -203,7 +203,6 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id 
                                     className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg p-2.5"
                                     value={user1Id || ''}
                                     onChange={(e) => setUser1Id(e.target.value)}
-                                    disabled={!!selectedUser1Id} // Disable if controlled by parent
                                 >
                                     <option value="" disabled>Select Team A</option>
                                     {users?.map(u => (
@@ -221,7 +220,6 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id 
                                     className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg p-2.5"
                                     value={user2Id || ''}
                                     onChange={(e) => setUser2Id(e.target.value)}
-                                    disabled={!!selectedUser2Id} // Disable if controlled by parent
                                 >
                                     <option value="" disabled>Select Team B</option>
                                     {users?.filter(u => u.user_id !== user1Id).map(u => (

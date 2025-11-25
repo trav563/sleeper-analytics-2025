@@ -109,7 +109,10 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                             </th>
                             <th
                                 className="px-2 sm:px-4 py-3 text-center group relative cursor-help"
-                                onClick={() => setShowTooltip(!showTooltip)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowTooltip(!showTooltip);
+                                }}
                             >
                                 <div className="flex items-center justify-center gap-1">
                                     <span className="md:hidden">Luck</span>
