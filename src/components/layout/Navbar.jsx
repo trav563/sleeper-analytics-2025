@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
 import { avatarUrl } from '../../utils/nflData';
-import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X } from 'lucide-react';
+import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard } from 'lucide-react';
 
 const Navbar = () => {
     const { user, leagues, getLeagues } = useSleeper();
@@ -25,7 +25,10 @@ const Navbar = () => {
         setIsMobileMenuOpen(false);
     }, [location]);
 
-    const isActive = (path) => location.pathname.includes(path);
+    const isActive = (path) => {
+        if (path === '') return location.pathname === `/league/${leagueId}`;
+        return location.pathname.includes(path);
+    };
 
     const handleLeagueSwitch = (e) => {
         const newLeagueId = e.target.value;
@@ -43,12 +46,20 @@ const Navbar = () => {
                         <Link to={leagueId ? `/league/${leagueId}` : "/"} className="flex items-center space-x-2 group">
                             <Trophy className="h-6 w-6 text-blue-500 group-hover:text-blue-400 transition-colors" />
                             <span className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
-                                Sleeper Analytics
+                                Dynasty Lens
                             </span>
                         </Link>
 
                         {leagueId && (
                             <div className="hidden md:flex items-center gap-1">
+                                <Link
+                                    to={`/league/${leagueId}`}
+                                    className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${isActive('') ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <LayoutDashboard className="w-4 h-4" />
+                                    Dashboard
+                                </Link>
                                 <Link
                                     to={`/league/${leagueId}/lineup`}
                                     className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${isActive('lineup') ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
@@ -146,6 +157,13 @@ const Navbar = () => {
                 <div className="md:hidden bg-slate-800 border-t border-slate-700 px-2 pt-2 pb-3 space-y-1 shadow-lg animate-fade-in">
                     {leagueId && (
                         <>
+                            <Link
+                                to={`/league/${leagueId}`}
+                                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                            >
+                                <LayoutDashboard className="w-5 h-5" />
+                                Dashboard
+                            </Link>
                             <Link
                                 to={`/league/${leagueId}/lineup`}
                                 className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('lineup') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
