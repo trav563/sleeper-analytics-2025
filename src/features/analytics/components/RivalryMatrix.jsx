@@ -139,6 +139,9 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id 
                 const match2 = weekMatchups.find(m => m.roster_id === roster2.roster_id);
 
                 if (match1 && match2 && match1.matchup_id === match2.matchup_id) {
+                    // Skip if both teams scored 0 (likely bye week or unplayed)
+                    if (match1.points === 0 && match2.points === 0) return;
+
                     games++;
                     points1 += match1.points;
                     points2 += match2.points;
