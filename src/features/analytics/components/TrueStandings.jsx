@@ -83,6 +83,8 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
 
     }, [seasonMatchups, rosters, userById, loading]);
 
+    const [showTooltip, setShowTooltip] = import('react').useState(false);
+
     if (loading) return <div className="p-4 text-center text-gray-400">Loading True Standings...</div>;
     if (error) return <div className="p-4 text-center text-red-400">Failed to load data</div>;
 
@@ -96,17 +98,27 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                 <table className="w-full text-sm text-left text-slate-300">
                     <thead className="text-xs text-slate-400 uppercase bg-slate-800">
                         <tr>
-                            <th className="px-4 py-3">Team</th>
-                            <th className="px-4 py-3 text-center">Actual</th>
-                            <th className="px-4 py-3 text-center">All-Play</th>
-                            <th className="px-4 py-3 text-center group relative cursor-help">
+                            <th className="px-2 sm:px-4 py-3">Team</th>
+                            <th className="px-2 sm:px-4 py-3 text-center">
+                                <span className="md:hidden">Rec</span>
+                                <span className="hidden md:inline">Actual</span>
+                            </th>
+                            <th className="px-2 sm:px-4 py-3 text-center">
+                                <span className="md:hidden">AP</span>
+                                <span className="hidden md:inline">All-Play</span>
+                            </th>
+                            <th
+                                className="px-2 sm:px-4 py-3 text-center group relative cursor-help"
+                                onClick={() => setShowTooltip(!showTooltip)}
+                            >
                                 <div className="flex items-center justify-center gap-1">
-                                    Luck Index (Wins)
+                                    <span className="md:hidden">Luck</span>
+                                    <span className="hidden md:inline">Luck Index (Wins)</span>
                                     <span className="text-slate-500">?</span>
                                 </div>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity w-48 pointer-events-none z-10 border border-slate-700">
+                                <div className={`absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl transition-opacity w-48 z-10 border border-slate-700 ${showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100'}`}>
                                     Difference between Actual Wins and Expected Wins (based on All-Play record).
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                                    <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-900"></div>
                                 </div>
                             </th>
                         </tr>
@@ -114,13 +126,13 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                     <tbody>
                         {stats.map((team, idx) => (
                             <tr key={team.rosterId} className="border-b border-slate-700 hover:bg-slate-700/50">
-                                <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
-                                    <img src={team.avatar} alt="" className="w-6 h-6 rounded-full" />
-                                    {team.name}
+                                <td className="px-2 sm:px-4 py-3 font-medium text-white flex items-center gap-2">
+                                    <img src={team.avatar} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
+                                    <span className="truncate max-w-[100px] sm:max-w-none">{team.name}</span>
                                 </td>
-                                <td className="px-4 py-3 text-center">{team.actualRecord}</td>
-                                <td className="px-4 py-3 text-center">{team.allPlayRecord}</td>
-                                <td className={`px-4 py-3 text-center font-bold ${parseFloat(team.luckIndex) > 0 ? 'text-green-400' : parseFloat(team.luckIndex) < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                <td className="px-2 sm:px-4 py-3 text-center">{team.actualRecord}</td>
+                                <td className="px-2 sm:px-4 py-3 text-center">{team.allPlayRecord}</td>
+                                <td className={`px-2 sm:px-4 py-3 text-center font-bold ${parseFloat(team.luckIndex) > 0 ? 'text-green-400' : parseFloat(team.luckIndex) < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                                     {parseFloat(team.luckIndex) > 0 ? '+' : ''}{team.luckIndex}
                                 </td>
                             </tr>
