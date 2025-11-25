@@ -5,37 +5,10 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
     const playerValues = useMemo(() => {
         if (!seasonMatchups || !currentWeek) return {};
 
-        const values = {}; // playerId -> { totalPoints, games, avg }
+        const valuesV2 = {};
         const startWeek = Math.max(1, currentWeek - 5);
         const endWeek = Math.max(1, currentWeek - 1);
 
-        // Iterate through relevant weeks
-        for (let w = startWeek; w <= endWeek; w++) {
-            const weekMatchups = seasonMatchups[w];
-            if (!weekMatchups) continue;
-
-            weekMatchups.forEach(matchup => {
-                matchup.starters.forEach((playerId, idx) => {
-                    if (playerId === "0") return;
-                    const points = matchup.starters_points[idx];
-                    if (!values[playerId]) values[playerId] = { totalPoints: 0, games: 0 };
-                    values[playerId].totalPoints += points;
-                    values[playerId].games += 1;
-                });
-                // Also check bench if available? Sleeper matchups usually only have starters points.
-                // If we want bench points, we might need players' stats API, but user said "use matchups".
-                // Sleeper matchups endpoint includes 'players_points' dictionary for ALL players on roster!
-                if (matchup.players_points) {
-                    Object.entries(matchup.players_points).forEach(([playerId, points]) => {
-                        // If we already processed this player as a starter, don't double count?
-                        // Actually, 'players_points' covers everyone. Let's use that instead of starters loop.
-                    });
-                }
-            });
-        }
-
-        // Re-do using players_points for accuracy
-        const valuesV2 = {};
         for (let w = startWeek; w <= endWeek; w++) {
             const weekMatchups = seasonMatchups[w];
             if (!weekMatchups) continue;
@@ -68,20 +41,34 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
 
         // Helper to get valid positions
         const validPositions = ['QB', 'RB', 'WR', 'TE'];
-        const rosterPositions = league.roster_positions.filter(p => validPositions.includes(p));
+
+        // Dynasty Mode: Classify Teams
+        const allPPTS = rosters.map(r => r.settings?.ppts || 0).sort((a, b) => b - a);
+        const contenderThreshold = allPPTS[3] || 0; // Top 4
+        const rebuilderThreshold = allPPTS[Math.max(0, allPPTS.length - 4)] || 0; // Bottom 4
 
         rosters.forEach(roster => {
+            // Dynasty Status
+            const ppts = roster.settings?.ppts || 0;
+            let status = 'Neutral';
+            if (ppts >= contenderThreshold) status = 'Contender';
+            else if (ppts <= rebuilderThreshold) status = 'Rebuilder';
+
             // Get all players with their values
             const rosterPlayers = (roster.players || [])
-                .map(pid => ({
-                    id: pid,
-                    ...players[pid],
-                    value: playerValues[pid] || 0
-                }))
+                .map(pid => {
+                    const nickname = roster.metadata?.[`p_nick_${pid}`];
+                    const isOTB = nickname && nickname.toUpperCase().includes('OTB');
+                    return {
+                        id: pid,
+                        ...players[pid],
+                        value: playerValues[pid] || 0,
+                        isOTB
+                    };
+                })
                 .sort((a, b) => b.value - a.value);
 
             // Determine "Starters" based on league settings (simplified)
-            // We'll just take top N players for each position based on roster slots
             const starters = { QB: [], RB: [], WR: [], TE: [] };
             const bench = [];
 
@@ -99,10 +86,6 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             // Assign starters
             rosterPlayers.forEach(p => {
                 if (validPositions.includes(p.position)) {
-                    // Simple logic: if we have "slots" left, they are a starter
-                    // Note: This is an approximation. FLEX handling is tricky.
-                    // Let's just take the top X players per position where X is roughly the number of starters.
-                    // E.g. 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX -> Top 1 QB, Top 3 RB, Top 3 WR, Top 1 TE (generous)
                     const limit = Math.ceil(slots[p.position] || 1);
                     if (starters[p.position].length < limit) {
                         starters[p.position].push(p);
@@ -124,9 +107,11 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             analysis[roster.roster_id] = {
                 rosterId: roster.roster_id,
                 ownerId: roster.owner_id,
+                status, // Contender / Rebuilder / Neutral
                 strengths,
                 starters,
                 bench,
+                rosterPlayers, // All players for easy access
                 needs: [],
                 surplus: []
             };
@@ -150,7 +135,6 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             });
 
             // Surplus: Bench players performing like average starters
-            // Avg starter value for this position across league
             validPositions.forEach(pos => {
                 const avgStarterVal = leaguePositionScores[pos].reduce((a, b) => a + b, 0) / leaguePositionScores[pos].length;
                 const surplusPlayers = team.bench.filter(p => p.position === pos && p.value >= avgStarterVal);
@@ -177,39 +161,91 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         Object.values(teamAnalysis).forEach(opponent => {
             if (opponent.rosterId === focusRosterId) return;
 
-            const mutualNeeds = []; // Opponent has surplus in Focus Need
-            const mutualSurplus = []; // Opponent needs Focus Surplus
+            let score = 0;
+            const mutualNeeds = [];
+            const mutualSurplus = [];
+            const benchUpgrades = [];
+            const dynastySuggestions = [];
 
-            // Check if Opponent has what Focus needs
+            // 1. Needs Matching
             focusTeam.needs.forEach(needPos => {
                 const surplus = opponent.surplus.find(s => s.position === needPos);
                 if (surplus) {
-                    mutualNeeds.push({
-                        position: needPos,
-                        assets: surplus.players
-                    });
+                    mutualNeeds.push({ position: needPos, assets: surplus.players });
+                    score += 50;
                 }
             });
 
-            // Check if Focus has what Opponent needs
             opponent.needs.forEach(needPos => {
                 const surplus = focusTeam.surplus.find(s => s.position === needPos);
                 if (surplus) {
-                    mutualSurplus.push({
-                        position: needPos,
-                        assets: surplus.players
-                    });
+                    mutualSurplus.push({ position: needPos, assets: surplus.players });
+                    score += 50; // Perfect match bonus
                 }
             });
 
-            if (mutualNeeds.length > 0) {
-                const isPerfect = mutualSurplus.length > 0;
+            // 2. Bench Upgrade Detector
+            opponent.bench.forEach(player => {
+                const myStarters = focusTeam.starters[player.position];
+                if (!myStarters || myStarters.length === 0) return;
+
+                // Find worst starter
+                const worstStarter = [...myStarters].sort((a, b) => a.value - b.value)[0];
+
+                if (player.value > worstStarter.value) {
+                    benchUpgrades.push({
+                        player,
+                        upgradeOver: worstStarter,
+                        diff: player.value - worstStarter.value
+                    });
+                    score += 20; // Upgrade bonus
+                }
+            });
+
+            // 3. OTB Scanner Bonus
+            const otbPlayers = opponent.rosterPlayers.filter(p => p.isOTB);
+            otbPlayers.forEach(p => {
+                // If OTB player matches a need, big bonus
+                if (focusTeam.needs.includes(p.position)) {
+                    score += 30;
+                }
+            });
+
+            // 4. Dynasty Logic
+            if (focusTeam.status === 'Contender' && opponent.status === 'Rebuilder') {
+                // Look for Vets on Opponent
+                const vets = opponent.rosterPlayers.filter(p => p.age >= 27 && (p.position === 'RB' || p.position === 'WR') || p.age >= 30);
+                if (vets.length > 0) {
+                    dynastySuggestions.push({
+                        type: 'Win-Now Move',
+                        message: `History suggests ${opponent.status} teams want to move veterans.`,
+                        assets: vets
+                    });
+                    score += 10;
+                }
+            } else if (focusTeam.status === 'Rebuilder' && opponent.status === 'Contender') {
+                // Look for Youth on Opponent
+                const youth = opponent.rosterPlayers.filter(p => p.age < 25);
+                if (youth.length > 0) {
+                    dynastySuggestions.push({
+                        type: 'Rebuild Move',
+                        message: `Contenders often trade youth for immediate production.`,
+                        assets: youth
+                    });
+                    score += 10;
+                }
+            }
+
+            if (score > 0) {
                 matches.push({
                     opponent,
-                    type: isPerfect ? 'Perfect Match' : 'One-Way Match',
-                    score: isPerfect ? 100 : 50,
-                    receiving: mutualNeeds, // What Focus gets
-                    giving: mutualSurplus // What Focus gives
+                    type: mutualSurplus.length > 0 ? 'Perfect Match' : 'Potential Partner',
+                    score,
+                    receiving: mutualNeeds,
+                    giving: mutualSurplus,
+                    benchUpgrades,
+                    dynastySuggestions,
+                    otbPlayers
                 });
             }
         });

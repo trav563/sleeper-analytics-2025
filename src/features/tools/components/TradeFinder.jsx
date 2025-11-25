@@ -120,6 +120,9 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {matches.map((match, idx) => {
                             const opponentUser = getOwner(match.opponent.rosterId);
+                            const statusColor = match.opponent.status === 'Contender' ? 'text-green-400 bg-green-400/10' :
+                                match.opponent.status === 'Rebuilder' ? 'text-orange-400 bg-orange-400/10' : 'text-slate-400 bg-slate-400/10';
+
                             return (
                                 <div key={match.opponent.rosterId} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors">
                                     <div className="p-4 border-b border-slate-700 flex justify-between items-start">
@@ -130,7 +133,12 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                                 className="w-10 h-10 rounded-full"
                                             />
                                             <div>
-                                                <h4 className="font-bold text-white">{displayTeamName(opponentUser)}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-bold text-white">{displayTeamName(opponentUser)}</h4>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider ${statusColor}`}>
+                                                        {match.opponent.status}
+                                                    </span>
+                                                </div>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${match.type === 'Perfect Match' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'}`}>
                                                     {match.type}
                                                 </span>
@@ -139,6 +147,43 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                     </div>
 
                                     <div className="p-4 space-y-4">
+                                        {/* Dynasty Insights */}
+                                        {match.dynastySuggestions && match.dynastySuggestions.length > 0 && (
+                                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3">
+                                                <p className="text-xs font-bold text-indigo-300 mb-1 flex items-center gap-1">
+                                                    <RefreshCw className="w-3 h-3" /> Dynasty Insight
+                                                </p>
+                                                {match.dynastySuggestions.map((s, i) => (
+                                                    <div key={i}>
+                                                        <p className="text-xs text-indigo-200 mb-1">{s.message}</p>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {s.assets.map(p => (
+                                                                <span key={p.id} className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
+                                                                    {p.full_name} ({p.age}yo)
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Bench Upgrades (Hidden Gems) */}
+                                        {match.benchUpgrades && match.benchUpgrades.length > 0 && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                                                <p className="text-xs font-bold text-emerald-300 mb-2 flex items-center gap-1">
+                                                    💎 Hidden Gems (Bench Upgrades)
+                                                </p>
+                                                <div className="space-y-1">
+                                                    {match.benchUpgrades.map((upgrade, i) => (
+                                                        <div key={i} className="text-xs text-emerald-100">
+                                                            Start <span className="font-bold text-white">{upgrade.player.full_name}</span> <span className="text-emerald-400">(+{upgrade.diff.toFixed(1)})</span> over {upgrade.upgradeOver.full_name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* They Have (Target) */}
                                         <div>
                                             <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (Their Surplus)</p>
@@ -146,9 +191,12 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                                 {match.receiving.map(item => (
                                                     <div key={item.position} className="flex flex-wrap gap-2">
                                                         {item.assets.map(player => (
-                                                            <div key={player.id} className="flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3">
+                                                            <div key={player.id} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
                                                                 <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
-                                                                <span className="text-sm text-white">{player.full_name || player.first_name + ' ' + player.last_name}</span>
+                                                                <span className="text-sm text-white">
+                                                                    {player.full_name || player.first_name + ' ' + player.last_name}
+                                                                    {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
+                                                                </span>
                                                                 <span className="text-xs text-green-400 ml-auto">{player.value.toFixed(1)} ppg</span>
                                                             </div>
                                                         ))}
