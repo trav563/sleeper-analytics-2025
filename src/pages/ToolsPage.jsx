@@ -14,6 +14,7 @@ const ToolsPage = () => {
                 rosters={rosters}
                 users={users}
                 players={players}
+                league={league}
             />
             <DraftAnalysis
                 league={league}
