@@ -109,3 +109,12 @@ export const fetchLeagueTransactions = async (leagueId, round) => {
     const timestamp = Date.now();
     return fetchSleeper(`/league/${leagueId}/transactions/${round}?_=${timestamp}`);
 };
+
+/**
+ * Fetch NFL stats for a specific season (regular season)
+ * @param {string} season - e.g., '2024'
+ */
+export const fetchSeasonStats = async (season) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/stats/nfl/regular/${season}?_=${timestamp}`);
+};

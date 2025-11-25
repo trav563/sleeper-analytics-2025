@@ -1,34 +1,41 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { fetchDraftPicks } from '../../../utils/sleeper';
-import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
-import { usePlayerStats } from '../hooks/usePlayerStats';
+import { useLeagueHistory } from '../../league/hooks/useLeagueHistory';
+import { useCareerStats } from '../../stats/hooks/useCareerStats';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { User, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
+    const [selectedSeason, setSelectedSeason] = useState(null);
     const [picks, setPicks] = useState([]);
     const [loadingDraft, setLoadingDraft] = useState(false);
     const [selectedRosterId, setSelectedRosterId] = useState(null);
-    const { seasonMatchups, loading: loadingMatchups } = useSeasonMatchups(league?.league_id, currentWeek);
-    const playerStats = usePlayerStats(seasonMatchups);
 
-    const [hoveredPoint, setHoveredPoint] = useState(null);
+    // 1. League History Traversal
+    const { history, loading: loadingHistory } = useLeagueHistory(league?.league_id);
 
-    // Initialize selected roster
+    // Initialize selected season to current
     useEffect(() => {
-        if (!selectedRosterId && rosters && rosters.length > 0) {
-            setSelectedRosterId(rosters[0].roster_id);
+        if (league?.season && !selectedSeason) {
+            setSelectedSeason(league.season);
         }
-    }, [rosters, selectedRosterId]);
+    }, [league, selectedSeason]);
 
-    // Fetch Draft Data
+    // Get active league ID/Draft ID for selected season
+    const activeLeagueData = useMemo(() => {
+        if (!history || !selectedSeason) return null;
+        return history.find(h => h.season === selectedSeason) ||
+            (league?.season === selectedSeason ? { league_id: league.league_id, draft_id: league.draft_id } : null);
+    }, [history, selectedSeason, league]);
+
+    // 2. Fetch Draft Data for Selected Season
     useEffect(() => {
         async function loadDraft() {
-            if (!league?.draft_id) return;
+            if (!activeLeagueData?.draft_id) return;
             setLoadingDraft(true);
             try {
-                const data = await fetchDraftPicks(league.draft_id);
+                const data = await fetchDraftPicks(activeLeagueData.draft_id);
                 setPicks(data);
             } catch (e) {
                 console.error("Failed to load draft picks", e);
@@ -37,22 +44,36 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
             }
         }
         loadDraft();
-    }, [league]);
+    }, [activeLeagueData]);
+
+    // 3. Fetch Career Stats (From Selected Season to Current)
+    // Assuming current season is 2025 (or whatever league.season is)
+    const currentSeason = league?.season || '2025';
+    const { careerStats, loading: loadingStats } = useCareerStats(selectedSeason, currentSeason);
+
+    // Initialize selected roster
+    useEffect(() => {
+        if (!selectedRosterId && rosters && rosters.length > 0) {
+            setSelectedRosterId(rosters[0].roster_id);
+        }
+    }, [rosters, selectedRosterId]);
+
+    const [hoveredPoint, setHoveredPoint] = useState(null);
 
     // Calculate Max Points in the Draft Class for Expected Value Model
     const maxDraftPoints = useMemo(() => {
-        if (!picks || !playerStats) return 0;
+        if (!picks || !careerStats) return 0;
         let max = 0;
         picks.forEach(p => {
-            const stat = playerStats[p.player_id];
+            const stat = careerStats[p.player_id];
             if (stat && stat.totalPoints > max) max = stat.totalPoints;
         });
         return max;
-    }, [picks, playerStats]);
+    }, [picks, careerStats]);
 
     // Process Data for Selected Team
     const { chartData, curveData, summary } = useMemo(() => {
-        if (!picks || !playerStats || !players || !selectedRosterId || maxDraftPoints === 0) {
+        if (!picks || !careerStats || !players || !selectedRosterId || maxDraftPoints === 0) {
             return { chartData: [], curveData: [], summary: { wins: 0, solid: 0, busts: 0 } };
         }
 
@@ -61,28 +82,25 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
 
         const processedPicks = teamPicks.map(pick => {
             const pid = pick.player_id;
-            const stat = playerStats[pid];
+            const stat = careerStats[pid];
             const player = players[pid];
 
             if (!stat || !player) return null;
 
             // Expected Value Model: Max * (1 / (ln(Pick) + 1))
-            // Adding 1 to pick_no to avoid log(0) issues if pick is 0 (though usually 1-based)
-            // Using Math.log (natural log)
+            // Using actual max points from this class to set the curve height
             const expected = maxDraftPoints * (1 / (Math.log(pick.pick_no) + 1));
 
             const diff = stat.totalPoints - expected;
             const roi = expected > 0 ? diff / expected : 0;
 
+            // Dynamic Tiers based on Class Trendline
             let tier = 'Solid';
             if (roi > 0.2) { tier = 'Winner'; wins++; }
             else if (roi < -0.2) { tier = 'Bust'; busts++; }
             else { solid++; }
 
-            // Check if still on team
-            // We need to check the current roster of the player.
-            // Since we don't have easy access to "current roster of every player" without iterating all rosters,
-            // let's check if this player ID is in the selected roster's player list.
+            // Check if still on team (using current rosters)
             const currentRoster = rosters.find(r => r.roster_id === selectedRosterId);
             const isOnTeam = currentRoster?.players?.includes(pid);
 
@@ -102,40 +120,31 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
 
         // Generate Curve Data for Background
         const curve = [];
-        const maxPick = Math.max(...picks.map(p => p.pick_no), 50); // At least 50
+        const maxPick = Math.max(...picks.map(p => p.pick_no), 50);
         for (let i = 1; i <= maxPick; i++) {
             const exp = maxDraftPoints * (1 / (Math.log(i) + 1));
             curve.push({
                 pickNo: i,
                 expected: exp,
-                upper: exp * 1.2, // Top of Solid Zone
-                lower: exp * 0.8  // Bottom of Solid Zone
+                upper: exp * 1.2, // Top of Solid Zone (+20%)
+                lower: exp * 0.8  // Bottom of Solid Zone (-20%)
             });
         }
 
         return { chartData: processedPicks, curveData: curve, summary: { wins, solid, busts } };
 
-    }, [picks, playerStats, players, selectedRosterId, maxDraftPoints, rosters]);
+    }, [picks, careerStats, players, selectedRosterId, maxDraftPoints, rosters]);
 
     const getOwner = (rosterId) => users.find(u => u.user_id === rosters.find(r => r.roster_id === rosterId)?.owner_id);
     const selectedOwner = getOwner(selectedRosterId);
 
-    if (loadingDraft || loadingMatchups) return <div className="p-8 text-center text-gray-400">Loading GM Performance...</div>;
-
-
+    if (loadingDraft || loadingStats || loadingHistory) return <div className="p-8 text-center text-gray-400">Loading GM Performance...</div>;
 
     // Custom Shape for Scatter
     const CustomShape = (props) => {
         const { cx, cy, fill, payload, onMouseEnter, onMouseLeave } = props;
-
-        // We need to pass the event handlers to the shape so they trigger
-        const handleMouseEnter = (e) => {
-            onMouseEnter && onMouseEnter({ ...props, cx, cy }, e);
-        };
-
-        const handleMouseLeave = (e) => {
-            onMouseLeave && onMouseLeave(e);
-        };
+        const handleMouseEnter = (e) => onMouseEnter && onMouseEnter({ ...props, cx, cy }, e);
+        const handleMouseLeave = (e) => onMouseLeave && onMouseLeave(e);
 
         if (payload.isOnTeam) {
             return <circle cx={cx} cy={cy} r={6} fill={fill} stroke="none" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
@@ -155,9 +164,26 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                     <p className="text-sm text-slate-400">Draft ROI analysis vs League Expectation.</p>
                 </div>
 
-                <div className="w-full md:w-64">
+                <div className="flex gap-3 w-full md:w-auto">
+                    {/* Year Selector */}
                     <select
-                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={selectedSeason || ''}
+                        onChange={(e) => setSelectedSeason(e.target.value)}
+                        disabled={loadingHistory}
+                    >
+                        {history.map(h => (
+                            <option key={h.season} value={h.season}>{h.season} Class</option>
+                        ))}
+                        {/* Fallback if history empty but current league exists */}
+                        {!history.find(h => h.season === league?.season) && league?.season && (
+                            <option value={league.season}>{league.season} Class</option>
+                        )}
+                    </select>
+
+                    {/* Team Selector */}
+                    <select
+                        className="bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none md:w-64"
                         value={selectedRosterId || ''}
                         onChange={(e) => setSelectedRosterId(Number(e.target.value))}
                     >
@@ -206,7 +232,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                                 dataKey="points"
                                 name="Points"
                                 stroke="#94a3b8"
-                                label={{ value: 'Career Points', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
+                                label={{ value: 'Career Points (PPR)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
                             />
 
                             {/* Zones */}
@@ -275,7 +301,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                             style={{
                                 left: hoveredPoint.cx,
                                 top: hoveredPoint.cy,
-                                transform: 'translate(-50%, -110%)' // Center horizontally, move above dot
+                                transform: 'translate(-50%, -110%)'
                             }}
                         >
                             <div className="flex items-center gap-2 mb-2">
@@ -289,7 +315,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                                     <span className="text-slate-500">Draft:</span> R{hoveredPoint.payload.round} • Pick {hoveredPoint.payload.draftSlot} (Ov {hoveredPoint.payload.pickNo})
                                 </p>
                                 <p className="text-slate-300">
-                                    <span className="text-slate-500">Points:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Exp: {hoveredPoint.payload.expected.toFixed(1)}</span>
+                                    <span className="text-slate-500">Career Pts:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Exp: {hoveredPoint.payload.expected.toFixed(1)}</span>
                                 </p>
                             </div>
 
