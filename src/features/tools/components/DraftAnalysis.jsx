@@ -120,57 +120,25 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
 
     if (loadingDraft || loadingMatchups) return <div className="p-8 text-center text-gray-400">Loading GM Performance...</div>;
 
-    const CustomTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            // Recharts might pass curve data or scatter data. We only want scatter tooltip.
-            // Scatter data has 'name' property.
-            const data = payload.find(p => p.dataKey === 'points')?.payload;
-
-            if (!data) return null;
-
-            return (
-                <div className="bg-slate-800 border border-slate-700 p-3 rounded shadow-lg text-xs z-50">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className={`w-2 h-2 rounded-full ${data.tier === 'Winner' ? 'bg-green-400' : data.tier === 'Bust' ? 'bg-red-400' : 'bg-slate-400'}`} />
-                        <span className="font-bold text-white text-sm">{data.name}</span>
-                        <span className="text-slate-400">({data.position})</span>
-                    </div>
-
-                    <div className="space-y-1 mb-2">
-                        <p className="text-slate-300">
-                            <span className="text-slate-500">Draft:</span> R{data.round} • Pick {data.draftSlot} (Ov {data.pickNo})
-                        </p>
-                        <p className="text-slate-300">
-                            <span className="text-slate-500">Points:</span> {data.points.toFixed(1)} <span className="text-slate-600">/ Exp: {data.expected.toFixed(1)}</span>
-                        </p>
-                    </div>
-
-                    <div className={`font-bold text-center py-1 rounded ${data.tier === 'Winner' ? 'bg-green-500/20 text-green-400' :
-                        data.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
-                            'bg-slate-500/20 text-slate-300'
-                        }`}>
-                        {data.tier === 'Winner' ? `✅ STEAL (+${(data.roi * 100).toFixed(0)}% ROI)` :
-                            data.tier === 'Bust' ? `❌ BUST (${(data.roi * 100).toFixed(0)}% ROI)` :
-                                `⚖️ SOLID (Fair Value)`}
-                    </div>
-
-                    {!data.isOnTeam && (
-                        <p className="text-[10px] text-slate-500 mt-1 italic text-center">No longer on roster</p>
-                    )}
-                </div>
-            );
-        }
-        return null;
-    };
+    const [hoveredPoint, setHoveredPoint] = useState(null);
 
     // Custom Shape for Scatter
     const CustomShape = (props) => {
-        const { cx, cy, fill, payload } = props;
+        const { cx, cy, fill, payload, onMouseEnter, onMouseLeave } = props;
+
+        // We need to pass the event handlers to the shape so they trigger
+        const handleMouseEnter = (e) => {
+            onMouseEnter && onMouseEnter({ ...props, cx, cy }, e);
+        };
+
+        const handleMouseLeave = (e) => {
+            onMouseLeave && onMouseLeave(e);
+        };
 
         if (payload.isOnTeam) {
-            return <circle cx={cx} cy={cy} r={6} fill={fill} stroke="none" />;
+            return <circle cx={cx} cy={cy} r={6} fill={fill} stroke="none" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
         } else {
-            return <circle cx={cx} cy={cy} r={5} fill="transparent" stroke={fill} strokeWidth={2} />;
+            return <circle cx={cx} cy={cy} r={5} fill="transparent" stroke={fill} strokeWidth={2} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
         }
     };
 
@@ -200,7 +168,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                 </div>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 relative">
                 <div className="flex items-center gap-4 mb-6">
                     <img
                         src={avatarUrl(selectedOwner?.avatar)}
@@ -219,7 +187,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                     </div>
                 </div>
 
-                <div className="h-96 w-full">
+                <div className="h-96 w-full relative">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
@@ -238,7 +206,6 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                                 stroke="#94a3b8"
                                 label={{ value: 'Career Points', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
                             />
-                            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
 
                             {/* Zones */}
                             <Area
@@ -277,7 +244,13 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                             />
 
                             {/* Players */}
-                            <Scatter name="Players" data={chartData} shape={<CustomShape />}>
+                            <Scatter
+                                name="Players"
+                                data={chartData}
+                                shape={<CustomShape />}
+                                onMouseEnter={(props) => setHoveredPoint(props)}
+                                onMouseLeave={() => setHoveredPoint(null)}
+                            >
                                 {chartData.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
@@ -292,6 +265,46 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                             </Scatter>
                         </ComposedChart>
                     </ResponsiveContainer>
+
+                    {/* Manual Tooltip */}
+                    {hoveredPoint && (
+                        <div
+                            className="absolute bg-slate-800 border border-slate-700 p-3 rounded shadow-lg text-xs z-50 pointer-events-none w-48"
+                            style={{
+                                left: hoveredPoint.cx,
+                                top: hoveredPoint.cy,
+                                transform: 'translate(-50%, -110%)' // Center horizontally, move above dot
+                            }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-2 h-2 rounded-full ${hoveredPoint.payload.tier === 'Winner' ? 'bg-green-400' : hoveredPoint.payload.tier === 'Bust' ? 'bg-red-400' : 'bg-slate-400'}`} />
+                                <span className="font-bold text-white text-sm truncate">{hoveredPoint.payload.name}</span>
+                                <span className="text-slate-400">({hoveredPoint.payload.position})</span>
+                            </div>
+
+                            <div className="space-y-1 mb-2">
+                                <p className="text-slate-300">
+                                    <span className="text-slate-500">Draft:</span> R{hoveredPoint.payload.round} • Pick {hoveredPoint.payload.draftSlot} (Ov {hoveredPoint.payload.pickNo})
+                                </p>
+                                <p className="text-slate-300">
+                                    <span className="text-slate-500">Points:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Exp: {hoveredPoint.payload.expected.toFixed(1)}</span>
+                                </p>
+                            </div>
+
+                            <div className={`font-bold text-center py-1 rounded ${hoveredPoint.payload.tier === 'Winner' ? 'bg-green-500/20 text-green-400' :
+                                    hoveredPoint.payload.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-slate-500/20 text-slate-300'
+                                }`}>
+                                {hoveredPoint.payload.tier === 'Winner' ? `✅ STEAL (+${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
+                                    hoveredPoint.payload.tier === 'Bust' ? `❌ BUST (${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
+                                        `⚖️ SOLID (Fair Value)`}
+                            </div>
+
+                            {!hoveredPoint.payload.isOnTeam && (
+                                <p className="text-[10px] text-slate-500 mt-1 italic text-center">No longer on roster</p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-center gap-6 mt-4 text-xs text-slate-400">
