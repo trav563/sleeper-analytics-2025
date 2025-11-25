@@ -20,6 +20,8 @@ const ToolsPage = () => {
                 league={league}
                 currentWeek={currentWeek}
                 players={players}
+                users={users}
+                rosters={rosters}
             />
         </div>
     );
