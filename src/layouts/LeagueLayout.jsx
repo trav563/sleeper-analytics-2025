@@ -103,6 +103,7 @@ const LeagueLayout = () => {
                 players,
                 user,
                 state,
+                currentWeek: state?.display_week || state?.week || state?.leg,
                 matchups,
                 transactions, // Pass transactions to child routes
                 loading,
