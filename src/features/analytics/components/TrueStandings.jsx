@@ -99,7 +99,16 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                             <th className="px-4 py-3">Team</th>
                             <th className="px-4 py-3 text-center">Actual</th>
                             <th className="px-4 py-3 text-center">All-Play</th>
-                            <th className="px-4 py-3 text-center">Luck Index (Wins)</th>
+                            <th className="px-4 py-3 text-center group relative cursor-help">
+                                <div className="flex items-center justify-center gap-1">
+                                    Luck Index (Wins)
+                                    <span className="text-slate-500">?</span>
+                                </div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity w-48 pointer-events-none z-10 border border-slate-700">
+                                    Difference between Actual Wins and Expected Wins (based on All-Play record).
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>

@@ -116,6 +116,7 @@ const AnalyticsPage = () => {
                     players={players}
                     userRosterId={selectedRosterId}
                     opponentRosterId={comparisonMode === 'h2h' ? opponentRosterId : null}
+                    opponentTeamName={comparisonMode === 'h2h' ? displayTeamName(opponentUser) : null}
                     users={users}
                 />
             </div>
