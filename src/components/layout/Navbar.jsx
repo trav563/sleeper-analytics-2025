@@ -1,13 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
 import { avatarUrl } from '../../utils/nflData';
-import { Trophy, User, BarChart2, History, Wrench, Users } from 'lucide-react';
+import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
     const { user, leagues, getLeagues } = useSleeper();
     const location = useLocation();
     const navigate = useNavigate();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Robustly extract leagueId from URL regardless of route nesting
     const leagueIdMatch = location.pathname.match(/\/league\/(\d+)/);
@@ -19,12 +20,18 @@ const Navbar = () => {
         }
     }, [user, leagues.length, getLeagues]);
 
+    // Close mobile menu when location changes
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [location]);
+
     const isActive = (path) => location.pathname.includes(path);
 
     const handleLeagueSwitch = (e) => {
         const newLeagueId = e.target.value;
         if (newLeagueId) {
             navigate(`/league/${newLeagueId}`);
+            setIsMobileMenuOpen(false);
         }
     };
 
@@ -78,17 +85,129 @@ const Navbar = () => {
                         )}
                     </div>
 
+                    <div className="flex items-center gap-4">
+                        {user && (
+                            <div className="hidden md:flex items-center space-x-6">
+                                {/* League Switcher */}
+                                {leagues.length > 0 && (
+                                    <div className="hidden sm:block">
+                                        <select
+                                            value={leagueId || ''}
+                                            onChange={handleLeagueSwitch}
+                                            className="bg-slate-700 text-white text-sm rounded-lg border-slate-600 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                        >
+                                            <option value="" disabled>Switch League</option>
+                                            {leagues.map((league) => (
+                                                <option key={league.league_id} value={league.league_id}>
+                                                    {league.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center space-x-3">
+                                    <div className="hidden sm:block text-right">
+                                        <p className="text-sm font-medium text-white">{user.display_name}</p>
+                                        <p className="text-xs text-slate-400">@{user.username}</p>
+                                    </div>
+                                    {user.avatar ? (
+                                        <img
+                                            src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
+                                            alt={user.username}
+                                            className="h-10 w-10 rounded-full border-2 border-blue-500 shadow-md hover:border-blue-400 transition-colors"
+                                        />
+                                    ) : (
+                                        <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600">
+                                            <User className="h-6 w-6 text-slate-400" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mobile Menu Button */}
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="md:hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none"
+                        >
+                            {isMobileMenuOpen ? (
+                                <X className="h-6 w-6" />
+                            ) : (
+                                <Menu className="h-6 w-6" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Menu */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden bg-slate-800 border-t border-slate-700 px-2 pt-2 pb-3 space-y-1 shadow-lg animate-fade-in">
+                    {leagueId && (
+                        <>
+                            <Link
+                                to={`/league/${leagueId}/lineup`}
+                                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('lineup') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                            >
+                                <Users className="w-5 h-5" />
+                                Lineup
+                            </Link>
+                            <Link
+                                to={`/league/${leagueId}/analytics`}
+                                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('analytics') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                            >
+                                <BarChart2 className="w-5 h-5" />
+                                Analytics
+                            </Link>
+                            <Link
+                                to={`/league/${leagueId}/history`}
+                                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('history') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                            >
+                                <History className="w-5 h-5" />
+                                History
+                            </Link>
+                            <Link
+                                to={`/league/${leagueId}/tools`}
+                                className={`block px-3 py-2 rounded-md text-base font-medium flex items-center gap-2 ${isActive('tools') ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                            >
+                                <Wrench className="w-5 h-5" />
+                                Tools
+                            </Link>
+                        </>
+                    )}
+
                     {user && (
-                        <div className="flex items-center space-x-6">
-                            {/* League Switcher */}
+                        <div className="pt-4 pb-3 border-t border-slate-700">
+                            <div className="flex items-center px-3 mb-3">
+                                <div className="flex-shrink-0">
+                                    {user.avatar ? (
+                                        <img
+                                            src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
+                                            alt={user.username}
+                                            className="h-10 w-10 rounded-full border-2 border-blue-500"
+                                        />
+                                    ) : (
+                                        <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600">
+                                            <User className="h-6 w-6 text-slate-400" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="ml-3">
+                                    <div className="text-base font-medium leading-none text-white">{user.display_name}</div>
+                                    <div className="text-sm font-medium leading-none text-slate-400 mt-1">@{user.username}</div>
+                                </div>
+                            </div>
+
                             {leagues.length > 0 && (
-                                <div className="hidden sm:block">
+                                <div className="px-3">
+                                    <label className="block text-xs text-slate-400 uppercase tracking-wider mb-1">Switch League</label>
                                     <select
                                         value={leagueId || ''}
                                         onChange={handleLeagueSwitch}
                                         className="bg-slate-700 text-white text-sm rounded-lg border-slate-600 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                     >
-                                        <option value="" disabled>Switch League</option>
+                                        <option value="" disabled>Select League</option>
                                         {leagues.map((league) => (
                                             <option key={league.league_id} value={league.league_id}>
                                                 {league.name}
@@ -97,28 +216,10 @@ const Navbar = () => {
                                     </select>
                                 </div>
                             )}
-
-                            <div className="flex items-center space-x-3">
-                                <div className="hidden sm:block text-right">
-                                    <p className="text-sm font-medium text-white">{user.display_name}</p>
-                                    <p className="text-xs text-slate-400">@{user.username}</p>
-                                </div>
-                                {user.avatar ? (
-                                    <img
-                                        src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
-                                        alt={user.username}
-                                        className="h-10 w-10 rounded-full border-2 border-blue-500 shadow-md hover:border-blue-400 transition-colors"
-                                    />
-                                ) : (
-                                    <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600">
-                                        <User className="h-6 w-6 text-slate-400" />
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     )}
                 </div>
-            </div>
+            )}
         </nav>
     );
 };

@@ -44,7 +44,7 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek }) => {
     if (!stats) return null;
 
     return (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 flex flex-col items-center justify-center text-center">
                 <Trophy className="w-5 h-5 text-yellow-500 mb-2" />
                 <div className="text-2xl font-bold text-white">#{stats.rank}</div>
