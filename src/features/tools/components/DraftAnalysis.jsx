@@ -13,6 +13,8 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
     const { seasonMatchups, loading: loadingMatchups } = useSeasonMatchups(league?.league_id, currentWeek);
     const playerStats = usePlayerStats(seasonMatchups);
 
+    const [hoveredPoint, setHoveredPoint] = useState(null);
+
     // Initialize selected roster
     useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {
@@ -120,7 +122,7 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
 
     if (loadingDraft || loadingMatchups) return <div className="p-8 text-center text-gray-400">Loading GM Performance...</div>;
 
-    const [hoveredPoint, setHoveredPoint] = useState(null);
+
 
     // Custom Shape for Scatter
     const CustomShape = (props) => {
@@ -292,8 +294,8 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                             </div>
 
                             <div className={`font-bold text-center py-1 rounded ${hoveredPoint.payload.tier === 'Winner' ? 'bg-green-500/20 text-green-400' :
-                                    hoveredPoint.payload.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-slate-500/20 text-slate-300'
+                                hoveredPoint.payload.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-slate-500/20 text-slate-300'
                                 }`}>
                                 {hoveredPoint.payload.tier === 'Winner' ? `✅ STEAL (+${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
                                     hoveredPoint.payload.tier === 'Bust' ? `❌ BUST (${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
