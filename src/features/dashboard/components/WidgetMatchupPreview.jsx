@@ -34,9 +34,11 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
 
         // Smart Projections Logic
         // If viewing history (selectedWeek < currentNFLWeek), show actual points.
-        // If viewing current/future (selectedWeek >= currentNFLWeek), show projected points (Implied Score).
-        const isHistory = week < currentNFLWeek;
-        const isFuture = week >= currentNFLWeek;
+        // If viewing future (selectedWeek > currentNFLWeek), show projected points.
+        // If viewing current week (selectedWeek === currentNFLWeek):
+        //    - If scores are 0 (game likely hasn't started), show projected.
+        //    - If scores exist (game in progress/finished), show actual.
+        const useProjections = week > currentNFLWeek || (week === currentNFLWeek && userScore === 0 && opponentScore === 0);
 
         const userProjected = calculateProjectedScore(userMatchup.starters, seasonMatchups, players);
         const opponentProjected = opponentMatchup ? calculateProjectedScore(opponentMatchup.starters, seasonMatchups, players) : 0;
@@ -95,40 +97,11 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
             opponentName: displayTeamName(opponentUser),
             userRemaining,
             opponentRemaining,
-            isHistory,
-            isFuture
+            useProjections
         };
     }, [week, currentNFLWeek, users, rosters, matchups, selectedUserId, players, gameStatuses, seasonMatchups]);
 
     if (!matchupData) return null;
-
-    // Helper to render score with tooltip if projected
-    const ScoreDisplay = ({ score, projected, label, isFuture }) => {
-        // Show projected if in Future mode.
-        // If in History mode, always show score (even if 0).
-        const displayScore = isFuture ? projected : score;
-        const showProjectedUI = isFuture; // Always show projected UI for future weeks
-
-        return (
-            <div className={label === 'VS' ? '' : 'text-right'}>
-                <div className={`text-3xl font-bold ${showProjectedUI ? 'text-blue-300' : (label === 'My Score' ? 'text-white' : 'text-slate-400')}`}>
-                    {displayScore.toFixed(2)}
-                </div>
-                <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-end">
-                    {label}
-                    {showProjectedUI && (
-                        <div className="group relative">
-                            <Info className="w-3 h-3 text-blue-400 cursor-help" />
-                            <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
-                                Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
-                            </div>
-                        </div>
-                    )}
-                </div>
-                {showProjectedUI && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
-            </div>
-        );
-    };
 
     return (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
@@ -136,12 +109,12 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
 
             <div className="flex justify-between items-end mb-4">
                 <div className="text-left">
-                    <div className={`text-3xl font-bold ${matchupData.isFuture ? 'text-blue-300' : 'text-white'}`}>
-                        {matchupData.isFuture ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
+                    <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-blue-300' : 'text-white'}`}>
+                        {matchupData.useProjections ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
                     </div>
                     <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                         My Score
-                        {matchupData.isFuture && (
+                        {matchupData.useProjections && (
                             <div className="group relative">
                                 <Info className="w-3 h-3 text-blue-400 cursor-help" />
                                 <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
@@ -150,18 +123,18 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
                             </div>
                         )}
                     </div>
-                    {matchupData.isFuture && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
+                    {matchupData.useProjections && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
                 </div>
 
                 <div className="text-sm font-medium text-slate-500 mb-4">VS</div>
 
                 <div className="text-right">
-                    <div className={`text-3xl font-bold ${matchupData.isFuture ? 'text-blue-300' : 'text-slate-400'}`}>
-                        {matchupData.isFuture ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
+                    <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-blue-300' : 'text-slate-400'}`}>
+                        {matchupData.useProjections ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
                     </div>
                     <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-end">
                         {matchupData.opponentName}
-                        {matchupData.isFuture && (
+                        {matchupData.useProjections && (
                             <div className="group relative">
                                 <Info className="w-3 h-3 text-blue-400 cursor-help" />
                                 <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
@@ -170,7 +143,7 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
                             </div>
                         )}
                     </div>
-                    {matchupData.isFuture && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
+                    {matchupData.useProjections && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
                 </div>
             </div>
 
