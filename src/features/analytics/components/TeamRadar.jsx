@@ -103,7 +103,7 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
     return (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
             <h3 className="text-lg font-semibold text-white mb-4">Positional Strength</h3>
-            <div className="h-64 w-full">
+            <div className="h-96 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data} margin={{ top: 0, right: 0, bottom: 30, left: 0 }}>
                         <PolarGrid stroke="#475569" />

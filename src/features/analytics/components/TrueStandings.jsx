@@ -120,11 +120,11 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                                     <span className="text-slate-500">?</span>
                                 </button>
                                 <div
-                                    className={`absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl transition-opacity w-48 z-10 border border-slate-700 ${showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none md:group-hover:opacity-100'}`}
+                                    className={`absolute top-full right-0 mt-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl transition-opacity w-48 z-10 border border-slate-700 ${showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none md:group-hover:opacity-100'}`}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     Difference between Actual Wins and Expected Wins (based on All-Play record).
-                                    <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-900"></div>
+                                    <div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-900"></div>
                                 </div>
                             </th>
                         </tr>
