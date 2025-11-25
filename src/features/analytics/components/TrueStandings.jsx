@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 
@@ -83,7 +83,7 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
 
     }, [seasonMatchups, rosters, userById, loading]);
 
-    const [showTooltip, setShowTooltip] = import('react').useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
 
     if (loading) return <div className="p-4 text-center text-gray-400">Loading True Standings...</div>;
     if (error) return <div className="p-4 text-center text-red-400">Failed to load data</div>;
