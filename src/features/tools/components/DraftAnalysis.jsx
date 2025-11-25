@@ -146,8 +146,8 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                     </div>
 
                     <div className={`font-bold text-center py-1 rounded ${data.tier === 'Winner' ? 'bg-green-500/20 text-green-400' :
-                            data.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
-                                'bg-slate-500/20 text-slate-300'
+                        data.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
+                            'bg-slate-500/20 text-slate-300'
                         }`}>
                         {data.tier === 'Winner' ? `✅ STEAL (+${(data.roi * 100).toFixed(0)}% ROI)` :
                             data.tier === 'Bust' ? `❌ BUST (${(data.roi * 100).toFixed(0)}% ROI)` :
@@ -241,11 +241,40 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
                             <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
 
                             {/* Zones */}
-                            <Area type="monotone" data={curveData} dataKey="upper" stroke="none" fill="#22c55e" fillOpacity={0.05} />
-                            <Area type="monotone" data={curveData} dataKey="lower" stroke="none" fill="#ef4444" fillOpacity={0.05} />
+                            <Area
+                                type="monotone"
+                                data={curveData}
+                                dataKey="upper"
+                                stroke="none"
+                                fill="#22c55e"
+                                fillOpacity={0.05}
+                                isAnimationActive={false}
+                                style={{ pointerEvents: 'none' }}
+                            />
+                            <Area
+                                type="monotone"
+                                data={curveData}
+                                dataKey="lower"
+                                stroke="none"
+                                fill="#ef4444"
+                                fillOpacity={0.05}
+                                isAnimationActive={false}
+                                style={{ pointerEvents: 'none' }}
+                            />
 
                             {/* Par Line */}
-                            <Line type="monotone" data={curveData} dataKey="expected" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={false} />
+                            <Line
+                                type="monotone"
+                                data={curveData}
+                                dataKey="expected"
+                                stroke="#64748b"
+                                strokeWidth={2}
+                                strokeDasharray="5 5"
+                                dot={false}
+                                activeDot={false}
+                                isAnimationActive={false}
+                                style={{ pointerEvents: 'none' }}
+                            />
 
                             {/* Players */}
                             <Scatter name="Players" data={chartData} shape={<CustomShape />}>
