@@ -107,19 +107,22 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                                 <span className="md:hidden">AP</span>
                                 <span className="hidden md:inline">All-Play</span>
                             </th>
-                            <th
-                                className="px-2 sm:px-4 py-3 text-center group relative cursor-help"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowTooltip(!showTooltip);
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-1">
+                            <th className="px-2 sm:px-4 py-3 text-center relative">
+                                <button
+                                    className="flex items-center justify-center gap-1 mx-auto focus:outline-none"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowTooltip(!showTooltip);
+                                    }}
+                                >
                                     <span className="md:hidden">Luck</span>
                                     <span className="hidden md:inline">Luck Index (Wins)</span>
                                     <span className="text-slate-500">?</span>
-                                </div>
-                                <div className={`absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl transition-opacity w-48 z-10 border border-slate-700 ${showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100'}`}>
+                                </button>
+                                <div
+                                    className={`absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-xs text-white rounded-lg shadow-xl transition-opacity w-48 z-10 border border-slate-700 ${showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none md:group-hover:opacity-100'}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     Difference between Actual Wins and Expected Wins (based on All-Play record).
                                     <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-900"></div>
                                 </div>
