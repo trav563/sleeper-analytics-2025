@@ -9,9 +9,12 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import HistoryPage from './pages/HistoryPage';
 import ToolsPage from './pages/ToolsPage';
 
+import { Analytics } from '@vercel/analytics/react';
+
 const App = () => {
   return (
     <SleeperProvider>
+      <Analytics />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<MainLayout />}>
