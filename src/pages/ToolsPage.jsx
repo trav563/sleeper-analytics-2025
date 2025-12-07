@@ -1,6 +1,7 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
+import DynastyLandscape from '../features/tools/components/DynastyLandscape';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
@@ -8,6 +9,13 @@ const ToolsPage = () => {
 
     return (
         <div className="space-y-8">
+            <DynastyLandscape
+                rosters={rosters}
+                users={users}
+                players={players}
+                league={league}
+            />
+
             <TankTracker
                 rosters={rosters}
                 users={users}
