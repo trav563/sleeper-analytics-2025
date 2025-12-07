@@ -99,6 +99,8 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
     }, [seasonMatchups, players, userRosterId, opponentRosterId, loading, selectedTeamName, opponentTeamName]);
 
     if (loading) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Radar...</div>;
+    if (!players) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Player Database...</div>;
+    if (!seasonMatchups || Object.keys(seasonMatchups).length === 0) return <div className="h-64 flex items-center justify-center text-gray-400">No Matchup Data Available</div>;
 
     return (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">

@@ -3,6 +3,7 @@ import { displayTeamName } from '../../../utils/nflData';
 import { getGameStatuses } from '../../../services/nflSchedule';
 import { calculateProjectedScore } from '../../../utils/scoreProjections';
 import { Info } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardTitle } from '../../../components/ui/Card';
 
 const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, selectedUserId, players, seasonMatchups }) => {
     const [gameStatuses, setGameStatuses] = useState({});
@@ -25,68 +26,37 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
         if (!userMatchup) return null;
 
         const opponentMatchup = matchups.find(m => m.matchup_id === userMatchup.matchup_id && m.roster_id !== userRoster.roster_id);
-
         const opponentRoster = opponentMatchup ? rosters.find(r => r.roster_id === opponentMatchup.roster_id) : null;
         const opponentUser = opponentRoster ? users.find(u => u.user_id === opponentRoster.owner_id) : null;
 
-        let userScore = userMatchup.points || 0;
-        let opponentScore = opponentMatchup?.points || 0;
+        const userScore = userMatchup.points || 0;
+        const opponentScore = opponentMatchup?.points || 0;
 
-        // Smart Projections Logic
-        // If viewing history (selectedWeek < currentNFLWeek), show actual points.
-        // If viewing future (selectedWeek > currentNFLWeek), show projected points.
-        // If viewing current week (selectedWeek === currentNFLWeek):
-        //    - If scores are 0 (game likely hasn't started), show projected.
-        //    - If scores exist (game in progress/finished), show actual.
         const useProjections = week > currentNFLWeek || (week === currentNFLWeek && userScore === 0 && opponentScore === 0);
 
         const userProjected = calculateProjectedScore(userMatchup.starters, seasonMatchups, players);
         const opponentProjected = opponentMatchup ? calculateProjectedScore(opponentMatchup.starters, seasonMatchups, players) : 0;
 
-        // Calculate remaining players
         const userRemaining = [];
         const opponentRemaining = [];
 
         if (players && Object.keys(gameStatuses).length > 0) {
-            // User's remaining players
+            // Logic for remaining players omitted for brevity but assumed similar structure
+            // Simplified for this rewriting step to focus on UI
             const userStarters = userMatchup.starters || [];
-            const userPlayersPoints = userMatchup.players_points || {};
-
             userStarters.forEach(playerId => {
-                const playerPoints = userPlayersPoints[playerId] || 0;
                 const player = players[playerId];
-
-                if (player && playerPoints === 0) {
-                    const playerTeam = player.team;
-                    const teamStatus = gameStatuses[playerTeam];
-
-                    if (teamStatus === 'scheduled') {
-                        const playerName = `${player.first_name?.[0]}. ${player.last_name}`;
-                        userRemaining.push(playerName);
-                    }
+                if (player && (userMatchup.players_points?.[playerId] || 0) === 0 && gameStatuses[player.team] === 'scheduled') {
+                    userRemaining.push(`${player.first_name?.[0]}. ${player.last_name}`);
                 }
             });
-
-            // Opponent's remaining players
-            if (opponentMatchup) {
-                const opponentStarters = opponentMatchup.starters || [];
-                const opponentPlayersPoints = opponentMatchup.players_points || {};
-
-                opponentStarters.forEach(playerId => {
-                    const playerPoints = opponentPlayersPoints[playerId] || 0;
-                    const player = players[playerId];
-
-                    if (player && playerPoints === 0) {
-                        const playerTeam = player.team;
-                        const teamStatus = gameStatuses[playerTeam];
-
-                        if (teamStatus === 'scheduled') {
-                            const playerName = `${player.first_name?.[0]}. ${player.last_name}`;
-                            opponentRemaining.push(playerName);
-                        }
-                    }
-                });
-            }
+            const opponentStarters = opponentMatchup?.starters || [];
+            opponentStarters.forEach(playerId => {
+                const player = players[playerId];
+                if (player && (opponentMatchup.players_points?.[playerId] || 0) === 0 && gameStatuses[player.team] === 'scheduled') {
+                    opponentRemaining.push(`${player.first_name?.[0]}. ${player.last_name}`);
+                }
+            });
         }
 
         return {
@@ -104,67 +74,58 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
     if (!matchupData) return null;
 
     return (
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
-            <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Week {week} Matchup</h3>
-
-            <div className="flex justify-between items-end mb-4">
-                <div className="text-left">
-                    <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-blue-300' : 'text-white'}`}>
-                        {matchupData.useProjections ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
+        <Card className="h-full bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-2 border-b border-slate-700">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+                        Week {week} Matchup
+                    </CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent className="pt-6 text-center">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="text-center">
+                        <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-primary/80' : 'text-white'}`}>
+                            {matchupData.useProjections ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-center">
+                            My Score
+                            {matchupData.useProjections && (
+                                <Info className="w-3 h-3 text-primary cursor-help" />
+                            )}
+                        </div>
+                        {matchupData.useProjections && <div className="text-[10px] text-primary/70 font-medium mt-0.5">Proj (Avg)*</div>}
                     </div>
-                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        My Score
-                        {matchupData.useProjections && (
-                            <div className="group relative">
-                                <Info className="w-3 h-3 text-blue-400 cursor-help" />
-                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
-                                    Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
-                                </div>
+
+                    <div className="text-sm font-bold text-slate-500">VS</div>
+
+                    <div className="text-center">
+                        <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-primary/80' : 'text-white'}`}>
+                            {matchupData.useProjections ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-center">
+                            {matchupData.opponentName}
+                        </div>
+                        {matchupData.useProjections && <div className="text-[10px] text-primary/70 font-medium mt-0.5">Proj (Avg)*</div>}
+                    </div>
+                </div>
+
+                {(matchupData.userRemaining.length > 0 || matchupData.opponentRemaining.length > 0) && (
+                    <div className="space-y-2 mt-4 text-left">
+                        {matchupData.userRemaining.length > 0 && (
+                            <div className="text-xs text-slate-400">
+                                <span className="font-semibold text-slate-300">Yet to Play:</span> {matchupData.userRemaining.join(', ')}
+                            </div>
+                        )}
+                        {matchupData.opponentRemaining.length > 0 && (
+                            <div className="text-xs text-orange-400/80">
+                                <span className="font-semibold text-orange-400">Opponent Remaining:</span> {matchupData.opponentRemaining.join(', ')}
                             </div>
                         )}
                     </div>
-                    {matchupData.useProjections && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
-                </div>
-
-                <div className="text-sm font-medium text-slate-500 mb-4">VS</div>
-
-                <div className="text-right">
-                    <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-blue-300' : 'text-slate-400'}`}>
-                        {matchupData.useProjections ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-end">
-                        {matchupData.opponentName}
-                        {matchupData.useProjections && (
-                            <div className="group relative">
-                                <Info className="w-3 h-3 text-blue-400 cursor-help" />
-                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 border border-slate-700 p-2 rounded shadow-lg text-[10px] text-slate-300 hidden group-hover:block z-50">
-                                    Note: Official player projections are not available via the public Sleeper API. This score is an estimate calculated by summing the historical averages of the currently active starting lineup.
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    {matchupData.useProjections && <div className="text-[10px] text-blue-400/70 font-medium mt-0.5">Proj (Avg)*</div>}
-                </div>
-            </div>
-
-            {/* Remaining Players */}
-            {(matchupData.userRemaining.length > 0 || matchupData.opponentRemaining.length > 0) && (
-                <div className="space-y-2 pt-4 border-t border-slate-700">
-                    {matchupData.userRemaining.length > 0 && (
-                        <div className="text-xs">
-                            <span className="text-slate-400">Yet to Play ({matchupData.userRemaining.length}): </span>
-                            <span className="text-blue-400">{matchupData.userRemaining.join(', ')}</span>
-                        </div>
-                    )}
-                    {matchupData.opponentRemaining.length > 0 && (
-                        <div className="text-xs">
-                            <span className="text-slate-400">Opponent Remaining ({matchupData.opponentRemaining.length}): </span>
-                            <span className="text-orange-400">{matchupData.opponentRemaining.join(', ')}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+                )}
+            </CardContent>
+        </Card>
     );
 };
 

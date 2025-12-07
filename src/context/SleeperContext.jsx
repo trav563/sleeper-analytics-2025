@@ -15,7 +15,7 @@ export const useSleeper = () => {
 export const SleeperProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [leagues, setLeagues] = useState([]);
-    const [leagueHistory, setLeagueHistory] = useState([]);
+    const [leagueHistory, setLeagueHistory] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [season, setSeason] = useState(null);
@@ -87,15 +87,22 @@ export const SleeperProvider = ({ children }) => {
     }, [searchUser, getLeagues]);
 
     const loadHistory = useCallback(async (currentLeagueId, userId) => {
-        if (!currentLeagueId || !userId) return;
+        if (!currentLeagueId) {
+            console.warn("Missing leagueId for history fetch");
+            return;
+        }
+
+        console.log(`Loading history for league ${currentLeagueId} and user ${userId}`);
         setLoading(true);
         try {
             const history = await fetchLeagueHistory(currentLeagueId, userId);
-            setLeagueHistory(history);
+            console.log("History loaded:", history);
+            setLeagueHistory(history || []);
             return history;
         } catch (err) {
             console.error("Failed to load league history:", err);
             setError("Failed to load league history");
+            setLeagueHistory([]); // Ensure we don't stick on "loading"
             return [];
         } finally {
             setLoading(false);

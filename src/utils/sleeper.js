@@ -111,6 +111,15 @@ export const fetchLeagueTransactions = async (leagueId, round) => {
 };
 
 /**
+ * Fetch traded picks for a league
+ * @param {string} leagueId
+ */
+export const fetchTradedPicks = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/traded_picks?_=${timestamp}`);
+};
+
+/**
  * Fetch NFL stats for a specific season (regular season)
  * @param {string} season - e.g., '2024'
  */

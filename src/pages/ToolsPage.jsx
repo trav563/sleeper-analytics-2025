@@ -1,10 +1,9 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import TradeFinder from '../features/tools/components/TradeFinder';
-import DraftAnalysis from '../features/tools/components/DraftAnalysis';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
-    const { league, rosters, users, players, currentWeek } = useOutletContext();
+    const { league, rosters, users, players, currentWeek, tradedPicks } = useOutletContext();
 
     return (
         <div className="space-y-8">
@@ -15,13 +14,7 @@ const ToolsPage = () => {
                 users={users}
                 players={players}
                 league={league}
-            />
-            <DraftAnalysis
-                league={league}
-                currentWeek={currentWeek}
-                players={players}
-                users={users}
-                rosters={rosters}
+                tradedPicks={tradedPicks}
             />
         </div>
     );

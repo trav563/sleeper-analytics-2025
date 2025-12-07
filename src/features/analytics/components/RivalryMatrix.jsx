@@ -4,8 +4,8 @@ import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { displayTeamName } from '../../../utils/nflData';
 import { Users, Grid, Trophy, Swords } from 'lucide-react';
 
-const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id }) => {
-    const { leagueHistory } = useSleeper();
+const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id, leagueId }) => {
+    const { leagueHistory, loadHistory, user } = useSleeper();
     const [historicalMatchups, setHistoricalMatchups] = useState({}); // league_id -> matchups
     const [loading, setLoading] = useState(false);
     const [viewMode, setViewMode] = useState('h2h'); // 'h2h' or 'matrix'
@@ -164,7 +164,16 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id 
         return { wins1, wins2, points1, points2, games, history };
     }, [user1Id, user2Id, historicalMatchups, leagueHistory]);
 
+    useEffect(() => {
+        if (!leagueHistory && leagueId) {
+            loadHistory(leagueId, user?.user_id);
+        }
+    }, [leagueHistory, leagueId, user, loadHistory, historicalMatchups]);
+
     if (loading) return <div className="p-8 text-center text-gray-400">Loading Rivalry History...</div>;
+    // Don't show "No History" immediately if we are just waiting for the fetch to start
+    if (!leagueHistory) return <div className="p-8 text-center text-gray-400">Loading League History...</div>;
+    if (leagueHistory.length === 0) return <div className="p-8 text-center text-gray-400">No League History Found</div>;
 
     const user1 = users?.find(u => u.user_id === user1Id);
     const user2 = users?.find(u => u.user_id === user2Id);

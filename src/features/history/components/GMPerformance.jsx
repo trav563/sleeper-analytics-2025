@@ -6,7 +6,7 @@ import { useCareerStats } from '../../stats/hooks/useCareerStats';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { TrendingUp } from 'lucide-react';
 
-const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
+const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
     const [selectedSeason, setSelectedSeason] = useState(null);
     const [picks, setPicks] = useState([]);
     const [loadingDraft, setLoadingDraft] = useState(false);
@@ -354,4 +354,4 @@ const DraftAnalysis = ({ league, currentWeek, players, users, rosters }) => {
     );
 };
 
-export default DraftAnalysis;
+export default GMPerformance;

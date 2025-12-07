@@ -1,18 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTradeAnalysis } from '../hooks/useTradeAnalysis';
 import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft, User } from 'lucide-react';
 
-const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league }) => {
+const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, tradedPicks }) => {
     const { seasonMatchups, loading: matchupsLoading } = useSeasonMatchups(leagueId, currentWeek);
-    const { teamAnalysis, findMatches, playerValues } = useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek);
+    const { teamAnalysis, findMatches, playerValues } = useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks);
 
     // Default to current user if possible, else first roster
     const [selectedRosterId, setSelectedRosterId] = useState(null);
 
     // Initialize selected roster once data is loaded
-    useMemo(() => {
+    useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {
             // Try to find logged in user? For now just pick first
             setSelectedRosterId(rosters[0].roster_id);
@@ -204,27 +204,27 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league })
                                         )}
 
                                         {/* They Have (Target) */}
-                                        {match.receiving.length > 0 && (
-                                            <div>
-                                                <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (Their Surplus)</p>
-                                                <div className="space-y-2">
-                                                    {match.receiving.map(item => (
-                                                        <div key={item.position} className="flex flex-wrap gap-2">
-                                                            {item.assets.map(player => (
-                                                                <div key={player.id} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
-                                                                    <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
-                                                                    <span className="text-sm text-white">
-                                                                        {player.full_name || player.first_name + ' ' + player.last_name}
-                                                                        {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
-                                                                    </span>
-                                                                    <span className="text-xs text-green-400 ml-auto">{player.value.toFixed(1)} ppg</span>
-                                                                </div>
-                                                            ))}
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (You Get)</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {match.displayTargets && match.displayTargets.length > 0 ? (
+                                                    match.displayTargets.map((player, idx) => (
+                                                        <div key={player.id || idx} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
+                                                            <span className={`text-xs font-bold w-6 ${player.position === 'PICK' ? 'text-blue-300' : 'text-slate-300'}`}>
+                                                                {player.position}
+                                                            </span>
+                                                            <span className="text-sm text-white">
+                                                                {player.full_name || player.first_name + ' ' + player.last_name}
+                                                                {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
+                                                            </span>
+                                                            <span className="text-xs text-green-400 ml-auto">{player.value?.toFixed(0)} pts</span>
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-xs text-slate-500 italic">Target: Future Draft Capital</div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
 
                                         {/* You Have (Offer) */}
                                         {match.giving.length > 0 && (

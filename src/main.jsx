@@ -1,7 +1,11 @@
 import { StrictMode, Component } from 'react'
 import { createRoot } from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
 import App from './App.jsx'
+
+const queryClient = new QueryClient()
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -39,7 +43,11 @@ class ErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <App />
+        </HelmetProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

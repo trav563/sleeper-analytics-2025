@@ -15,14 +15,22 @@ const AnalyticsPage = () => {
     const [opponentRosterId, setOpponentRosterId] = useState(null);
 
     useEffect(() => {
-        if (rosters && user && !selectedRosterId) {
+        if (!rosters || rosters.length === 0) return;
+
+        // If we already have a selection that is valid, don't change it
+        if (selectedRosterId && rosters.find(r => r.roster_id === selectedRosterId)) return;
+
+        // Try to match current user
+        if (user) {
             const userRoster = rosters.find(r => r.owner_id === user.user_id);
             if (userRoster) {
                 setSelectedRosterId(userRoster.roster_id);
-            } else if (rosters.length > 0) {
-                setSelectedRosterId(rosters[0].roster_id);
+                return;
             }
         }
+
+        // Fallback to first roster
+        setSelectedRosterId(rosters[0].roster_id);
     }, [rosters, user, selectedRosterId]);
 
     const handleTeamChange = (e) => {
@@ -126,6 +134,7 @@ const AnalyticsPage = () => {
                 users={users}
                 selectedUser1Id={selectedUser?.user_id}
                 selectedUser2Id={comparisonMode === 'h2h' ? opponentUser?.user_id : null}
+                leagueId={leagueId}
             />
         </div>
     );

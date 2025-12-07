@@ -1,6 +1,23 @@
 import { useMemo } from 'react';
 
-export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek) {
+// Helper for Pick Valuation
+const getPickValue = (round, rankInsideLeague, totalTeams) => {
+    // 1.01 (Rank 1) -> Early
+    // Round 1
+    if (round === 1) {
+        if (rankInsideLeague <= totalTeams * 0.33) return 1000; // Early 1st
+        if (rankInsideLeague <= totalTeams * 0.66) return 700;  // Mid 1st
+        return 500; // Late 1st
+    }
+    // Round 2
+    if (round === 2) return 200;
+    // Round 3
+    if (round === 3) return 50;
+    // Round 4+
+    return 10;
+};
+
+export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks) {
     // 1. Calculate Player Values (True PPG - Avg points excluding 0-point games)
     const playerValues = useMemo(() => {
         if (!seasonMatchups || !currentWeek) return {};
@@ -35,7 +52,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         return finalValues;
     }, [seasonMatchups, currentWeek]);
 
-    // 2. Analyze Team Needs & Surplus
+    // 2. Analyze Team Needs & Surplus (with Picks)
     const teamAnalysis = useMemo(() => {
         if (!league || !rosters || !players || Object.keys(playerValues).length === 0) return {};
 
@@ -46,9 +63,88 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         const validPositions = ['QB', 'RB', 'WR', 'TE'];
 
         // Dynasty Mode: Classify Teams
-        const allPPTS = rosters.map(r => r.settings?.ppts || 0).sort((a, b) => b - a);
-        const contenderThreshold = allPPTS[3] || 0; // Top 4
-        const rebuilderThreshold = allPPTS[Math.max(0, allPPTS.length - 4)] || 0; // Bottom 4
+        const allPPTS = rosters.map(r => ({ rosterId: r.roster_id, ppts: r.settings?.ppts || 0 }))
+            .sort((a, b) => a.ppts - b.ppts); // ASCENDING for Draft Order (Low Point = 1.01)
+
+        // PPTS Rank Map (rosterId -> rank 1..N)
+        const pptsRank = {};
+        allPPTS.forEach((item, idx) => {
+            pptsRank[item.rosterId] = idx + 1;
+        });
+
+        const totalTeams = rosters.length;
+        // Status Thresholds (High PPTS = Good Team)
+        // Sort DESC for status
+        const sortedByStrength = [...allPPTS].sort((a, b) => b.ppts - a.ppts);
+        const contenderThreshold = sortedByStrength[3]?.ppts || 0; // Top 4
+        const rebuilderThreshold = sortedByStrength[Math.max(0, totalTeams - 4)]?.ppts || 0; // Bottom 4
+
+        // --- PICK LEDGER START ---
+        // Initialize ledger: Everyone owns their own picks for next 2 years (plus current if mid-season/not drafted?)
+        // Assuming current season + 1 + 2 (3 years total usually tracked)
+        // Sleeper `league.season` gives current year.
+        const currentYear = parseInt(league.season);
+        const draftYears = [currentYear + 1, currentYear + 2]; // Usually track future picks. Current year picks vanish after draft.
+        // If league status is pre-draft, might need currentYear. Let's assume standard dynasty: future picks.
+
+        const initialPicks = [];
+        rosters.forEach(r => {
+            draftYears.forEach(year => {
+                [1, 2, 3].forEach(round => { // Assuming 3 rounds
+                    initialPicks.push({
+                        year,
+                        round,
+                        roster_id: r.roster_id, // Current Owner
+                        original_owner_id: r.roster_id, // Origin
+                        collection_id: r.roster_id // Origin ID for display if needed
+                    });
+                });
+            });
+        });
+
+        // Apply Trades to update 'roster_id' (Current Owner)
+        // tradedPicks: [{ season, round, roster_id (current owner), owner_id (new owner?? Wait check Sleeper API docs or assumption) }]
+        // Sleeper API: `owner_id` is the PREVIOUS owner (sender), `roster_id` is ??? 
+        // Docs say: `roster_id` is the roster the pick originated from. `owner_id` is the CURRENT owner roster ID.
+        // YES. `roster_id` is ORIGIN. `owner_id` is CURRENT HOLDER.
+
+        if (tradedPicks) {
+            tradedPicks.forEach(tp => {
+                const year = parseInt(tp.season);
+                const pickIndex = initialPicks.findIndex(p =>
+                    p.year === year &&
+                    p.round === tp.round &&
+                    p.original_owner_id === tp.roster_id // Match Origin
+                );
+
+                if (pickIndex !== -1) {
+                    initialPicks[pickIndex].roster_id = tp.owner_id; // Update Current Owner
+                }
+            });
+        }
+
+        // Assign Values to Picks
+        initialPicks.forEach(p => {
+            const originRank = pptsRank[p.original_owner_id] || Math.floor(totalTeams / 2); // Default to mid if unknown
+            p.value = getPickValue(p.round, originRank, totalTeams);
+
+            // Description
+            let desc = 'Mid';
+            if (p.round === 1) {
+                if (originRank <= totalTeams * 0.33) desc = 'Early';
+                else if (originRank > totalTeams * 0.66) desc = 'Late';
+            }
+            p.description = `${p.year} ${p.round === 1 ? '1st' : p.round === 2 ? '2nd' : p.round + 'rd'} (${desc})`;
+            p.isOriginal = p.roster_id === p.original_owner_id;
+        });
+
+        // Group picks by Current Owner
+        const ledgerByRoster = {};
+        initialPicks.forEach(p => {
+            if (!ledgerByRoster[p.roster_id]) ledgerByRoster[p.roster_id] = [];
+            ledgerByRoster[p.roster_id].push(p);
+        });
+        // --- PICK LEDGER END ---
 
         rosters.forEach(roster => {
             // Dynasty Status
@@ -61,12 +157,12 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             const rosterPlayers = (roster.players || [])
                 .map(pid => {
                     const nickname = roster.metadata?.[`p_nick_${pid}`];
-                    const isOTB = nickname && nickname.toUpperCase().includes('OTB');
                     return {
                         id: pid,
                         ...players[pid],
                         value: playerValues[pid] || 0,
-                        isOTB
+                        isOTB: nickname?.toUpperCase().includes('OTB'),
+                        age: players[pid]?.age || 25
                     };
                 })
                 .sort((a, b) => b.value - a.value);
@@ -87,14 +183,20 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             };
 
             // Assign starters
+            const usedPlayers = new Set();
             rosterPlayers.forEach(p => {
                 if (validPositions.includes(p.position)) {
                     const limit = Math.ceil(slots[p.position] || 1);
                     if (starters[p.position].length < limit) {
                         starters[p.position].push(p);
-                    } else {
-                        bench.push(p);
+                        usedPlayers.add(p.id);
                     }
+                }
+            });
+            // Assign bench players (those not used as starters)
+            rosterPlayers.forEach(p => {
+                if (!usedPlayers.has(p.id)) {
+                    bench.push(p);
                 }
             });
 
@@ -115,6 +217,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 starters,
                 bench,
                 rosterPlayers, // All players for easy access
+                picks: ledgerByRoster[roster.roster_id] || [], // Attach Picks
                 needs: [],
                 surplus: []
             };
@@ -125,7 +228,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         validPositions.forEach(pos => {
             const scores = leaguePositionScores[pos].sort((a, b) => a - b);
             const cutoffIndex = Math.floor(scores.length * 0.4);
-            thresholds[pos] = scores[cutoffIndex];
+            thresholds[pos] = scores[cutoffIndex] || 0;
         });
 
         // Calculate Starter Baselines (The score needed to be a starter in this league)
@@ -139,15 +242,6 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             // Sort descending
             allStarterScores.sort((a, b) => b - a);
 
-            // The baseline is the score of the lowest ranked starter
-            // If we have 12 teams and 2 WRs, we look at the top 24 scores.
-            // But since we already filtered "starters" in the previous step based on slots,
-            // `allStarterScores` should contain exactly the number of starters in the league.
-            // So the last player in this list is the "worst starter".
-            // Let's use the value at the 80th percentile (bottom 20%) to be safe?
-            // Or just the median?
-            // Let's stick to the prompt: "would be starters on an average team".
-            // An average team has average starters.
             // Let's use the Median of the starter scores.
             const medianIndex = Math.floor(allStarterScores.length / 2);
             starterBaselines[pos] = allStarterScores[medianIndex] || 0;
@@ -178,9 +272,9 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         });
 
         return analysis;
-    }, [league, rosters, players, playerValues]);
+    }, [league, rosters, players, playerValues, tradedPicks]);
 
-    // 3. Find Matches
+    // 3. Find Matches (Updated with Pick Logic)
     const findMatches = (focusRosterId) => {
         if (!focusRosterId || !teamAnalysis[focusRosterId]) return [];
 
@@ -195,8 +289,9 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             const mutualSurplus = [];
             const benchUpgrades = [];
             const dynastySuggestions = [];
+            let pickSuggestions = []; // New Pick Trades
 
-            // 1. Needs Matching
+            // 1. Needs Matching (Player Swaps)
             focusTeam.needs.forEach(needPos => {
                 const surplus = opponent.surplus.find(s => s.position === needPos);
                 if (surplus) {
@@ -208,8 +303,25 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             opponent.needs.forEach(needPos => {
                 const surplus = focusTeam.surplus.find(s => s.position === needPos);
                 if (surplus) {
-                    mutualSurplus.push({ position: needPos, assets: surplus.players });
-                    score += 50; // Perfect match bonus
+                    // DIRECTIONAL TRADING: Filter assets based on Receiver Status
+                    let eligibleAssets = surplus.players;
+
+                    // RULE 1: If Receiver is Rebuilder, PROHIBIT Age > 26
+                    if (opponent.status === 'Rebuilder') {
+                        eligibleAssets = eligibleAssets.filter(p => (p.age || 25) <= 26);
+                    }
+
+                    // Proceed if we still have valid assets to offer
+                    if (eligibleAssets.length > 0) {
+                        mutualSurplus.push({ position: needPos, assets: eligibleAssets });
+                        score += 50; // Perfect match bonus
+
+                        // RULE 2: Priority Bonus for Youth to Rebuilders
+                        if (opponent.status === 'Rebuilder') {
+                            const hasYouth = eligibleAssets.some(p => (p.age || 25) <= 24);
+                            if (hasYouth) score += 20;
+                        }
+                    }
                 }
             });
 
@@ -263,43 +375,133 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 }
             });
 
-            // 4. Dynasty Logic
-            if (focusTeam.status === 'Contender' && opponent.status === 'Rebuilder') {
-                // Look for Vets on Opponent
-                const vets = opponent.rosterPlayers.filter(p => p.age >= 27 && (p.position === 'RB' || p.position === 'WR') || p.age >= 30);
-                if (vets.length > 0) {
-                    dynastySuggestions.push({
-                        type: 'Win-Now Move',
-                        message: `History suggests ${opponent.status} teams want to move veterans.`,
-                        assets: vets
-                    });
-                    score += 10;
+            // 4. Dynasty Logic (with Picks)
+            // Scenario A: Focus is REBUILDER. Wants Picks. Opponent is Contender/Neutral context.
+            if (focusTeam.status === 'Rebuilder' && ['Contender', 'Neutral'].includes(opponent.status)) {
+                // Determine assets to Sell: Vets (Age > 26) with value
+                const sellableVets = focusTeam.rosterPlayers.filter(p => p.age > 26 && p.value > 10);
+
+                if (sellableVets.length > 0 && opponent.picks.length > 0) {
+                    // Find high value picks from opponent
+                    const valuablePicks = opponent.picks.filter(p => p.round === 1 || p.round === 2);
+                    if (valuablePicks.length > 0) {
+                        pickSuggestions.push({
+                            type: 'Rebuild: Sell High',
+                            message: 'Sell vets for draft capital',
+                            give: sellableVets.slice(0, 3), // Top 3
+                            receive: valuablePicks
+                        });
+                        score += 40;
+                    }
                 }
-            } else if (focusTeam.status === 'Rebuilder' && opponent.status === 'Contender') {
-                // Look for Youth on Opponent
-                const youth = opponent.rosterPlayers.filter(p => p.age < 25);
-                if (youth.length > 0) {
-                    dynastySuggestions.push({
-                        type: 'Rebuild Move',
-                        message: `Contenders often trade youth for immediate production.`,
-                        assets: youth
+            }
+
+            // Scenario B: Focus is CONTENDER. Wants Vets. Can Sell Picks.
+            if (focusTeam.status === 'Contender' && ['Rebuilder', 'Neutral'].includes(opponent.status)) {
+                // My Picks to Sell
+                const myPicks = focusTeam.picks.filter(p => p.round >= 1); // Any picks
+                // Their Vets to Buy
+                const targetVets = opponent.rosterPlayers.filter(p => p.age > 26 && p.value > 12);
+
+                if (myPicks.length > 0 && targetVets.length > 0) {
+                    pickSuggestions.push({
+                        type: 'Contend: Buy Production',
+                        message: 'Trade picks for veteran production',
+                        give: myPicks,
+                        receive: targetVets.slice(0, 3)
                     });
+                    score += 40;
+                }
+            }
+
+            // The prompt asks to ensure "You Get" section is populated.
+            // We'll calculate a explicit 'targetAssets' list.
+
+            let forcedTargets = [];
+            // Strategy depends on OPPONENT Status (what can they give?)
+            if (opponent.status === 'Rebuilder') {
+                // They have Youth and High Picks
+                // 1. Young Surplus
+                const youngSurplus = opponent.surplus
+                    .flatMap(s => s.players)
+                    .filter(p => (p.age || 25) < 25)
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 3);
+
+                if (youngSurplus.length > 0) {
+                    forcedTargets = youngSurplus.map(p => ({ ...p, type: 'Player' }));
+                } else {
+                    // 2. Draft Picks (Top 3)
+                    forcedTargets = opponent.picks
+                        .sort((a, b) => b.value - a.value)
+                        .slice(0, 3)
+                        .map(p => ({ ...p, type: 'Pick', full_name: p.description, position: 'PICK' }));
+                }
+            } else {
+                // Contender (or Neutral) -> They have Vets and Late Picks
+                // 1. Veteran Surplus
+                const vetSurplus = opponent.surplus
+                    .flatMap(s => s.players)
+                    .filter(p => (p.age || 25) >= 25)
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 3);
+
+                if (vetSurplus.length > 0) {
+                    forcedTargets = vetSurplus.map(p => ({ ...p, type: 'Player' }));
+                } else {
+                    // 2. Late Draft Picks (or any picks)
+                    forcedTargets = opponent.picks
+                        .sort((a, b) => b.value - a.value) // Still best available
+                        .slice(0, 3)
+                        .map(p => ({ ...p, type: 'Pick', full_name: p.description, position: 'PICK' }));
+                }
+            }
+
+            // Merge with mutualNeeds (Preferred Targets)
+            // If mutualNeeds exists, we show those. If not, we show forcedTargets.
+            // Actually prompt says: "Populate the 'Target Assets' ... If no [surplus], YOU MUST DISPLAY DRAFT PICKS"
+            // So if `mutualNeeds` is empty, we USE forcedTargets.
+            // We'll pass a refined `targetAssets` array to the UI.
+
+            // Re-map mutualNeeds to flat assets for UI consumption if needed, or keep structure
+            // existing structure: receiving: [{ position, assets: [] }]
+            // We'll stick to that or better yet, make a unified `targets` list for the UI.
+
+            // Let's create a NEW field `displayTargets` which consolidates this.
+            let displayTargets = [];
+            if (mutualNeeds.length > 0) {
+                // Flatten
+                mutualNeeds.forEach(g => displayTargets.push(...g.assets.map(a => ({ ...a, type: 'Player' }))));
+            } else {
+                displayTargets = forcedTargets;
+                // If we are forcing targets, we should add a small score bump so these matches appear?
+                // The prompt implies we want to fix the UI for *existing* matches or ensure matches exist?
+                // "Ensure every Trade Card has two distinct sections... If ... empty, force it"
+                // This implies we function on existing matches found via `score > 0`.
+                // BUT if we rely only on other scores, we might miss these.
+                // However, matching logic usually finds *something* (surplus match, bench upgrade, etc).
+                // If score is 0, we might want to push a match purely based on "They have picks"? 
+                // Let's assume we modify matches that qualify (score > 0). 
+                // BUT if score is 0, maybe we should consider them valid if we found forcedTargets?
+                // Providing options is good. Let's give a small score for having ANY targets.
+                if (displayTargets.length > 0 && score === 0) {
                     score += 10;
                 }
             }
 
             if (score > 0) {
-                // Correct Perfect Match Logic: Must have BOTH mutual needs and mutual surplus
                 const isPerfect = mutualNeeds.length > 0 && mutualSurplus.length > 0;
 
                 matches.push({
                     opponent,
                     type: isPerfect ? 'Perfect Match' : 'Potential Partner',
-                    score: score + (isPerfect ? 50 : 0), // Bonus for perfect match
-                    receiving: mutualNeeds,
+                    score: score + (isPerfect ? 50 : 0),
+                    receiving: mutualNeeds, // Keep original structured data
+                    displayTargets, // NEW: For UI Display
                     giving: mutualSurplus,
                     benchUpgrades,
                     dynastySuggestions,
+                    pickSuggestions,
                     otbPlayers
                 });
             }

@@ -14,9 +14,13 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
         if (!leagueId) return;
 
         try {
+            console.log(`Fetching history for league: ${leagueId}`);
             // 1. Fetch league details
             const league = await fetchLeague(leagueId);
-            if (!league) return;
+            if (!league) {
+                console.warn(`League not found: ${leagueId}`);
+                return;
+            }
 
             // 2. Fetch rosters
             const rosters = await fetchLeagueRosters(leagueId);
@@ -58,6 +62,7 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
     };
 
     await fetchRecursive(currentLeagueId);
+    console.log("History fetched:", history);
 
     // Sort by season descending (newest first)
     return history.sort((a, b) => b.season - a.season);

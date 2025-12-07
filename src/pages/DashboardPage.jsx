@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { displayTeamName } from '../utils/nflData';
 import WidgetLineupStatus from '../features/dashboard/components/WidgetLineupStatus';
@@ -7,6 +7,8 @@ import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats'
 import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, transactions, loading, error, user, league } = useOutletContext();
@@ -66,52 +68,50 @@ const DashboardPage = () => {
         }
     }, [users, user, selectedUserId]);
 
-    if (loading) return <div className="p-8 text-center text-slate-400">Loading Dashboard...</div>;
-    if (error) return <div className="p-8 text-center text-red-400">Error loading dashboard data.</div>;
+    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading Dashboard...</div>;
+    if (error) return <div className="p-8 text-center text-destructive">Error loading dashboard data.</div>;
 
     // Generate Week Options (1 to 18)
     const weekOptions = Array.from({ length: 18 }, (_, i) => i + 1);
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6">
             {/* Header & Switcher */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">League Dashboard</h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-slate-400">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">League Dashboard</h1>
+                    <div className="flex items-center gap-3 mt-1">
+                        <p className="text-sm text-muted-foreground">
                             {selectedWeek === currentNFLWeek ? 'Current Week Overview' : `Week ${selectedWeek} History`}
                         </p>
                         {selectedWeek !== currentNFLWeek && (
-                            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
-                                Time Travel Active
-                            </span>
+                            <Badge variant="secondary">Time Travel Active</Badge>
                         )}
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                     {/* Week Selector */}
-                    <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider pl-2">Week:</span>
+                    <div className="flex items-center gap-2 bg-card p-1.5 rounded-lg border border-border">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider pl-2">Week</span>
                         <select
-                            className="bg-slate-700 text-white text-sm rounded-md border-none focus:ring-2 focus:ring-blue-500 py-1.5 pl-3 pr-8"
+                            className="bg-transparent text-sm font-medium text-foreground rounded-md border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pl-1 pr-8"
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(Number(e.target.value))}
                         >
                             {weekOptions.map(w => (
                                 <option key={w} value={w}>
-                                    Week {w} {w === currentNFLWeek ? '(Current)' : ''}
+                                    {w} {w === currentNFLWeek ? '(Current)' : ''}
                                 </option>
                             ))}
                         </select>
                     </div>
 
                     {/* User Selector */}
-                    <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider pl-2">Viewing As:</span>
+                    <div className="flex items-center gap-2 bg-card p-1.5 rounded-lg border border-border">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider pl-2">View As</span>
                         <select
-                            className="bg-slate-700 text-white text-sm rounded-md border-none focus:ring-2 focus:ring-blue-500 py-1.5 pl-3 pr-8"
+                            className="bg-transparent text-sm font-medium text-foreground rounded-md border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pl-1 pr-8"
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                         >
@@ -151,7 +151,7 @@ const DashboardPage = () => {
                 {/* Right Column: Matchup & Ticker */}
                 <div className="space-y-6">
                     {/* Matchup Preview */}
-                    <div className={`transition-opacity duration-200 ${loadingMatchups ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                    <div className={`transition-opacity duration-300 ${loadingMatchups ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                         <WidgetMatchupPreview
                             week={selectedWeek}
                             currentNFLWeek={currentNFLWeek}
