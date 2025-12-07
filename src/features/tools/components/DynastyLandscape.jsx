@@ -1,3 +1,9 @@
+import { useMemo, useState } from 'react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
+import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import { Switch } from '../../../components/ui/Switch';
+
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [useMaxPf, setUseMaxPf] = useState(false);
 
