@@ -1,10 +1,3 @@
-```javascript
-import { useMemo, useState } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
-import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Switch } from '../../../components/ui/Switch';
-
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [useMaxPf, setUseMaxPf] = useState(false);
 
@@ -16,15 +9,15 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
         const teams = rosters.map(roster => {
             const owner = users.find(u => u.user_id === roster.owner_id);
-            
+
             // 1. Calculate Production (Y-Axis)
             // Logic: Use state.leg (current week number) - 1 for games played.
             // If median scoring is enabled, we need to account for double games per week?
             // User requested: "roster.settings.fpts / (state.leg - 1)"
             // Fallback: If (wins + losses) > 18, divide by 2.
-            
+
             let gamesPlayed = Math.max(1, currentLeg - 1);
-            
+
             // Correction for median scoring if detected via high win/loss count
             const totalRecord = (roster.settings?.wins || 0) + (roster.settings?.losses || 0) + (roster.settings?.ties || 0);
             if (totalRecord > 18) { // Heuristic: 18 games implies median scoring or long season
@@ -39,7 +32,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 // BUT I will stick to the simplest PPG: Total Points / Weeks Played.
                 // (state.leg - 1) is Weeks Played.
             }
-            
+
             const ppg = ((roster.settings?.fpts || 0) + (roster.settings?.fpts_decimal || 0) / 100) / gamesPlayed;
             const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
             const productionMetric = useMaxPf ? maxPf : ppg;
@@ -81,9 +74,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         const { cx, cy, payload } = props;
         return (
             <foreignObject x={cx - 20} y={cy - 20} width={40} height={40}>
-                <img 
-                    src={payload.avatar} 
-                    alt={payload.name} 
+                <img
+                    src={payload.avatar}
+                    alt={payload.name}
                     className="w-[40px] h-[40px] rounded-full border-2 border-white/20 hover:scale-125 transition-transform cursor-pointer shadow-lg bg-slate-800"
                     title={payload.name}
                 />
@@ -95,7 +88,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
-            
+
             // Classify based on new quadrants
             let classification = "";
             // Top-Left (Young & High Prod) -> Dynasty King
@@ -117,7 +110,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                         </div>
                         <div className="flex justify-between gap-4">
                             <span>{data.productionLabel}:</span>
-                            <span className={`font - mono font - bold ${ data.production >= averages.production ? 'text-green-400' : 'text-red-400' } `}>
+                            <span className={`font-mono font-bold ${data.production >= averages.production ? 'text-green-400' : 'text-red-400'}`}>
                                 {data.production}
                             </span>
                         </div>
@@ -159,7 +152,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                     <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-                            
+
                             {/* Color Quadrants based on Averages */}
                             {/* Top-Left: Young (minAge to avgAge) & Good (avgProd to maxProd) */}
                             <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill="#4ade80" fillOpacity={0.05} />
@@ -170,11 +163,11 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                             {/* Bottom-Right: Old (avgAge to maxAge) & Bad (minProd to avgProd) */}
                             <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill="#f87171" fillOpacity={0.05} />
 
-                            <XAxis 
-                                type="number" 
-                                dataKey="age" 
-                                name="Average Age" 
-                                domain={[minAge, maxAge]} 
+                            <XAxis
+                                type="number"
+                                dataKey="age"
+                                name="Average Age"
+                                domain={[minAge, maxAge]}
                                 stroke="#94a3b8"
                                 tick={{ fill: '#94a3b8', fontSize: 10 }}
                                 tickCount={5}
@@ -182,11 +175,11 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                                 <Label value="Average Age" offset={-10} position="insideBottom" fill="#64748b" style={{ fontSize: '10px' }} />
                             </XAxis>
 
-                            <YAxis 
-                                type="number" 
-                                dataKey="production" 
-                                name="Production" 
-                                domain={[minProd, maxProd]} 
+                            <YAxis
+                                type="number"
+                                dataKey="production"
+                                name="Production"
+                                domain={[minProd, maxProd]}
                                 stroke="#94a3b8"
                                 tick={{ fill: '#94a3b8', fontSize: 10 }}
                                 width={30}
@@ -209,15 +202,15 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                         <div className="w-3 h-3 rounded-full bg-green-400/20 border border-green-400"></div>
                         <span className="text-[10px] sm:text-xs text-slate-400">Dynasty King</span>
                     </div>
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-yellow-400/20 border border-yellow-400"></div>
                         <span className="text-[10px] sm:text-xs text-slate-400">Contender</span>
                     </div>
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-blue-400/20 border border-blue-400"></div>
                         <span className="text-[10px] sm:text-xs text-slate-400">Rebuilder</span>
                     </div>
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-red-400/20 border border-red-400"></div>
                         <span className="text-[10px] sm:text-xs text-slate-400">Danger Zone</span>
                     </div>
