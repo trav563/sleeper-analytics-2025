@@ -1,4 +1,3 @@
-```javascript
 import { useMemo, useState, useRef } from 'react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
@@ -30,9 +29,9 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
             const originalOwner = users.find(u => u.user_id === roster.owner_id);
             const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
 
-            const tradeEntry = tradedPicks?.find(p => 
-                p.roster_id === originalOwnerId && 
-                p.round === selectedRound && 
+            const tradeEntry = tradedPicks?.find(p =>
+                p.roster_id === originalOwnerId &&
+                p.round === selectedRound &&
                 p.season === nextDraftYear
             );
 
@@ -48,7 +47,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
             }
 
             return {
-                pick: `${ selectedRound }.${ String(index + 1).padStart(2, '0') } `,
+                pick: `${selectedRound}.${String(index + 1).padStart(2, '0')}`,
                 originalOwner,
                 currentOwner,
                 maxPf: maxPf.toFixed(2),
@@ -64,13 +63,13 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
             try {
                 // Wait a tick to ensure styles are applied if needed
                 await new Promise(resolve => setTimeout(resolve, 100));
-                const dataUrl = await toPng(captureRef.current, { 
-                    cacheBust: true, 
+                const dataUrl = await toPng(captureRef.current, {
+                    cacheBust: true,
                     backgroundColor: '#0f172a',
                     pixelRatio: 2 // High quality
                 });
                 const link = document.createElement('a');
-                link.download = `tank - tracker - round - ${ selectedRound }.png`;
+                link.download = `tank-tracker-round-${selectedRound}.png`;
                 link.href = dataUrl;
                 link.click();
             } catch (err) {
@@ -94,11 +93,10 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                         <button
                             key={round}
                             onClick={() => setSelectedRound(round)}
-                            className={`px - 4 py - 1.5 rounded - md text - sm font - medium transition - all ${
-    selectedRound === round
-        ? 'bg-blue-600 text-white shadow-lg'
-        : 'text-slate-400 hover:text-white hover:bg-slate-700'
-} `}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${selectedRound === round
+                                    ? 'bg-blue-600 text-white shadow-lg'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                }`}
                         >
                             Round {round}
                         </button>
@@ -113,9 +111,9 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
             {/* Capture Container */}
             <div ref={captureRef} className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
                 <div className="p-6 pb-0">
-                     <div className="flex justify-between items-end mb-6">
+                    <div className="flex justify-between items-end mb-6">
                         <div>
-                             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                                 <span className="text-3xl">🚜</span> Tank Tracker
                             </h2>
                             <p className="text-slate-400 text-sm mt-1 uppercase tracking-widest font-bold">
@@ -124,9 +122,9 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                         </div>
                         {/* Only show league name in capture if desired, or always? Always looks good. */}
                         <div className="text-right hidden sm:block">
-                             <div className="text-sm font-bold text-slate-500">{league?.name}</div>
+                            <div className="text-sm font-bold text-slate-500">{league?.name}</div>
                         </div>
-                     </div>
+                    </div>
                 </div>
 
                 <div className="px-6">
@@ -144,18 +142,18 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-700/50">
                                         {projectedOrder.map((row) => (
-                                            <tr key={row.pick} className={`group ${ row.isTraded ? 'bg-blue-500/10' : 'hover:bg-slate-800/50' } `}>
+                                            <tr key={row.pick} className={`group ${row.isTraded ? 'bg-blue-500/10' : 'hover:bg-slate-800/50'}`}>
                                                 <td className="px-4 py-3 font-mono font-bold text-white">{row.pick}</td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-3">
                                                         <div className="relative">
-                                                             <img src={avatarUrl(row.currentOwner?.avatar)} className="w-8 h-8 rounded-full border border-slate-600" />
-                                                             {row.isTraded && (
-                                                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-900"></div>
-                                                             )}
+                                                            <img src={avatarUrl(row.currentOwner?.avatar)} className="w-8 h-8 rounded-full border border-slate-600" />
+                                                            {row.isTraded && (
+                                                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-900"></div>
+                                                            )}
                                                         </div>
                                                         <div>
-                                                            <div className={`font - bold ${ row.isTraded ? 'text-blue-300' : 'text-slate-200' } `}>
+                                                            <div className={`font-bold ${row.isTraded ? 'text-blue-300' : 'text-slate-200'}`}>
                                                                 {displayTeamName(row.currentOwner)}
                                                             </div>
                                                             {row.isTraded && (
@@ -212,4 +210,3 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
 };
 
 export default TankTracker;
-```
