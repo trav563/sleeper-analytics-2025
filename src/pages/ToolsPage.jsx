@@ -14,6 +14,7 @@ const ToolsPage = () => {
                 users={users}
                 players={players}
                 league={league}
+                state={state}
             />
 
             <TankTracker

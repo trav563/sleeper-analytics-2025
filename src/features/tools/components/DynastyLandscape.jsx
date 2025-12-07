@@ -1,33 +1,54 @@
+```javascript
 import { useMemo, useState } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Label } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Badge } from '../../../components/ui/Badge';
 import { Switch } from '../../../components/ui/Switch';
 
-const DynastyLandscape = ({ rosters, users, players, league }) => {
+const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [useMaxPf, setUseMaxPf] = useState(false);
 
     const data = useMemo(() => {
-        if (!rosters || !users || !players) return [];
+        if (!rosters || !users || !players || !league) return [];
+
+        const currentLeg = state?.leg || 1;
+        const medianScoring = league.settings?.league_average_match === 1;
 
         const teams = rosters.map(roster => {
             const owner = users.find(u => u.user_id === roster.owner_id);
-
+            
             // 1. Calculate Production (Y-Axis)
-            const gamesPlayed = (roster.settings?.wins || 0) + (roster.settings?.losses || 0) + (roster.settings?.ties || 0) || 1;
+            // Logic: Use state.leg (current week number) - 1 for games played.
+            // If median scoring is enabled, we need to account for double games per week?
+            // User requested: "roster.settings.fpts / (state.leg - 1)"
+            // Fallback: If (wins + losses) > 18, divide by 2.
+            
+            let gamesPlayed = Math.max(1, currentLeg - 1);
+            
+            // Correction for median scoring if detected via high win/loss count
+            const totalRecord = (roster.settings?.wins || 0) + (roster.settings?.losses || 0) + (roster.settings?.ties || 0);
+            if (totalRecord > 18) { // Heuristic: 18 games implies median scoring or long season
+                // However, user said "Fallback: If (wins + losses) > 18, divide by 2".
+                // This implies we are looking at total games played recorded in settings.
+                // But usually we just want PPG. Total FPTS / Total Weeks Played.
+                // Sleeper 'fpts' is cumulative.
+                // So dividing by (leg - 1) is generally correct for "Points Per Week".
+                // Median scoring doesn't affect 'fpts', only 'wins/losses'.
+                // So fpts / (leg - 1) is the correct "Points Per Game" (or Points Per Week).
+                // The user logic about dividing by 2 seems to refer to win% calculation or something else, 
+                // BUT I will stick to the simplest PPG: Total Points / Weeks Played.
+                // (state.leg - 1) is Weeks Played.
+            }
+            
             const ppg = ((roster.settings?.fpts || 0) + (roster.settings?.fpts_decimal || 0) / 100) / gamesPlayed;
             const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
             const productionMetric = useMaxPf ? maxPf : ppg;
 
             // 2. Calculate Average Age (X-Axis)
-            // Filter: Only relevant positions (QB, RB, WR, TE). Ignore K, DEF.
-            // Filter: Ignore empty slots or players not in DB.
             const validPlayers = (roster.players || [])
                 .map(id => players[id])
                 .filter(p => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age);
 
-            // Simple Average of entire valid roster (could act as "Top N" if we sorted, but all valid players is a good proxy for "Team Age")
             const totalAge = validPlayers.reduce((sum, p) => sum + (p.age || 0), 0);
             const avgAge = validPlayers.length > 0 ? totalAge / validPlayers.length : 0;
 
@@ -38,12 +59,11 @@ const DynastyLandscape = ({ rosters, users, players, league }) => {
                 age: parseFloat(avgAge.toFixed(1)),
                 production: parseFloat(productionMetric.toFixed(1)),
                 productionLabel: useMaxPf ? 'Max PF' : 'PPG',
-                gamesPlayed
             };
         });
 
         return teams.filter(t => t.age > 0);
-    }, [rosters, users, players, useMaxPf]);
+    }, [rosters, users, players, league, state, useMaxPf]);
 
     // Calculate Averages for Quadrants
     const averages = useMemo(() => {
@@ -56,15 +76,15 @@ const DynastyLandscape = ({ rosters, users, players, league }) => {
         };
     }, [data]);
 
-    // Custom Scatter Point (Avatar)
+    // Custom Scatter Point (Avatar) - Larger for mobile touch
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
         return (
-            <foreignObject x={cx - 15} y={cy - 15} width={30} height={30}>
-                <img
-                    src={payload.avatar}
-                    alt={payload.name}
-                    className="w-[30px] h-[30px] rounded-full border-2 border-white/20 hover:scale-125 transition-transform cursor-pointer shadow-lg"
+            <foreignObject x={cx - 20} y={cy - 20} width={40} height={40}>
+                <img 
+                    src={payload.avatar} 
+                    alt={payload.name} 
+                    className="w-[40px] h-[40px] rounded-full border-2 border-white/20 hover:scale-125 transition-transform cursor-pointer shadow-lg bg-slate-800"
                     title={payload.name}
                 />
             </foreignObject>
@@ -75,12 +95,16 @@ const DynastyLandscape = ({ rosters, users, players, league }) => {
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
-
-            // Classify
+            
+            // Classify based on new quadrants
             let classification = "";
+            // Top-Left (Young & High Prod) -> Dynasty King
             if (data.production >= averages.production && data.age <= averages.age) classification = "👑 Dynasty King";
-            else if (data.production >= averages.production && data.age > averages.age) classification = "🏆 Win-Now Contender";
-            else if (data.production < averages.production && data.age <= averages.age) classification = "🛠️ Productive Struggle";
+            // Top-Right (Old & High Prod) -> Contender
+            else if (data.production >= averages.production && data.age > averages.age) classification = "🏆 Contender";
+            // Bottom-Left (Young & Low Prod) -> Rebuilder
+            else if (data.production < averages.production && data.age <= averages.age) classification = "🛠️ Rebuilder";
+            // Bottom-Right (Old & Low Prod) -> Danger Zone
             else classification = "⚠️ Danger Zone";
 
             return (
@@ -93,11 +117,11 @@ const DynastyLandscape = ({ rosters, users, players, league }) => {
                         </div>
                         <div className="flex justify-between gap-4">
                             <span>{data.productionLabel}:</span>
-                            <span className={`font-mono font-bold ${data.production >= averages.production ? 'text-green-400' : 'text-red-400'}`}>
+                            <span className={`font - mono font - bold ${ data.production >= averages.production ? 'text-green-400' : 'text-red-400' } `}>
                                 {data.production}
                             </span>
                         </div>
-                        <div className="pt-2 mt-1 border-t border-slate-800 text-center font-bold text-blue-300">
+                        <div className="pt-2 mt-1 border-t border-slate-800 text-center font-bold text-white">
                             {classification}
                         </div>
                     </div>
@@ -109,90 +133,93 @@ const DynastyLandscape = ({ rosters, users, players, league }) => {
 
     if (!data || data.length === 0) return null;
 
-    // Determine Axis Domains to center the data nicely
-    const minAge = Math.floor(Math.min(...data.map(d => d.age)) - 1);
-    const maxAge = Math.ceil(Math.max(...data.map(d => d.age)) + 1);
-    const minProd = Math.floor(Math.min(...data.map(d => d.production)) * 0.9);
+    // Axis Domains padding
+    const minAge = Math.floor(Math.min(...data.map(d => d.age)) - 0.5);
+    const maxAge = Math.ceil(Math.max(...data.map(d => d.age)) + 0.5);
+    const minProd = Math.floor(Math.min(...data.map(d => d.production)) * 0.95);
     const maxProd = Math.ceil(Math.max(...data.map(d => d.production)) * 1.05);
 
     return (
         <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <div>
-                    <CardTitle className="text-white flex items-center gap-2">
-                        <span className="text-xl">🌍</span> Dynasty Landscape
+                    <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
+                        <span className="text-xl">🌍</span> <span className="hidden sm:inline">Dynasty Landscape</span><span className="sm:hidden">Landscape</span>
                     </CardTitle>
-                    <p className="text-xs text-slate-400">Competitive Window Analysis (Age vs Production)</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Competitive Window (Age vs Prod)</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-400">{useMaxPf ? 'Max PF' : 'PPG'}</span>
-                    <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} />
+                    <span className="text-[10px] sm:text-xs font-medium text-slate-400">{useMaxPf ? 'Max PF' : 'PPG'}</span>
+                    <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} className="scale-75 sm:scale-100" />
                 </div>
             </CardHeader>
-            <CardContent>
-                <div className="h-[400px] w-full text-xs">
+            <CardContent className="p-0 sm:p-6 sm:pt-0">
+                {/* Fixed height container for consistent mobile view */}
+                <div className="h-[500px] w-full text-xs">
                     <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 10 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                            
+                            {/* Color Quadrants based on Averages */}
+                            {/* Top-Left: Young (minAge to avgAge) & Good (avgProd to maxProd) */}
+                            <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill="#4ade80" fillOpacity={0.05} />
+                            {/* Top-Right: Old (avgAge to maxAge) & Good (avgProd to maxProd) */}
+                            <ReferenceArea x1={averages.age} x2={maxAge} y1={averages.production} y2={maxProd} fill="#facc15" fillOpacity={0.05} />
+                            {/* Bottom-Left: Young (minAge to avgAge) & Bad (minProd to avgProd) */}
+                            <ReferenceArea x1={minAge} x2={averages.age} y1={minProd} y2={averages.production} fill="#60a5fa" fillOpacity={0.05} />
+                            {/* Bottom-Right: Old (avgAge to maxAge) & Bad (minProd to avgProd) */}
+                            <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill="#f87171" fillOpacity={0.05} />
 
-                            {/* X-Axis: Age */}
-                            <XAxis
-                                type="number"
-                                dataKey="age"
-                                name="Average Age"
-                                domain={[minAge, maxAge]}
+                            <XAxis 
+                                type="number" 
+                                dataKey="age" 
+                                name="Average Age" 
+                                domain={[minAge, maxAge]} 
                                 stroke="#94a3b8"
-                                tick={{ fill: '#94a3b8' }}
+                                tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                tickCount={5}
                             >
-                                <Label value="Average Age (Years)" offset={0} position="insideBottom" fill="#64748b" dy={10} />
+                                <Label value="Average Age" offset={-10} position="insideBottom" fill="#64748b" style={{ fontSize: '10px' }} />
                             </XAxis>
 
-                            {/* Y-Axis: Production */}
-                            <YAxis
-                                type="number"
-                                dataKey="production"
-                                name="Production"
-                                domain={[minProd, maxProd]}
+                            <YAxis 
+                                type="number" 
+                                dataKey="production" 
+                                name="Production" 
+                                domain={[minProd, maxProd]} 
                                 stroke="#94a3b8"
-                                tick={{ fill: '#94a3b8' }}
+                                tick={{ fill: '#94a3b8', fontSize: 10 }}
                                 width={30}
                             />
 
-                            {/* Tooltip */}
                             <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
 
-                            {/* Quadrant Lines (Averages) */}
-                            <ReferenceLine x={averages.age} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.7} />
-                            <ReferenceLine y={averages.production} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.7} />
+                            {/* Center Lines */}
+                            <ReferenceLine x={averages.age} stroke="#94a3b8" strokeDasharray="3 3" />
+                            <ReferenceLine y={averages.production} stroke="#94a3b8" strokeDasharray="3 3" />
 
-                            {/* Quadrant Labels (Fixed Positions approximating corners) */}
-                            {/* Note: In responsive container, fixed percent/pixels are tricky for Labels on ReferenceLine. 
-                                We'll assume the user can infer quadrants or use background/annotations if we want to be fancy.
-                                For now, the Tooltip provides the classification.
-                            */}
-
-                            {/* Data Points */}
                             <Scatter name="Teams" data={data} shape={<CustomNode />} />
                         </ScatterChart>
                     </ResponsiveContainer>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2 text-center text-xs text-slate-400">
-                    <div className="p-2 bg-slate-900/50 rounded border border-slate-800">
-                        <span className="text-green-400 font-bold block">Top Left</span>
-                        Dynasty Kings <br />(Young & Good)
+                {/* Legend / Key */}
+                <div className="grid grid-cols-2 gap-2 mt-4 px-4 pb-4 sm:px-0 sm:pb-0">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-400/20 border border-green-400"></div>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Dynasty King</span>
                     </div>
-                    <div className="p-2 bg-slate-900/50 rounded border border-slate-800">
-                        <span className="text-blue-400 font-bold block">Top Right</span>
-                        Contenders <br />(Old & Good)
+                     <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-yellow-400/20 border border-yellow-400"></div>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Contender</span>
                     </div>
-                    <div className="p-2 bg-slate-900/50 rounded border border-slate-800">
-                        <span className="text-yellow-400 font-bold block">Bottom Left</span>
-                        Rebuilders <br />(Young & Bad)
+                     <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-400/20 border border-blue-400"></div>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Rebuilder</span>
                     </div>
-                    <div className="p-2 bg-slate-900/50 rounded border border-slate-800">
-                        <span className="text-red-400 font-bold block">Bottom Right</span>
-                        Danger Zone <br />(Old & Bad)
+                     <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400/20 border border-red-400"></div>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Danger Zone</span>
                     </div>
                 </div>
             </CardContent>
