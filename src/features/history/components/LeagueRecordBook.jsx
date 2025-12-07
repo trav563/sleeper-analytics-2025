@@ -26,7 +26,7 @@ const RecordCard = ({ title, icon: Icon, record, color }) => (
                         />
                         <div>
                             <div className="font-bold text-white text-lg leading-tight">{record.value}</div>
-                            <div className="text-xs text-slate-400 truncate max-w-[150px]" title={record.teamName}>{record.teamName}</div>
+                            <div className="text-xs text-slate-400 line-clamp-2 leading-tight" title={record.teamName}>{record.teamName}</div>
                         </div>
                     </div>
                     <div className="text-xs text-slate-500 flex justify-between">
@@ -153,12 +153,15 @@ const LeagueRecordBook = ({ users }) => {
                     const diff = Math.abs(m1.points - m2.points);
                     if (diff < closestMatch.value) {
                         // Display the winner or the first team
-                        const r = Object.values(rosters).find(r => r.roster_id === m1.roster_id);
-                        const u = users?.find(user => user.user_id === r?.owner_id);
+                        const r1 = Object.values(rosters).find(r => r.roster_id === m1.roster_id);
+                        const r2 = Object.values(rosters).find(r => r.roster_id === m2.roster_id);
+                        const u1 = users?.find(user => user.user_id === r1?.owner_id);
+                        const u2 = users?.find(user => user.user_id === r2?.owner_id);
+
                         closestMatch = {
                             value: diff.toFixed(2),
-                            teamName: `${displayTeamName(u)} vs ...`, // Just showing one name for space
-                            avatar: u?.avatar,
+                            teamName: `${displayTeamName(u1)} vs ${displayTeamName(u2)}`,
+                            avatar: u1?.avatar,
                             year: league.season,
                             week: weekNum,
                             detail: `Diff (${m1.points.toFixed(1)} - {m2.points.toFixed(1)})` // Fixed syntax below
