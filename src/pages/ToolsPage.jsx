@@ -5,7 +5,7 @@ import DynastyLandscape from '../features/tools/components/DynastyLandscape';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
-    const { league, rosters, users, players, currentWeek, tradedPicks } = useOutletContext();
+    const { league, rosters, users, players, currentWeek, tradedPicks, state } = useOutletContext();
 
     return (
         <div className="space-y-8">
