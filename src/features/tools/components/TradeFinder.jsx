@@ -1,23 +1,32 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTradeAnalysis } from '../hooks/useTradeAnalysis';
 import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
+import { useSleeper } from '../../../context/SleeperContext';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft, User } from 'lucide-react';
 
 const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, tradedPicks }) => {
+    const { user } = useSleeper();
     const { seasonMatchups, loading: matchupsLoading } = useSeasonMatchups(leagueId, currentWeek);
     const { teamAnalysis, findMatches, playerValues } = useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks);
 
-    // Default to current user if possible, else first roster
     const [selectedRosterId, setSelectedRosterId] = useState(null);
 
     // Initialize selected roster once data is loaded
     useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {
-            // Try to find logged in user? For now just pick first
+            // Default to logged-in user if found
+            if (user) {
+                const userRoster = rosters.find(r => r.owner_id === user.user_id);
+                if (userRoster) {
+                    setSelectedRosterId(userRoster.roster_id);
+                    return;
+                }
+            }
+            // Fallback to first roster
             setSelectedRosterId(rosters[0].roster_id);
         }
-    }, [rosters, selectedRosterId]);
+    }, [rosters, user, selectedRosterId]);
 
     const focusTeam = teamAnalysis[selectedRosterId];
     const matches = useMemo(() => findMatches(selectedRosterId), [selectedRosterId, findMatches]);

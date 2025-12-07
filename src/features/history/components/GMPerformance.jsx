@@ -3,10 +3,12 @@ import { ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid, Toolti
 import { fetchDraftPicks } from '../../../utils/sleeper';
 import { useLeagueHistory } from '../../league/hooks/useLeagueHistory';
 import { useCareerStats } from '../../stats/hooks/useCareerStats';
+import { useSleeper } from '../../../context/SleeperContext';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { TrendingUp } from 'lucide-react';
 
 const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
+    const { user } = useSleeper();
     const [selectedSeason, setSelectedSeason] = useState(null);
     const [picks, setPicks] = useState([]);
     const [loadingDraft, setLoadingDraft] = useState(false);
@@ -54,9 +56,18 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
     // Initialize selected roster
     useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {
+            // Default to logged-in user if found
+            if (user) {
+                const userRoster = rosters.find(r => r.owner_id === user.user_id);
+                if (userRoster) {
+                    setSelectedRosterId(userRoster.roster_id);
+                    return;
+                }
+            }
+            // Fallback to first roster
             setSelectedRosterId(rosters[0].roster_id);
         }
-    }, [rosters, selectedRosterId]);
+    }, [rosters, user, selectedRosterId]);
 
     const [hoveredPoint, setHoveredPoint] = useState(null);
 
