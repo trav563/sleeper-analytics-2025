@@ -34,32 +34,51 @@ const RosterNews = ({ roster, players }) => {
         }
     };
 
-    const NewsItem = ({ item }) => (
-        <a
-            href={item.link}
-            target="_blank"
-            rel="noreferrer"
-            className="block mb-3 last:mb-0 group"
-        >
-            <div className="bg-slate-900/50 hover:bg-slate-800 border border-slate-800 rounded-lg p-3 transition-all relative overflow-hidden">
-                {isBreaking(item.pubDate) && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-red-500/10 text-red-500 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded animate-pulse">
-                        <Flame className="w-3 h-3" />
-                        Breaking
+    const NewsItem = ({ item }) => {
+        const isAlert = item.type === 'alert';
+
+        return (
+            <a
+                href={item.link || '#'}
+                target={item.link ? "_blank" : "_self"}
+                rel="noreferrer"
+                className={`block mb-3 last:mb-0 group ${!item.link ? 'cursor-default' : ''}`}
+            >
+                <div className={`
+                    border rounded-lg p-3 transition-all relative overflow-hidden
+                    ${isAlert
+                        ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+                        : 'bg-slate-900/50 hover:bg-slate-800 border-slate-800'}
+                `}>
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1">
+                            <h4 className={`font-semibold text-sm pr-2 group-hover:text-blue-400 transition-colors ${isAlert ? 'text-red-200' : 'text-white'}`}>
+                                {isAlert && <span className="mr-2">🏥</span>}
+                                {item.title}
+                            </h4>
+
+                            <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+                                <Clock className="w-3 h-3" />
+                                <span>{formatTime(item.pubDate)}</span>
+                                {item.trending === 'down' && (
+                                    <span className="flex items-center gap-1 text-red-400 bg-red-900/30 px-1.5 py-0.5 rounded ml-2">
+                                        📉 Selling Off ({item.count})
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {isBreaking(item.pubDate) && !isAlert && (
+                            <div className="flex items-center gap-1 bg-red-500/10 text-red-500 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded animate-pulse shrink-0">
+                                <Flame className="w-3 h-3" />
+                                Breaking
+                            </div>
+                        )}
                     </div>
-                )}
-
-                <h4 className="font-semibold text-white text-sm pr-16 group-hover:text-blue-400 transition-colors">
-                    {item.title}
-                </h4>
-
-                <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatTime(item.pubDate)}</span>
                 </div>
-            </div>
-        </a>
-    );
+            </a>
+        );
+    };
 
     if (isLoading) {
         return (
