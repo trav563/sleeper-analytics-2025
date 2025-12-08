@@ -43,10 +43,14 @@ export const usePlayerNews = (rosterData, players) => {
     const myPlayerNames = playerIds.map(id => {
         const p = players[id];
         if (!p) return null;
-        // Construct search terms: "C. Lamb", "CeeDee Lamb", "Lamb"
-        // Simplify: Just check if full Last Name is in title? Too noisy (e.g. "Jones").
-        // Full Name is safer. "CeeDee Lamb".
-        return `${p.first_name} ${p.last_name}`;
+
+        let fullName = `${p.first_name} ${p.last_name}`;
+
+        // Remove suffixes for better matching logic (e.g. "Brian Thomas Jr." -> "Brian Thomas")
+        // as news headlines often omit them ("Brian Thomas: ...")
+        const cleanName = fullName.replace(/\s+(Jr\.?|Sr\.?|III|II|IV)$/i, '');
+
+        return cleanName;
     }).filter(Boolean);
 
     const personalNews = newsItems.filter(item => {

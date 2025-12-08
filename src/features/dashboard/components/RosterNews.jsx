@@ -84,7 +84,7 @@ const RosterNews = ({ roster, players }) => {
     const displayNews = hasNews ? personalNews : topHeadlines;
 
     return (
-        <Card className="bg-slate-800/50 border-slate-700 h-full flex flex-col">
+        <Card className="bg-slate-800/50 border-slate-700 w-full flex flex-col">
             <CardHeader className="pb-2">
                 <CardTitle className="text-white flex items-center justify-between text-base">
                     <div className="flex items-center gap-2">
