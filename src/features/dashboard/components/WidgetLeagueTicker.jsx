@@ -106,7 +106,7 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
     }
 
     return (
-        <Card className="h-full bg-slate-800/50 border-slate-700">
+        <Card className="w-full bg-slate-800/50 border-slate-700">
             <CardHeader className="pb-2 border-b border-slate-700">
                 <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">League Activity</CardTitle>
             </CardHeader>
