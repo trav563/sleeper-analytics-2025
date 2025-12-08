@@ -127,3 +127,14 @@ export const fetchSeasonStats = async (season) => {
     const timestamp = Date.now();
     return fetchSleeper(`/stats/nfl/regular/${season}?_=${timestamp}`);
 };
+
+/**
+ * Fetch trending players (add/drop)
+ * @param {string} type - 'add' or 'drop'
+ * @param {number} lookbackHours - hours to look back (default 24)
+ * @param {number} limit - limit results (default 25)
+ */
+export const fetchTrendingPlayers = async (type = 'add', lookbackHours = 24, limit = 25) => {
+    // Note: trending endpoint doesn't need cache busting usually as it changes often
+    return fetchSleeper(`/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
+};
