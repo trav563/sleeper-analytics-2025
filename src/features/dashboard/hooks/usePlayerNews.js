@@ -57,6 +57,8 @@ export const usePlayerNews = (roster, players) => {
         // Check for major statuses
         if (['IR', 'Out', 'PUP', 'Sus', 'Doubtful'].includes(p.status) || p.injury_status === 'Out') {
             const name = `${p.first_name} ${p.last_name}`;
+            const displayStatus = p.injury_status || p.status;
+
             // Check if we already have recent news for this player
             const hasRecentNews = personalNews.some(n => {
                 const nDate = new Date(n.pubDate);
@@ -65,9 +67,9 @@ export const usePlayerNews = (roster, players) => {
 
             if (!hasRecentNews) {
                 personalNews.push({
-                    title: `🚨 ALERT: ${name} is marked ${p.status || p.injury_status}`,
+                    title: `🚨 ALERT: ${name} is marked ${displayStatus}`,
                     link: null, // No link for synthetic
-                    content: `Sleeper official status update: ${name} is currently ${p.status || p.injury_status}.`,
+                    content: `Sleeper official status update: ${name} is currently ${displayStatus}.`,
                     pubDate: new Date().toISOString(), // effectively "now"
                     type: 'alert',
                     player_id: p.player_id
