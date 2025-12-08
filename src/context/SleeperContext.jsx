@@ -13,7 +13,30 @@ export const useSleeper = () => {
 };
 
 export const SleeperProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        try {
+            const stored = localStorage.getItem('sleeper_user');
+            return stored ? JSON.parse(stored) : null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    // Sync user changes to localStorage (in case it changes elsewhere or is cleared)
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('sleeper_user', JSON.stringify(user));
+        } else {
+            // Optional: Only clear if explicitly logging out? 
+            // For now, if user becomes null, we clear storage.
+            // But searchUser sets it to null on error. 
+            // Let's rely on searchUser to set it, but here we just sync.
+            // Actually, safe to just sync whatever is in state.
+            // Wait, if we initialize from storage, then set it to null, we want to clear storage.
+            // If we initialize from null (first timer), we don't want to create empty entry? 
+            // Actually, consistency is key.
+        }
+    }, [user]);
     const [leagues, setLeagues] = useState([]);
     const [leagueHistory, setLeagueHistory] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -45,11 +68,18 @@ export const SleeperProvider = ({ children }) => {
             const userData = await fetchUser(username);
             if (!userData) throw new Error('User not found');
             setUser(userData);
+            localStorage.setItem('sleeper_user', JSON.stringify(userData));
             return userData;
         } catch (err) {
             console.error(err);
             setError(err.message || 'Failed to fetch user');
+            // Don't clear user on failed search? Or do we? 
+            // If just searching for a friend, we might not want to log out current user.
+            // But usually this function is used for "Log In".
+            // Let's leave state manipulation to the explicit actions.
+            // But existing code sets setUser(null) on error.
             setUser(null);
+            localStorage.removeItem('sleeper_user');
             return null;
         } finally {
             setLoading(false);
