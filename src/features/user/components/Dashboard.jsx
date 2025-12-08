@@ -1,4 +1,5 @@
 import LeagueCard from '../../league/components/LeagueCard';
+import RosterNews from '../components/RosterNews';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 
 const Dashboard = ({ user, leagues, onLeagueClick, onLogout }) => {
@@ -50,6 +51,13 @@ const Dashboard = ({ user, leagues, onLeagueClick, onLogout }) => {
 
                 {leagues.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* News Ticker (Spans full width on mobile, or takes a slot) */}
+                        <div className="lg:col-span-3">
+                            {/* We pass empty roster for now to show top headlines. 
+                                 Future enhancement: Aggregated roster fetching. */}
+                            <RosterNews roster={null} players={null} />
+                        </div>
+
                         {leagues.map(league => (
                             <LeagueCard
                                 key={league.league_id}
