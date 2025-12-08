@@ -98,9 +98,9 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
 
             if (!stat || !player) return null;
 
-            // Expected Value Model: Max * (1 / (ln(Pick) + 1))
+            // Expected Value Model: Max * (1 / (ln(Pick) + 1)) * 1.5 (Starter Multiplier)
             // Using actual max points from this class to set the curve height
-            const expected = maxDraftPoints * (1 / (Math.log(pick.pick_no) + 1));
+            const expected = maxDraftPoints * (1 / (Math.log(pick.pick_no) + 1)) * 1.5;
 
             const diff = stat.totalPoints - expected;
             const roi = expected > 0 ? diff / expected : 0;
@@ -133,7 +133,7 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
         const curve = [];
         const maxPick = Math.max(...picks.map(p => p.pick_no), 50);
         for (let i = 1; i <= maxPick; i++) {
-            const exp = maxDraftPoints * (1 / (Math.log(i) + 1));
+            const exp = maxDraftPoints * (1 / (Math.log(i) + 1)) * 1.5;
             curve.push({
                 pickNo: i,
                 expected: exp,
@@ -326,7 +326,7 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                                     <span className="text-slate-500">Draft:</span> R{hoveredPoint.payload.round} • Pick {hoveredPoint.payload.draftSlot} (Ov {hoveredPoint.payload.pickNo})
                                 </p>
                                 <p className="text-slate-300">
-                                    <span className="text-slate-500">Career Pts:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Exp: {hoveredPoint.payload.expected.toFixed(1)}</span>
+                                    <span className="text-slate-500">Career Pts:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Target: {hoveredPoint.payload.expected.toFixed(1)}</span>
                                 </p>
                             </div>
 
