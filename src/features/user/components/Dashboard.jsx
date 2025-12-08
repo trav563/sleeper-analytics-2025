@@ -1,5 +1,5 @@
 import LeagueCard from '../../league/components/LeagueCard';
-import RosterNews from '../components/RosterNews';
+import RosterNews from '../../dashboard/components/RosterNews';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 
 const Dashboard = ({ user, leagues, onLeagueClick, onLogout }) => {
