@@ -5,6 +5,7 @@ import WidgetLineupStatus from '../features/dashboard/components/WidgetLineupSta
 import WidgetMatchupPreview from '../features/dashboard/components/WidgetMatchupPreview';
 import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats';
 import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
+import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
 import { Card, CardContent } from '../components/ui/Card';
@@ -165,6 +166,11 @@ const DashboardPage = () => {
                     </div>
 
                     {/* League Ticker - Always shows latest transactions, independent of time travel */}
+                    <RosterNews
+                        roster={rosters?.find(r => r.owner_id === selectedUserId)}
+                        players={players}
+                    />
+
                     <WidgetLeagueTicker
                         transactions={transactions}
                         users={users}
