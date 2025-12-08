@@ -2,6 +2,7 @@ import { useOutletContext, useParams } from 'react-router-dom';
 import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
+import RosterClogger from '../features/tools/components/RosterClogger';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
@@ -12,6 +13,13 @@ const ToolsPage = () => {
             <DynastyLandscape
                 rosters={rosters}
                 users={users}
+                players={players}
+                league={league}
+                state={state}
+            />
+
+            <RosterClogger
+                rosters={rosters}
                 players={players}
                 league={league}
                 state={state}
