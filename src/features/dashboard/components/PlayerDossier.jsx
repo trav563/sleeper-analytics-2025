@@ -47,13 +47,21 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
         });
     }
 
-    // Calculate Consistency
+    // Calculate Consistency (CV Method)
     const scores = performanceData.map(d => d.points);
     const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     const stdDev = scores.length ? Math.sqrt(scores.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / scores.length) : 0;
-    const cv = avg > 0 ? (stdDev / avg) * 100 : 0;
-    const consistencyGrade = cv < 20 ? 'A (Elite)' : cv < 40 ? 'B (Reliable)' : cv < 60 ? 'C (Volatile)' : 'D (Boom/Bust)';
-    const consistencyColor = cv < 30 ? 'text-green-400' : cv < 50 ? 'text-yellow-400' : 'text-red-400';
+    const cv = avg > 0 ? stdDev / avg : 0; // Coefficient of Variation
+
+    // Curved Grading Scale (Fantasy Specific)
+    let consistencyGrade = 'F (Lottery Ticket)';
+    let consistencyColor = 'text-red-500';
+
+    if (cv < 0.20) { consistencyGrade = 'A+ (Robot)'; consistencyColor = 'text-purple-400'; }
+    else if (cv < 0.35) { consistencyGrade = 'A (Elite)'; consistencyColor = 'text-blue-400'; }
+    else if (cv < 0.50) { consistencyGrade = 'B (Reliable)'; consistencyColor = 'text-green-400'; }
+    else if (cv < 0.75) { consistencyGrade = 'C (Volatile)'; consistencyColor = 'text-yellow-400'; }
+    else if (cv <= 1.0) { consistencyGrade = 'D (Boom/Bust)'; consistencyColor = 'text-orange-400'; }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -88,8 +96,11 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
                     <TabsContent value="pulse" className="space-y-4 mt-4">
                         <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
                             <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wider">Consistency Grade</p>
+                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Consistency Grade</p>
                                 <p className={`text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                    Typically scores +/- {stdDev.toFixed(1)}pts of average
+                                </p>
                             </div>
                             <div className="text-right">
                                 <p className="text-xs text-slate-400 uppercase tracking-wider">Avg PPG</p>
