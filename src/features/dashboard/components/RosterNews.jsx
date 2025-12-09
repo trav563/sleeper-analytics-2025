@@ -1,6 +1,7 @@
 import { usePlayerNews } from '../hooks/usePlayerNews';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Newspaper, ExternalLink, Clock, Flame } from 'lucide-react';
+import InjuryReport from './InjuryReport';
 
 const RosterNews = ({ roster, players }) => {
     const { personalNews, topHeadlines, isLoading } = usePlayerNews(roster, players);
@@ -129,8 +130,12 @@ const RosterNews = ({ roster, players }) => {
                         <NewsItem key={idx} item={item} />
                     ))}
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </CardContent>
+            
+            {/* Injury Report Widget */ }
+    <InjuryReport roster={roster} players={players} />
+        </Card >
     );
 };
 

@@ -47,35 +47,62 @@ export const usePlayerNews = (roster, players) => {
         });
     });
 
-    // Strategy 2: Synthetic Alerts (Injuries)
-    // If player is injured, and NO news in last 24h, create alert.
+    // Strategy 2: Smart Alerts (Injuries with History Tracking)
     const now = new Date();
     const oneDay = 24 * 60 * 60 * 1000;
 
+    // Load History
+    let alertHistory = {};
+    try {
+        alertHistory = JSON.parse(localStorage.getItem('alert_history') || '{}');
+    } catch (e) {
+        console.warn('Failed to parse alert_history', e);
+    }
+
+    let historyUpdated = false;
+
     rosterPlayers.forEach(p => {
-        // Check for major statuses
+        // Only care about Bad Statuses
         if (['IR', 'Out', 'PUP', 'Sus', 'Doubtful'].includes(p.status) || p.injury_status === 'Out') {
-            const name = `${p.first_name} ${p.last_name}`;
             const displayStatus = p.injury_status || p.status;
+            const pid = p.player_id;
 
-            // Check if we already have recent news for this player
-            const hasRecentNews = personalNews.some(n => {
-                const nDate = new Date(n.pubDate);
-                return (now - nDate < oneDay) && n.title.includes(name);
-            });
+            // Check History
+            const lastRecord = alertHistory[pid];
+            let alertTimestamp = lastRecord?.timestamp;
 
-            if (!hasRecentNews) {
+            // DETECT CHANGE (New Alert)
+            if (!lastRecord || lastRecord.status !== displayStatus) {
+                // Status Changed! Treat as NEW breaking news.
+                alertTimestamp = now.getTime();
+
+                // Update History
+                alertHistory[pid] = {
+                    status: displayStatus,
+                    timestamp: alertTimestamp
+                };
+                historyUpdated = true;
+            }
+
+            // SHOW ALERT (If within 24h window of the "Change Event")
+            if (now.getTime() - alertTimestamp < oneDay) {
+                const name = `${p.first_name} ${p.last_name}`;
                 personalNews.push({
                     title: `🚨 ALERT: ${name} is marked ${displayStatus}`,
-                    link: null, // No link for synthetic
+                    link: null,
                     content: `Sleeper official status update: ${name} is currently ${displayStatus}.`,
-                    pubDate: new Date().toISOString(), // effectively "now"
+                    pubDate: new Date(alertTimestamp).toISOString(),
                     type: 'alert',
-                    player_id: p.player_id
+                    player_id: pid
                 });
             }
         }
     });
+
+    // Save History (Side Effect - Debounced or direct)
+    if (historyUpdated) {
+        localStorage.setItem('alert_history', JSON.stringify(alertHistory));
+    }
 
     // Strategy 3: Trending Context
     // Tag news items if the player is also trending down
