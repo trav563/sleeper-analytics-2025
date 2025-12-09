@@ -102,7 +102,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
 
     // 2. Analyze Team Needs & Surplus (with Picks)
     const teamAnalysis = useMemo(() => {
-        if (!league || !rosters || !players || Object.keys(playerStats).length === 0) return {};
+        if (!league || !rosters || !players || !Array.isArray(rosters) || !league.roster_positions || Object.keys(playerStats).length === 0) return {};
 
         const analysis = {};
         const totalTeams = rosters.length;
