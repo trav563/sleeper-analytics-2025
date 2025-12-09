@@ -130,12 +130,11 @@ const RosterNews = ({ roster, players }) => {
                         <NewsItem key={idx} item={item} />
                     ))}
                 </div>
-            </div>
-        </CardContent>
-            
-            {/* Injury Report Widget */ }
-    <InjuryReport roster={roster} players={players} />
-        </Card >
+            </CardContent>
+
+            {/* Injury Report Widget */}
+            <InjuryReport roster={roster} players={players} />
+        </Card>
     );
 };
 
