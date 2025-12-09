@@ -43,8 +43,7 @@ export const usePlayerNews = (roster, players) => {
     // Strategy 1: Real News Matching
     let personalNews = (newsItems || []).filter(item => {
         return myPlayerNames.some(name => {
-            return item.title.toLowerCase().includes(name.toLowerCase()) ||
-                (item.content && item.content.toLowerCase().includes(name.toLowerCase()));
+            return item.title.toLowerCase().includes(name.toLowerCase());
         });
     });
 
