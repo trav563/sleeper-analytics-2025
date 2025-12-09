@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "../../utils/cn" // Assuming utils/cn exists based on commonly used patterns or I'll create it locally if needed. 
+import { cn } from "../../lib/utils" // Assuming utils/cn exists based on commonly used patterns or I'll create it locally if needed. 
 // Wait, Card.jsx uses `className` prop but let's see how it merges. 
 // If Card.jsx doesn't use `cn`, I'll check `src/utils` again.
 
