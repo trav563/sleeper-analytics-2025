@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui
 import { Card } from '../../../components/ui/Card';
 import { ScrollArea } from '../../../components/ui/ScrollArea';
 import { avatarUrl, displayTeamName } from '../../../utils/nflData';
-import { fetchRecursiveTrades } from '../../../utils/sleeper';
+import { fetchFullTransactionHistory } from '../../../utils/sleeper';
 import { ArrowLeftRight, Activity, TrendingUp, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
@@ -16,7 +16,7 @@ const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters
     useEffect(() => {
         if (isOpen && player && league?.league_id) {
             setLoadingHistory(true);
-            fetchRecursiveTrades(league.league_id, 3) // 3 years back
+            fetchFullTransactionHistory(league.league_id, 3) // 3 years back
                 .then(trades => {
                     // Filter for this player
                     const relevant = trades.filter(t =>

@@ -159,12 +159,13 @@ export const fetchSeasonTrades = async (leagueId) => {
 };
 
 /**
- * Recursively fetch trade history across seasons
+ * Recursively fetch full transaction history across seasons
  * @param {string} currentLeagueId 
  * @param {number} depth - How many seasons back to go (default 3)
  */
-export const fetchRecursiveTrades = async (currentLeagueId, depth = 3) => {
+export const fetchFullTransactionHistory = async (currentLeagueId, depth = 3) => {
     let allTrades = [];
+    let processedIds = new Set();
     let processingLeagueId = currentLeagueId;
     let seasonsFetched = 0;
 
@@ -181,15 +182,20 @@ export const fetchRecursiveTrades = async (currentLeagueId, depth = 3) => {
             // 2. Fetch Trades for this season
             const seasonTrades = await fetchSeasonTrades(processingLeagueId);
 
-            // 3. Add Context (Season Year) to trades if missing
+            // 3. Enrich and Deduplicate
             const yearStr = leagueDetails.season; // e.g., "2024"
-            const enrichedTrades = seasonTrades.map(t => ({
+
+            const newTrades = seasonTrades.map(t => ({
                 ...t,
                 season: yearStr,
                 leagueId: processingLeagueId
-            }));
+            })).filter(t => {
+                if (processedIds.has(t.transaction_id)) return false;
+                processedIds.add(t.transaction_id);
+                return true;
+            });
 
-            allTrades = [...allTrades, ...enrichedTrades];
+            allTrades = [...allTrades, ...newTrades];
 
             // 4. Prepare next iteration
             processingLeagueId = leagueDetails.previous_league_id;
