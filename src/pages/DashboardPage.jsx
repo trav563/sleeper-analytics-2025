@@ -10,6 +10,7 @@ import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups
 import { fetchLeagueMatchups } from '../utils/sleeper';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import TeamRoster from '../features/dashboard/components/TeamRoster';
 
 const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, transactions, loading, error, user, league } = useOutletContext();
@@ -146,6 +147,18 @@ const DashboardPage = () => {
                         selectedUserId={selectedUserId}
                         league={league}
                         currentWeek={selectedWeek}
+                    />
+
+                    {/* Team Roster with Dossier */}
+                    <TeamRoster
+                        roster={rosters?.find(r => r.owner_id === selectedUserId)}
+                        players={players}
+                        users={users}
+                        currentWeek={selectedWeek}
+                        transactions={transactions}
+                        seasonMatchups={seasonMatchups}
+                        league={league}
+                        rosters={rosters}
                     />
                 </div>
 
