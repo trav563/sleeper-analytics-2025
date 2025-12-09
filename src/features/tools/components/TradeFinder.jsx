@@ -84,7 +84,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                             <h4 className="text-sm font-semibold text-red-400">Needs (Weak Starters)</h4>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {focusTeam.needs.length > 0 ? (
+                            {focusTeam?.needs?.length > 0 ? (
                                 focusTeam.needs.map(pos => (
                                     <span key={pos} className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded font-medium">
                                         {pos}
@@ -102,7 +102,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                             <h4 className="text-sm font-semibold text-green-400">Surplus (Strong Bench)</h4>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {focusTeam.surplus.length > 0 ? (
+                            {focusTeam?.surplus?.length > 0 ? (
                                 focusTeam.surplus.map(s => (
                                     <span key={s.position} className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded font-medium">
                                         {s.position}
@@ -120,20 +120,20 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Suggested Trade Partners</h3>
 
-                {matches.length === 0 ? (
+                {matches?.length === 0 ? (
                     <div className="text-center py-12 bg-slate-800/30 rounded-xl border border-slate-700/50">
                         <User className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                         <p className="text-slate-400">No obvious trade partners found based on current roster construction.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {matches.map((match, idx) => {
-                            const opponentUser = getOwner(match.opponent.rosterId);
-                            const statusColor = match.opponent.status === 'Contender' ? 'text-green-400 bg-green-400/10' :
-                                match.opponent.status === 'Rebuilder' ? 'text-orange-400 bg-orange-400/10' : 'text-slate-400 bg-slate-400/10';
+                        {matches?.map((match, idx) => {
+                            const opponentUser = getOwner(match.opponent?.rosterId);
+                            const statusColor = match.opponent?.status === 'Contender' ? 'text-green-400 bg-green-400/10' :
+                                match.opponent?.status === 'Rebuilder' ? 'text-orange-400 bg-orange-400/10' : 'text-slate-400 bg-slate-400/10';
 
                             return (
-                                <div key={match.opponent.rosterId} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors">
+                                <div key={match.opponent?.rosterId || idx} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-colors">
                                     <div className="p-4 border-b border-slate-700 flex justify-between items-start">
                                         <div className="flex items-center gap-3">
                                             <img
@@ -145,7 +145,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="font-bold text-white">{displayTeamName(opponentUser)}</h4>
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider ${statusColor}`}>
-                                                        {match.opponent.status}
+                                                        {match.opponent?.status}
                                                     </span>
                                                 </div>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${match.type === 'Perfect Match' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'}`}>
@@ -157,7 +157,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
 
                                     <div className="p-4 space-y-4">
                                         {/* Dynasty Insights */}
-                                        {match.dynastySuggestions && match.dynastySuggestions.length > 0 && (
+                                        {match?.dynastySuggestions?.length > 0 && (
                                             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3">
                                                 <p className="text-xs font-bold text-indigo-300 mb-1 flex items-center gap-1">
                                                     <RefreshCw className="w-3 h-3" /> Dynasty Insight
@@ -166,7 +166,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                     <div key={i}>
                                                         <p className="text-xs text-indigo-200 mb-1">{s.message}</p>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {s.assets.map(p => (
+                                                            {s?.assets?.map(p => (
                                                                 <span key={p.id} className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
                                                                     {p.full_name} ({p.age}yo)
                                                                 </span>
@@ -178,7 +178,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                         )}
 
                                         {/* Bench Upgrades (Hidden Gems) */}
-                                        {match.benchUpgrades && match.benchUpgrades.length > 0 && (
+                                        {match?.benchUpgrades?.length > 0 && (
                                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
                                                 <p className="text-xs font-bold text-emerald-300 mb-2 flex items-center gap-1">
                                                     💎 Hidden Gems (Bench Upgrades)
@@ -186,23 +186,23 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                 <div className="space-y-1">
                                                     {match.benchUpgrades.map((upgrade, i) => {
                                                         const isRental = upgrade.type === 'Win-Now Rental';
-                                                        const isInjured = upgrade.upgradeOver.injury_status === 'IR' || upgrade.upgradeOver.injury_status === 'Out';
+                                                        const isInjured = upgrade.upgradeOver?.injury_status === 'IR' || upgrade.upgradeOver?.injury_status === 'Out';
 
                                                         return (
                                                             <div key={i} className="text-xs text-emerald-100">
                                                                 {isRental ? (
                                                                     <span>
-                                                                        <span className="text-orange-300 font-bold">Win-Now Rental:</span> Acquire <span className="font-bold text-white">{upgrade.player.full_name}</span> to replace injured {upgrade.upgradeOver.full_name}
+                                                                        <span className="text-orange-300 font-bold">Win-Now Rental:</span> Acquire <span className="font-bold text-white">{upgrade.player?.full_name}</span> to replace injured {upgrade.upgradeOver?.full_name}
                                                                     </span>
                                                                 ) : (
                                                                     <span>
-                                                                        Start <span className="font-bold text-white">{upgrade.player.full_name}</span> <span className="text-emerald-400">(+{upgrade.diff.toFixed(1)})</span> over {upgrade.upgradeOver.full_name}
+                                                                        Start <span className="font-bold text-white">{upgrade.player?.full_name}</span> <span className="text-emerald-400">(+{upgrade.diff?.toFixed(1)})</span> over {upgrade.upgradeOver?.full_name}
                                                                     </span>
                                                                 )}
 
                                                                 {isInjured && (
                                                                     <span className="ml-2 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">
-                                                                        {upgrade.upgradeOver.injury_status}
+                                                                        {upgrade.upgradeOver?.injury_status}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -216,7 +216,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                         <div>
                                             <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Target Assets (You Get)</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {match.displayTargets && match.displayTargets.length > 0 ? (
+                                                {match?.displayTargets?.length > 0 ? (
                                                     match.displayTargets.map((player, idx) => (
                                                         <div key={player.id || idx} className={`flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3 ${player.isOTB ? 'border border-yellow-500/50' : ''}`}>
                                                             <span className={`text-xs font-bold w-6 ${player.position === 'PICK' ? 'text-blue-300' : 'text-slate-300'}`}>
@@ -236,13 +236,13 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                         </div>
 
                                         {/* You Have (Offer) */}
-                                        {match.giving.length > 0 && (
+                                        {match?.giving?.length > 0 && (
                                             <div>
                                                 <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Potential Offer (Your Surplus)</p>
                                                 <div className="space-y-2">
                                                     {match.giving.map(item => (
                                                         <div key={item.position} className="flex flex-wrap gap-2">
-                                                            {item.assets.map(player => (
+                                                            {item?.assets?.map(player => (
                                                                 <div key={player.id} className="flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3">
                                                                     <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
                                                                     <span className="text-sm text-white">{player.full_name || player.first_name + ' ' + player.last_name}</span>
@@ -257,7 +257,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                             </div>
                                         )}
 
-                                        {match.giving.length === 0 && (
+                                        {(!match?.giving || match.giving.length === 0) && (
                                             <div className="bg-slate-700/20 rounded p-3 text-xs text-slate-400 italic">
                                                 You don't have a clear surplus in their area of need, but they have players you need. Consider offering picks or starters depth.
                                             </div>
