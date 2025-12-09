@@ -37,27 +37,36 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
 
             matchups.forEach(m => {
                 if (m.players_points && m.players_points[player.player_id] !== undefined) {
+                    const pts = m.players_points[player.player_id];
                     performanceData.push({
                         week: `W${week}`,
-                        points: m.players_points[player.player_id],
-                        projected: m.starters_points?.[player.player_id] || 0 // Sleeper might not give historical projections easily here without deeper dive, we'll strip projected for now if unavailable
+                        points: pts === 0 ? null : pts, // Use null for 0 to create gaps
+                        projected: m.starters_points?.[player.player_id] || 0
                     });
                 }
             });
         });
     }
 
-    // Calculate Consistency (CV Method)
-    const scores = performanceData.map(d => d.points);
-    const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    const stdDev = scores.length ? Math.sqrt(scores.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / scores.length) : 0;
-    const cv = avg > 0 ? stdDev / avg : 0; // Coefficient of Variation
+    // Calculate Consistency (CV Method) - Active Games Only
+    const activeScores = performanceData
+        .map(d => d.points)
+        .filter(p => p !== null && p > 0); // Exclude 0/Null
+
+    const avg = activeScores.length ? activeScores.reduce((a, b) => a + b, 0) / activeScores.length : 0;
+    const stdDev = activeScores.length ? Math.sqrt(activeScores.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / activeScores.length) : 0;
+    const cv = avg > 0 ? stdDev / avg : 0;
 
     // Curved Grading Scale (Fantasy Specific)
     let consistencyGrade = 'F (Lottery Ticket)';
     let consistencyColor = 'text-red-500';
+    let subText = `Typically scores +/- ${stdDev.toFixed(1)}pts of average`;
 
-    if (cv < 0.20) { consistencyGrade = 'A+ (Robot)'; consistencyColor = 'text-purple-400'; }
+    if (activeScores.length < 3) {
+        consistencyGrade = 'N/A';
+        consistencyColor = 'text-slate-500';
+        subText = 'Not enough active games to grade';
+    } else if (cv < 0.20) { consistencyGrade = 'A+ (Robot)'; consistencyColor = 'text-purple-400'; }
     else if (cv < 0.35) { consistencyGrade = 'A (Elite)'; consistencyColor = 'text-blue-400'; }
     else if (cv < 0.50) { consistencyGrade = 'B (Reliable)'; consistencyColor = 'text-green-400'; }
     else if (cv < 0.75) { consistencyGrade = 'C (Volatile)'; consistencyColor = 'text-yellow-400'; }
@@ -99,7 +108,7 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
                                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Consistency Grade</p>
                                 <p className={`text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    Typically scores +/- {stdDev.toFixed(1)}pts of average
+                                    {subText}
                                 </p>
                             </div>
                             <div className="text-right">
@@ -117,8 +126,8 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
                                         contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
                                         itemStyle={{ color: '#60a5fa' }}
                                     />
-                                    <ReferenceLine y={avg} stroke="#94a3b8" strokeDasharray="3 3" />
-                                    <Line type="monotone" dataKey="points" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#1d4ed8' }} activeDot={{ r: 6 }} />
+                                    <ReferenceLine y={avg} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: 'AVG', fill: '#94a3b8', fontSize: 10 }} />
+                                    <Line type="monotone" dataKey="points" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#1d4ed8' }} activeDot={{ r: 6 }} connectNulls={false} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
