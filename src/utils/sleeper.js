@@ -138,3 +138,71 @@ export const fetchTrendingPlayers = async (type = 'add', lookbackHours = 24, lim
     // Note: trending endpoint doesn't need cache busting usually as it changes often
     return fetchSleeper(`/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
 };
+
+/**
+ * Fetch all trade transactions for a specific league (weeks 1-18)
+ * @param {string} leagueId
+ */
+export const fetchSeasonTrades = async (leagueId) => {
+    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+    const promises = weeks.map(week =>
+        fetchLeagueTransactions(leagueId, week)
+            .catch((err) => {
+                console.warn(`Failed to fetch transactions for week ${week}`, err);
+                return [];
+            })
+    );
+
+    const results = await Promise.all(promises);
+    // Flatten and filter for trades
+    return results.flat().filter(t => t.type === 'trade');
+};
+
+/**
+ * Recursively fetch trade history across seasons
+ * @param {string} currentLeagueId 
+ * @param {number} depth - How many seasons back to go (default 3)
+ */
+export const fetchRecursiveTrades = async (currentLeagueId, depth = 3) => {
+    let allTrades = [];
+    let processingLeagueId = currentLeagueId;
+    let seasonsFetched = 0;
+
+    // We need to fetch league details recursively to find previous_league_id
+    // But we might not have the full league object active.
+    // So we fetch league details for each step.
+
+    while (processingLeagueId && seasonsFetched <= depth) {
+        try {
+            // 1. Fetch League Details (to get previous_league_id and season year)
+            // Note: If processingLeagueId is currentLeagueId, we might already have details, but fetching safe.
+            const leagueDetails = await fetchSleeper(`/league/${processingLeagueId}`);
+
+            // 2. Fetch Trades for this season
+            const seasonTrades = await fetchSeasonTrades(processingLeagueId);
+
+            // 3. Add Context (Season Year) to trades if missing
+            const yearStr = leagueDetails.season; // e.g., "2024"
+            const enrichedTrades = seasonTrades.map(t => ({
+                ...t,
+                season: yearStr,
+                leagueId: processingLeagueId
+            }));
+
+            allTrades = [...allTrades, ...enrichedTrades];
+
+            // 4. Prepare next iteration
+            processingLeagueId = leagueDetails.previous_league_id;
+            seasonsFetched++;
+
+            // Optimization: If no previous league, break.
+            if (!processingLeagueId) break;
+
+        } catch (err) {
+            console.error(`Error traversing history at league ${processingLeagueId}`, err);
+            break;
+        }
+    }
+
+    return allTrades;
+};
