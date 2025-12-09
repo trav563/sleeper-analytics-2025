@@ -92,14 +92,15 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                     }
                 });
             }
+        } // Close if (weekMatchups) AND for loop
 
-            const finalStats = {};
-            Object.keys(stats).forEach(pid => {
-                finalStats[pid] = stats[pid].totalPoints / stats[pid].games;
-            });
+        const finalStats = {};
+        Object.keys(stats).forEach(pid => {
+            finalStats[pid] = stats[pid].totalPoints / stats[pid].games;
+        });
 
-            return finalStats;
-        }, [seasonMatchups, currentWeek]);
+        return finalStats;
+    }, [seasonMatchups, currentWeek]);
 
     // 2. Analyze Team Needs & Surplus (with Picks)
     const teamAnalysis = useMemo(() => {
