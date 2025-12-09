@@ -100,7 +100,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         return finalStats;
     }, [seasonMatchups, currentWeek]);
 
-    // 2. Analyze Teams & Assign Market Values
+    // 2. Analyze Team Needs & Surplus (with Picks)
     const teamAnalysis = useMemo(() => {
         if (!league || !rosters || !players || Object.keys(playerStats).length === 0) return {};
 
@@ -190,12 +190,15 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                     if (!p) return null;
                     const ppg = playerStats[pid] || 0;
                     const tradeValue = calculatePlayerValue(ppg, p.age, p.position, isSuperflex);
+                    const nickname = roster.metadata?.[`p_nick_${pid}`];
 
                     return {
                         id: pid,
-                        ...p,
+                        ...players[pid],
+                        value: playerStats[pid] || 0,
                         ppg: ppg.toFixed(1),
                         tradeValue,
+                        isOTB: nickname?.toUpperCase().includes('OTB'),
                         type: 'Player',
                         isOTB: roster.metadata?.[`p_nick_${pid}`]?.toUpperCase().includes('OTB')
                     };
@@ -391,6 +394,5 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         return matches.sort((a, b) => b.score - a.score);
     };
 
-    return { teamAnalysis, findMatches, playerStats };
+    return { teamAnalysis, findMatches, playerValues: playerStats };
 }
-
