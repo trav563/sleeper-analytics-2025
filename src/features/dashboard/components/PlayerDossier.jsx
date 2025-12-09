@@ -1,18 +1,39 @@
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/Dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
 import { Card } from '../../../components/ui/Card';
 import { ScrollArea } from '../../../components/ui/ScrollArea';
 import { avatarUrl, displayTeamName } from '../../../utils/nflData';
-import { ArrowLeftRight, Activity, TrendingUp } from 'lucide-react';
+import { fetchRecursiveTrades } from '../../../utils/sleeper';
+import { ArrowLeftRight, Activity, TrendingUp, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, users, rosters }) => {
+const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters, league }) => {
+    const [history, setHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // Fetch Deep History when opened
+    useEffect(() => {
+        if (isOpen && player && league?.league_id) {
+            setLoadingHistory(true);
+            fetchRecursiveTrades(league.league_id, 3) // 3 years back
+                .then(trades => {
+                    // Filter for this player
+                    const relevant = trades.filter(t =>
+                        t.adds?.[player.player_id] || t.drops?.[player.player_id]
+                    ).sort((a, b) => b.created - a.created);
+                    setHistory(relevant);
+                })
+                .catch(err => console.error("Failed to fetch history", err))
+                .finally(() => setLoadingHistory(false));
+        }
+    }, [isOpen, player, league?.league_id]);
+
     if (!player) return null;
 
     // --- Tab 1: The Ledger (Trade History) ---
-    const tradeHistory = (transactions || []).filter(t =>
-        t.type === 'trade' && t.adds && t.adds[player.player_id]
-    ).sort((a, b) => b.created - a.created);
+    // Use the fetched 'history' state instead of props
+    const tradeHistory = history;
 
     // --- Tab 2: The Pulse (Performance) ---
     // Extract weekly points for this player from seasonMatchups
@@ -135,7 +156,12 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
 
                     <TabsContent value="ledger" className="mt-4">
                         <ScrollArea className="h-[300px] w-full rounded-md border border-slate-700 bg-slate-900/50 p-4">
-                            {tradeHistory.length === 0 ? (
+                            {loadingHistory ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-2">
+                                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                                    <p className="text-sm"> digging through the archives...</p>
+                                </div>
+                            ) : tradeHistory.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 opacity-70">
                                     <ArrowLeftRight className="w-8 h-8" />
                                     <p className="text-sm">No recorded trades for this player.</p>
@@ -144,16 +170,16 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
                             ) : (
                                 <div className="relative border-l border-slate-700 ml-3 space-y-6">
                                     {tradeHistory.map((t, idx) => {
-                                        // Identify From and To
-                                        // "adds" contains the player. KEY is player_id, VALUE is roster_id (DESTINATION)
-                                        // "drops" usually contains the SOURCE? Or we have to look transaction structure.
-                                        // In Sleeper trade: 
-                                        // adds: { player_id: roster_id_destination }
-                                        // drops: { player_id: roster_id_source } (sometimes null if only adds?)
-                                        // Actually for TRADES, `drops` shows who gave it up.
-
-                                        const destRosterId = t.adds[player.player_id];
+                                        const destRosterId = t.adds?.[player.player_id];
                                         const sourceRosterId = t.drops?.[player.player_id];
+
+                                        // Note: Roster IDs from previous seasons won't match current rosters.
+                                        // Ideally we fetch historical rosters, but for now we fallback gracefully.
+                                        // We attempt to find a roster with same ID in current league (unlikely correct but safe fallback or just show ID)
+                                        // Actually, roster_ids are usually 1-12.
+                                        // If User A was Roster 1 in 2023 and Roster 1 in 2024, it matches.
+                                        // Sleeper roster IDs are stable index-based usually (1-12) unless commish changes it? No, usually stable.
+                                        // So using current rosters array (which is keyed by roster_id potentially) might actually work for Team Names!
 
                                         const destUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === destRosterId)?.owner_id);
                                         const sourceUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === sourceRosterId)?.owner_id);
@@ -164,11 +190,12 @@ const PlayerDossier = ({ player, isOpen, onClose, transactions, seasonMatchups, 
                                                     <div className="h-2 w-2 rounded-full bg-blue-500" />
                                                 </span>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-xs text-slate-500 font-mono">
+                                                    <span className="text-xs text-slate-500 font-mono flex items-center gap-2">
+                                                        {t.season && <span className="bg-slate-700 px-1 rounded text-white">{t.season}</span>}
                                                         Week {t.leg} • {new Date(t.created).toLocaleDateString()}
                                                     </span>
                                                     <p className="text-sm text-white">
-                                                        Traded from <span className="font-bold text-red-300">{displayTeamName(sourceUser)}</span> to <span className="font-bold text-green-300">{displayTeamName(destUser)}</span>
+                                                        Traded from <span className="font-bold text-red-300">{displayTeamName(sourceUser) || `Roster ${sourceRosterId}`}</span> to <span className="font-bold text-green-300">{displayTeamName(destUser) || `Roster ${destRosterId}`}</span>
                                                     </p>
                                                 </div>
                                             </div>
