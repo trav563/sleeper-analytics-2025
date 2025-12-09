@@ -197,6 +197,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 .sort((a, b) => b.tradeValue - a.tradeValue);
 
             // Determine Needs & Surplus (Heuristic based on Trade Values)
+            const myPicks = ledgerByRoster[roster.roster_id] || [];
             const needs = [];
             const surplus = []; // Store full objects { position, count } or just strings
 
