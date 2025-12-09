@@ -78,27 +78,28 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             const weekMatchups = seasonMatchups[w];
             if (!weekMatchups) continue;
 
-            weekMatchups.forEach(matchup => {
-                if (matchup.players_points) {
-                    Object.entries(matchup.players_points).forEach(([playerId, points]) => {
-                        // Exclude 0.0 games
-                        if (points > 0) {
-                            if (!stats[playerId]) stats[playerId] = { totalPoints: 0, games: 0 };
-                            stats[playerId].totalPoints += points;
-                            stats[playerId].games += 1;
-                        }
-                    });
-                }
+            if (weekMatchups) {
+                weekMatchups.forEach(matchup => {
+                    if (matchup.players_points) {
+                        Object.entries(matchup.players_points).forEach(([playerId, points]) => {
+                            // Exclude 0.0 games
+                            if (points > 0) {
+                                if (!stats[playerId]) stats[playerId] = { totalPoints: 0, games: 0 };
+                                stats[playerId].totalPoints += points;
+                                stats[playerId].games += 1;
+                            }
+                        });
+                    }
+                });
+            }
+
+            const finalStats = {};
+            Object.keys(stats).forEach(pid => {
+                finalStats[pid] = stats[pid].totalPoints / stats[pid].games;
             });
-        }
 
-        const finalStats = {};
-        Object.keys(stats).forEach(pid => {
-            finalStats[pid] = stats[pid].totalPoints / stats[pid].games;
-        });
-
-        return finalStats;
-    }, [seasonMatchups, currentWeek]);
+            return finalStats;
+        }, [seasonMatchups, currentWeek]);
 
     // 2. Analyze Team Needs & Surplus (with Picks)
     const teamAnalysis = useMemo(() => {
