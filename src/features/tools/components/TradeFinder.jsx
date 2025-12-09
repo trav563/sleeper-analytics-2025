@@ -226,7 +226,9 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                                 {player.full_name || player.first_name + ' ' + player.last_name}
                                                                 {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
                                                             </span>
-                                                            <span className="text-xs text-green-400 ml-auto">{player.value?.toFixed(0)} pts</span>
+                                                            <span className="text-xs text-green-400 ml-auto font-mono">
+                                                                {(player.tradeValue || 0).toLocaleString()} pts
+                                                            </span>
                                                         </div>
                                                     ))
                                                 ) : (

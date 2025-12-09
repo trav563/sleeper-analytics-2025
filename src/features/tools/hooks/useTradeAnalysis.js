@@ -2,61 +2,49 @@ import { useMemo } from 'react';
 
 // --- VALUATION HELPERS ---
 
-// 1. Pick Value (KTC-style approx)
+// 1. Pick Value (Standardized 0-10,000 Scale)
 const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = true) => {
     // Rank 1 = 1.01 (Highest Value)
-    // Rank 12 = 1.12
 
-    // Base Values
     if (round === 1) {
-        // Early 1st (Top 3)
-        if (rankInsideLeague <= 3) return 8000;
-        // Mid 1st
-        if (rankInsideLeague <= 8) return 5500;
-        // Late 1st
-        return 3800;
+        if (rankInsideLeague <= 3) return 7000; // Early 1st
+        if (rankInsideLeague <= 8) return 5500; // Mid 1st
+        return 4500; // Late 1st
     }
 
     if (round === 2) {
-        // Early 2nd
-        if (rankInsideLeague <= 4) return 2200;
-        // Mid/Late 2nd
-        return 1400;
+        if (rankInsideLeague <= 4) return 2800; // Early 2nd
+        if (rankInsideLeague <= 8) return 2200; // Mid 2nd
+        return 1600; // Late 2nd
     }
 
-    if (round === 3) return 400;
-    return 100; // 4th+
+    if (round === 3) return 600;
+    if (round === 4) return 200;
+
+    return 150; // Fallback
 };
 
 // 2. Player Value Calculation
 const calculatePlayerValue = (ppg, age, position, isSuperflex = true) => {
     if (!ppg || ppg <= 0) return 0;
 
-    // Baseline Multiplier
-    // e.g. 15pts * 300 = 4500
-    let baseValue = ppg * 250;
+    // 1. Base Score
+    let value = ppg * 150;
 
-    // Position Premiums
-    if (position === 'QB') {
-        if (isSuperflex) baseValue *= 1.8; // QB Gold in SF
-        else baseValue *= 0.8; // Devalue in 1QB
-    } else if (position === 'RB') {
-        baseValue *= 1.0;
-    } else if (position === 'WR') {
-        baseValue *= 1.1; // Longevity
-    } else if (position === 'TE') {
-        baseValue *= 1.2; // Scarcity premium if producing
-    }
-
-    // Age Multipliers (Dynasty Curve)
+    // 2. Age Multipliers (Dynasty Context)
     const safeAge = age || 25;
 
-    if (safeAge <= 22) baseValue *= 1.35; // Young Star premium
-    else if (safeAge <= 24) baseValue *= 1.15; // Prime Entry
-    else if (safeAge >= 29) baseValue *= 0.6; // Age Cliff
-    else if (safeAge >= 27 && position === 'RB') baseValue *= 0.7; // RB Cliff
+    if (safeAge < 24) value *= 1.5;        // Youth Premium
+    else if (safeAge <= 27) value *= 1.2;  // Prime
+    else if (safeAge <= 30) value *= 0.9;  // Post-Apex
+    else value *= 0.6;                     // Cliff
 
-    return Math.round(baseValue);
+    // 3. Superflex Bonus
+    if (isSuperflex && position === 'QB') {
+        value += 1500;
+    }
+
+    return Math.round(value);
 };
 
 
@@ -189,7 +177,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             const rosterPlayers = (roster.players || [])
                 .map(pid => {
                     const p = players[pid];
-                    if (!p) return null;
+                    if (!p || p.position === 'DEF') return null;
                     const ppg = playerStats[pid] || 0;
                     const tradeValue = calculatePlayerValue(ppg, p.age, p.position, isSuperflex);
                     const nickname = roster.metadata?.[`p_nick_${pid}`];
