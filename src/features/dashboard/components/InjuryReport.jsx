@@ -6,7 +6,7 @@ const InjuryReport = ({ roster, players }) => {
     // 1. Filter Injured Players
     const injuredPlayers = (roster?.players || [])
         .map(pid => players?.[pid])
-        .filter(p => p && (p.status !== 'Active' || p.injury_status))
+        .filter(p => p && p.position !== 'DEF' && (p.status !== 'Active' || p.injury_status))
         .sort((a, b) => {
             // Sort Priority: IR > Out > Doubtful > Questionable > Sus > Other
             const priority = { 'IR': 5, 'Out': 4, 'Doubtful': 3, 'Questionable': 2, 'Sus': 1 };

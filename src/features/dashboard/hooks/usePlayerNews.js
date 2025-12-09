@@ -62,8 +62,8 @@ export const usePlayerNews = (roster, players) => {
     let historyUpdated = false;
 
     rosterPlayers.forEach(p => {
-        // Only care about Bad Statuses
-        if (['IR', 'Out', 'PUP', 'Sus', 'Doubtful'].includes(p.status) || p.injury_status === 'Out') {
+        // Only care about Bad Statuses, ignore Defenses
+        if (p.position !== 'DEF' && (['IR', 'Out', 'PUP', 'Sus', 'Doubtful'].includes(p.status) || p.injury_status === 'Out')) {
             const displayStatus = p.injury_status || p.status;
             const pid = p.player_id;
 
