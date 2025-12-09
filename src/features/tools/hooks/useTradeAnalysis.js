@@ -252,57 +252,62 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             let score = 0;
             const tradeProposals = []; // { type, give: [], receive: [] }
 
-            // === SCENARIO 1: REBUILDER vs CONTENDER ===
-            // Case A: Focus is REBUILDER. Target is CONTENDER.
-            // Goal: Sell Vets -> Get Picks/Youth.
-            if (focusTeam.status === 'Rebuilder' && opponentStatus === 'Contender') {
+            // === SCENARIO 1: REBUILDER vs BUYERS (Contender/Neutral) ===
+            // Case A: Focus is REBUILDER. Target is Buying (Contender or Neutral).
+            // Goal: Liquidation Mode. Sell Vets -> Get Picks.
+            const isBuyer = opponentStatus === 'Contender' || opponentStatus === 'Neutral';
 
-                // My Sellable Assets: Vets (>25) with Value
+            if (focusTeam.status === 'Rebuilder' && isBuyer) {
+
+                // My Sellable Assets: Vets (>24) with Value
                 const mySellList = focusTeam.rosterPlayers
-                    .filter(p => (p.age > 24) && p.tradeValue > 2500) // Decent vets
+                    .filter(p => (p.age > 24) && p.tradeValue > 2500)
                     .sort((a, b) => b.tradeValue - a.tradeValue);
 
-                // Target Assets: Picks OR Young Players
+                // Target Assets: Future Picks (Primary) or Elite Youth (Secondary)
                 const theirPicks = opponent.picks.filter(p => p.round <= 2); // 1sts and 2nds
-                const theirYouth = opponent.rosterPlayers.filter(p => p.age <= 23 && p.tradeValue > 2000);
 
-                if (mySellList.length > 0 && (theirPicks.length > 0 || theirYouth.length > 0)) {
-                    // Create Offer
-                    const assetToSell = mySellList[0]; // Top asset
-                    // Find fair match (+/- 15%)
-                    const targetVal = assetToSell.tradeValue;
+                if (mySellList.length > 0 && theirPicks.length > 0) {
+                    // Iterate my sellable assets to find a pick match
+                    for (const assetToSell of mySellList) {
+                        const targetVal = assetToSell.tradeValue;
 
-                    // Try to match with Pick + Filler
-                    // Simplified: Just 1-for-1 or 1-for-Pick check
-                    const bestPickDetails = theirPicks.find(p =>
-                        Math.abs(p.tradeValue - targetVal) < (targetVal * 0.2) // looser 20% for picks
-                    );
-
-                    if (bestPickDetails) {
-                        tradeProposals.push({
-                            type: 'Rebuild: Cash Out',
-                            message: `Sell ${assetToSell.last_name} for Draft Capital`,
-                            give: [assetToSell],
-                            receive: [bestPickDetails],
-                            diff: bestPickDetails.tradeValue - targetVal
-                        });
-                        score += 80;
-                    }
-                    // Try Youth swap
-                    else {
-                        const bestYouth = theirYouth.find(p =>
-                            Math.abs(p.tradeValue - targetVal) < (targetVal * 0.15)
+                        // Find Pick Match (+/- 25% tolerance for picks to encourage deals)
+                        const matchingPick = theirPicks.find(p =>
+                            Math.abs(p.tradeValue - targetVal) < (targetVal * 0.25)
                         );
-                        if (bestYouth) {
+
+                        if (matchingPick) {
                             tradeProposals.push({
-                                type: 'Rebuild: Youth Swap',
-                                message: `Pivot from ${assetToSell.last_name} to ${bestYouth.last_name}`,
+                                type: '💰 Rebuild: Cash Out',
+                                message: `Liquidation Mode: Send ${assetToSell.last_name} for ${matchingPick.description}`,
                                 give: [assetToSell],
-                                receive: [bestYouth],
-                                diff: bestYouth.tradeValue - targetVal
+                                receive: [matchingPick],
+                                diff: matchingPick.tradeValue - targetVal,
+                                priority: 100 // High priority
                             });
-                            score += 70;
+                            score += 95; // Boost match score
+                            break; // Found top deal
                         }
+                    }
+                }
+
+                // Secondary: Youth Swap if no picks found
+                if (tradeProposals.length === 0 && mySellList.length > 0) {
+                    const theirYouth = opponent.rosterPlayers.filter(p => p.age <= 23 && p.tradeValue > 2000);
+                    const assetToSell = mySellList[0];
+                    const bestYouth = theirYouth.find(p => Math.abs(p.tradeValue - assetToSell.tradeValue) < (assetToSell.tradeValue * 0.2));
+
+                    if (bestYouth) {
+                        tradeProposals.push({
+                            type: 'Rebuild: Youth Swap',
+                            message: `Pivot from ${assetToSell.last_name} to ${bestYouth.last_name}`,
+                            give: [assetToSell],
+                            receive: [bestYouth],
+                            diff: bestYouth.tradeValue - assetToSell.tradeValue,
+                            priority: 80
+                        });
+                        score += 70;
                     }
                 }
             }
@@ -384,8 +389,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
 
             // === FINAL MATCH CONSTRUCTION ===
             if (tradeProposals.length > 0) {
-                // Pick best proposal
-                const bestProposal = tradeProposals.sort((a, b) => b.type.includes('Win Now') ? 1 : -1)[0];
+                // Pick best proposal based on priority
+                const bestProposal = tradeProposals.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0];
 
                 matches.push({
                     opponent,
