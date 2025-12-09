@@ -1,14 +1,39 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTradeAnalysis } from '../hooks/useTradeAnalysis';
 import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
 import { useSleeper } from '../../../context/SleeperContext';
+import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft, User } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft, User, AlertTriangle, Lock } from 'lucide-react';
 
-const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, tradedPicks }) => {
+const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, tradedPicks, state }) => {
     const { user } = useSleeper();
     const { seasonMatchups, loading: matchupsLoading } = useSeasonMatchups(leagueId, currentWeek);
-    const { teamAnalysis, findMatches, playerValues } = useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks);
+
+    // Fetch Market Values (FantasyCalc)
+    const { data: marketValues } = useQuery({
+        queryKey: ['fantasyCalc', leagueId],
+        queryFn: () => fetchMarketValues(
+            league?.roster_positions?.includes('SUPER_FLEX'),
+            rosters?.length || 12,
+            0.5 // Default PPR for now, could be dynamic from settings
+        ),
+        staleTime: 60 * 60 * 1000, // 1 hour
+    });
+
+    // Check Trade Deadline
+    const isTradeWindowOpen = useMemo(() => {
+        if (!league?.settings?.trade_deadline) return true; // No deadline
+        if (!state?.week) return true; // Preseason/Unknown
+        return state.week <= league.settings.trade_deadline;
+    }, [league, state]);
+
+    const { teamAnalysis, findMatches, playerValues } = useTradeAnalysis(
+        league, rosters, players, seasonMatchups, currentWeek, tradedPicks,
+        marketValues,
+        isTradeWindowOpen
+    );
 
     const [selectedRosterId, setSelectedRosterId] = useState(null);
 
@@ -39,13 +64,29 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
 
     return (
         <div className="space-y-6">
+
+            {/* Trade Deadline Banner */}
+            {!isTradeWindowOpen && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-yellow-500" />
+                    <div>
+                        <h4 className="text-yellow-400 font-bold text-sm">Trade Deadline Passed (Week {league.settings.trade_deadline})</h4>
+                        <p className="text-yellow-100/70 text-xs">Trading is closed based on league settings. Evaluation switched to "Offseason Mode" (Dynasty Value Focus).</p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                         <ArrowRightLeft className="w-6 h-6 text-blue-400" />
-                        Trade Finder
+                        {isTradeWindowOpen ? 'Trade Finder' : 'Offseason Planner'}
                     </h2>
-                    <p className="text-sm text-slate-400">AI-powered trade partner discovery based on roster needs and surplus.</p>
+                    <p className="text-sm text-slate-400">
+                        {isTradeWindowOpen
+                            ? "AI-powered trade partner discovery based on roster needs and surplus."
+                            : "Analyze potential offseason moves and dynasty stashes."}
+                    </p>
                 </div>
 
                 <div className="w-full md:w-64">
@@ -73,7 +114,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                     />
                     <div>
                         <h3 className="text-lg font-bold text-white">{displayTeamName(getOwner(selectedRosterId))}</h3>
-                        <p className="text-xs text-slate-400">Market Analysis</p>
+                        <p className="text-xs text-slate-400">Market Analysis {marketValues ? '• Live Data' : ''}</p>
                     </div>
                 </div>
 
@@ -118,7 +159,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
 
             {/* Matches List */}
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Suggested Trade Partners</h3>
+                <h3 className="text-lg font-semibold text-white">Suggested {isTradeWindowOpen ? 'Trade Partners' : 'Offseason Targets'}</h3>
 
                 {matches?.length === 0 ? (
                     <div className="text-center py-12 bg-slate-800/30 rounded-xl border border-slate-700/50">
@@ -178,7 +219,8 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                         )}
 
                                         {/* Bench Upgrades (Hidden Gems) */}
-                                        {match?.benchUpgrades?.length > 0 && (
+                                        {/* Only show "Start/Sit" logic if In-Season */}
+                                        {isTradeWindowOpen && match?.benchUpgrades?.length > 0 && (
                                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
                                                 <p className="text-xs font-bold text-emerald-300 mb-2 flex items-center gap-1">
                                                     💎 Hidden Gems (Bench Upgrades)
@@ -225,9 +267,10 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                             <span className="text-sm text-white">
                                                                 {player.full_name || player.first_name + ' ' + player.last_name}
                                                                 {player.isOTB && <span className="ml-1 text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">OTB</span>}
+                                                                {player.isDynastyStash && <span className="ml-1 text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1 rounded font-bold">STASH</span>}
                                                             </span>
                                                             <span className="text-xs text-green-400 ml-auto font-mono">
-                                                                {(player.tradeValue || 0).toLocaleString()} pts
+                                                                {(player.tradeValue || 0).toLocaleString()}
                                                             </span>
                                                         </div>
                                                     ))
@@ -249,7 +292,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                                     <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
                                                                     <span className="text-sm text-white">{player.full_name || player.first_name + ' ' + player.last_name}</span>
                                                                     <span className="text-xs text-green-400 ml-auto font-mono">
-                                                                        {player.tradeValue?.toLocaleString()} pts
+                                                                        {player.tradeValue?.toLocaleString()}
                                                                     </span>
                                                                 </div>
                                                             ))}
@@ -261,7 +304,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
 
                                         {(!match?.giving || match.giving.length === 0) && (
                                             <div className="bg-slate-700/20 rounded p-3 text-xs text-slate-400 italic">
-                                                You don't have a clear surplus in their area of need, but they have players you need. Consider offering picks or starters depth.
+                                                You don't have a clear surplus in their area of need, but they have players you need. Consider offering picks {isTradeWindowOpen ? 'or starters depth' : 'or stashes'}.
                                             </div>
                                         )}
                                     </div>

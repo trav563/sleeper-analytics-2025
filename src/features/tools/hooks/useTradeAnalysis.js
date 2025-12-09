@@ -24,8 +24,8 @@ const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = true) =
     return 150; // Fallback
 };
 
-// 2. Player Value Calculation
-const calculatePlayerValue = (ppg, age, position, isSuperflex = true) => {
+// 2. Player Value Calculation (Fallback only)
+const calculateFallbackValue = (ppg, age, position, isSuperflex = true) => {
     if (!ppg || ppg <= 0) return 0;
 
     // 1. Base Score
@@ -48,7 +48,7 @@ const calculatePlayerValue = (ppg, age, position, isSuperflex = true) => {
 };
 
 
-export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks) {
+export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks, marketValues = {}, isTradeWindowOpen = true) {
     // 0. Detect League Settings
     const isSuperflex = useMemo(() => {
         return league?.roster_positions?.includes('SUPER_FLEX');
@@ -179,7 +179,14 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                     const p = players[pid];
                     if (!p || p.position === 'DEF') return null;
                     const ppg = playerStats[pid] || 0;
-                    const tradeValue = calculatePlayerValue(ppg, p.age, p.position, isSuperflex);
+
+                    // MARKET VALUE INTEGRATION
+                    // Priority: Real Market Data > Fallback Formula
+                    let tradeValue = marketValues[pid];
+                    if (!tradeValue) {
+                        tradeValue = calculateFallbackValue(ppg, p.age, p.position, isSuperflex);
+                    }
+
                     const nickname = roster.metadata?.[`p_nick_${pid}`];
 
                     return {
@@ -190,7 +197,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                         tradeValue,
                         isOTB: nickname?.toUpperCase().includes('OTB'),
                         type: 'Player',
-                        isOTB: roster.metadata?.[`p_nick_${pid}`]?.toUpperCase().includes('OTB')
+                        isOTB: roster.metadata?.[`p_nick_${pid}`]?.toUpperCase().includes('OTB'),
+                        isDynastyStash: tradeValue > 2500 && ppg < 8 // High Value, Low Production
                     };
                 })
                 .filter(Boolean)
@@ -235,9 +243,9 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         });
 
         return analysis;
-    }, [league, rosters, players, playerStats, tradedPicks, isSuperflex]);
+    }, [league, rosters, players, playerStats, tradedPicks, isSuperflex, marketValues]); // Added marketValues dep
 
-    // 3. Find Matches (STRICT RULES)
+    // 3. Find Matches (STRICT RULES + DEADLINE AWARENESS)
     const findMatches = (focusRosterId) => {
         const focusTeam = teamAnalysis[focusRosterId];
         if (!focusTeam) return [];
@@ -314,7 +322,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
 
             // Case B: Focus is CONTENDER. Target is REBUILDER.
             // Goal: Buy Vets -> Give Picks/Youth.
-            else if (focusTeam.status === 'Contender' && opponentStatus === 'Rebuilder') {
+            // RULES: Only active if TRADE WINDOW IS OPEN
+            else if (isTradeWindowOpen && focusTeam.status === 'Contender' && opponentStatus === 'Rebuilder') {
 
                 // My Sellable: Picks & Youth
                 // STRICT RULE CHECK: Rebuilder CANNOT buy old players.
@@ -340,7 +349,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                             message: `Acquire ${targetVet.last_name} for ${fairAsset.full_name}`,
                             give: [fairAsset],
                             receive: [targetVet],
-                            diff: targetVet.tradeValue - fairAsset.tradeValue
+                            diff: targetVet.tradeValue - fairAsset.tradeValue,
+                            priority: 90
                         });
                         score += 90;
                     }
@@ -357,6 +367,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             if (tradeProposals.length === 0) {
                 // Fallback: Find 1-for-1 trade with exact value match (+/- 10%)
                 // Only if it makes sense relationally (Positional swap? Age swap?)
+                // OFFSEASON LOGIC: If offseasn, ignore starters/bench distinction, simply look for value.
 
                 // Let's iterate my top bench players
                 const myTradables = focusTeam.rosterPlayers.slice(8, 15).filter(p => p.tradeValue > 1500); // Bench-ish
@@ -371,6 +382,11 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                         if (focusTeam.status === 'Rebuilder' && theirP.age > 24) return false; // Deny Old
                         if (opponent.status === 'Rebuilder' && myP.age > 25) return false; // Don't insult them
 
+                        // Offseason Buy Low Check
+                        if (!isTradeWindowOpen && focusTeam.status === 'Contender') {
+                            // Buying injured/stashed players?
+                        }
+
                         return true;
                     });
 
@@ -380,7 +396,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                             message: `Swap ${myP.position} depth for ${match.position} help`,
                             give: [myP],
                             receive: [match],
-                            diff: match.tradeValue - myP.tradeValue
+                            diff: match.tradeValue - myP.tradeValue,
+                            priority: 30
                         });
                         score += 30;
                     }
