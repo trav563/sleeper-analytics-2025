@@ -196,12 +196,30 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 .filter(Boolean)
                 .sort((a, b) => b.tradeValue - a.tradeValue);
 
-            // Determine Needs (simplified logic using starter strength vs avg)
-            // For concise trade logic, we'll focus on position counts vs requirements
-            // and starter strength.
+            // Determine Needs & Surplus (Heuristic based on Trade Values)
+            const needs = [];
+            const surplus = []; // Store full objects { position, count } or just strings
 
-            const positions = ['QB', 'RB', 'WR', 'TE'];
-            const myPicks = ledgerByRoster[roster.roster_id] || [];
+            const counts = {
+                QB: rosterPlayers.filter(p => p.position === 'QB' && p.tradeValue > 3500).length,
+                RB: rosterPlayers.filter(p => p.position === 'RB' && p.tradeValue > 1800).length,
+                WR: rosterPlayers.filter(p => p.position === 'WR' && p.tradeValue > 1800).length,
+                TE: rosterPlayers.filter(p => p.position === 'TE' && p.tradeValue > 1500).length
+            };
+
+            // Needs Thresholds
+            if (isSuperflex && counts.QB < 2) needs.push('QB');
+            if (!isSuperflex && counts.QB < 1) needs.push('QB');
+            if (counts.RB < 2) needs.push('RB');
+            if (counts.WR < 3) needs.push('WR');
+            if (counts.TE < 1) needs.push('TE');
+
+            // Surplus Thresholds
+            if (isSuperflex && counts.QB > 2) surplus.push({ position: 'QB', count: counts.QB });
+            if (!isSuperflex && counts.QB > 1) surplus.push({ position: 'QB', count: counts.QB });
+            if (counts.RB > 3) surplus.push({ position: 'RB', count: counts.RB });
+            if (counts.WR > 4) surplus.push({ position: 'WR', count: counts.WR });
+            if (counts.TE > 1) surplus.push({ position: 'TE', count: counts.TE });
 
             analysis[roster.roster_id] = {
                 rosterId: roster.roster_id,
@@ -209,6 +227,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                 status,
                 rosterPlayers,
                 picks: myPicks,
+                needs,
+                surplus,
                 totalValue: rosterPlayers.reduce((sum, p) => sum + p.tradeValue, 0) + myPicks.reduce((sum, p) => sum + p.tradeValue, 0)
             };
         });
