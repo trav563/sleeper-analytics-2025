@@ -246,7 +246,9 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                                 <div key={player.id} className="flex items-center gap-2 bg-slate-700/50 rounded p-1.5 pr-3">
                                                                     <span className="text-xs font-bold text-slate-300 w-6">{player.position}</span>
                                                                     <span className="text-sm text-white">{player.full_name || player.first_name + ' ' + player.last_name}</span>
-                                                                    <span className="text-xs text-green-400 ml-auto">{player.value.toFixed(1)} ppg</span>
+                                                                    <span className="text-xs text-green-400 ml-auto font-mono">
+                                                                        {player.tradeValue?.toLocaleString()} pts
+                                                                    </span>
                                                                 </div>
                                                             ))}
                                                         </div>
