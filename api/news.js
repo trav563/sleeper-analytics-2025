@@ -4,8 +4,8 @@ export default async function handler(req, res) {
     const parser = new Parser();
 
     try {
-        // Fetch from RotoWire
-        const feed = await parser.parseURL('https://www.rotowire.com/rss/news.php?sport=nfl');
+        // Fetch from FFToday
+        const feed = await parser.parseURL('https://fftoday.com/rss/news.xml');
 
         // Cache Control: Cache for 10 minutes (600s), stale for 30s
         res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=30');
