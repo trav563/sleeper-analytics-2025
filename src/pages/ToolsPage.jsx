@@ -8,7 +8,9 @@ const ToolsPage = () => {
     const { leagueId } = useParams();
     const { league, rosters, users, players, currentWeek, tradedPicks, state } = useOutletContext();
 
-    if (!league || !rosters || !players) {
+    // Comprehensive Loading Guard
+    // Ensure all critical data (including Arrays) is present before rendering tools
+    if (!league || !league.roster_positions || !rosters || !users || !players) {
         return <div className="p-12 text-center text-slate-500">Loading League Tools...</div>;
     }
 
