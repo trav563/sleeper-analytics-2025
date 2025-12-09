@@ -64,12 +64,12 @@ const LeagueLayout = () => {
     return (
         <div className="space-y-6 sm:space-y-8 pb-12">
             <Helmet>
-                <title>{league ? `${league.name} Analysis | Dynasty Lens` : 'League Analysis | Dynasty Lens'}</title>
+                <title>{league ? `${league.name} Analysis | League Analysis` : 'League Analysis'}</title>
                 <meta name="description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
 
                 {/* Check if we have a trophy icon in public dir (assuming favicon.png for now based on file check) */}
                 {/* Standard OGP */}
-                <meta property="og:title" content={league ? `${league.name} Analysis | Dynasty Lens` : 'League Analysis | Dynasty Lens'} />
+                <meta property="og:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
                 <meta property="og:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
                 <meta property="og:image" content="/favicon.png" />
                 <meta property="og:type" content="website" />
@@ -77,7 +77,7 @@ const LeagueLayout = () => {
 
                 {/* Twitter Card */}
                 <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={league ? `${league.name} Analysis | Dynasty Lens` : 'League Analysis | Dynasty Lens'} />
+                <meta name="twitter:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
                 <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
                 <meta name="twitter:image" content="/favicon.png" />
             </Helmet>

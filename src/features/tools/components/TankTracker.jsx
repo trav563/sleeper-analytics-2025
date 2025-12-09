@@ -94,8 +94,8 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                             key={round}
                             onClick={() => setSelectedRound(round)}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${selectedRound === round
-                                    ? 'bg-blue-600 text-white shadow-lg'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-700'
                                 }`}
                         >
                             Round {round}
@@ -193,7 +193,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                 <div className="p-6 mt-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
                     <div>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">Analysis Powered By</p>
-                        <p className="text-xl font-black italic bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">DYNASTY LENS</p>
+                        <p className="text-xl font-black italic bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">LEAGUE ANALYSIS</p>
                     </div>
                     <div className="bg-white p-1.5 rounded shadow-lg">
                         <QRCode

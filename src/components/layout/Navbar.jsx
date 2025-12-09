@@ -57,7 +57,7 @@ const Navbar = () => {
                         <Link to={leagueId ? `/league/${leagueId}` : "/"} className="flex items-center space-x-2 group min-w-[180px] shrink-0">
                             <Trophy className="h-6 w-6 text-primary group-hover:text-primary/80 transition-colors flex-shrink-0" />
                             <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent whitespace-nowrap">
-                                Dynasty Lens
+                                League Analysis
                             </span>
                         </Link>
 

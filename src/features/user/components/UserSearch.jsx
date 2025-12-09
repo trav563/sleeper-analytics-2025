@@ -34,7 +34,7 @@ const UserSearch = () => {
             <div className="max-w-md w-full space-y-8 animate-fade-in">
                 <div className="text-center">
                     <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground">
-                        Dynasty Lens
+                        League Analysis
                     </h2>
                     <p className="mt-2 text-sm text-muted-foreground">
                         Find your league and check your lineup
