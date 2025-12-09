@@ -8,6 +8,10 @@ const ToolsPage = () => {
     const { leagueId } = useParams();
     const { league, rosters, users, players, currentWeek, tradedPicks, state } = useOutletContext();
 
+    if (!league || !rosters || !players) {
+        return <div className="p-12 text-center text-slate-500">Loading League Tools...</div>;
+    }
+
     return (
         <div className="space-y-8">
             <DynastyLandscape
