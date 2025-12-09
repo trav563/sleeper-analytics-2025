@@ -59,7 +59,7 @@ const RosterNews = ({ roster, players }) => {
 
                             <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                                 <Clock className="w-3 h-3" />
-                                <span>{formatTime(item.pubDate)}</span>
+                                <span>{isAlert ? 'Live Update' : formatTime(item.pubDate)}</span>
                                 {item.trending === 'down' && (
                                     <span className="flex items-center gap-1 text-red-400 bg-red-900/30 px-1.5 py-0.5 rounded ml-2">
                                         📉 Selling Off ({item.count})
