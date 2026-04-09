@@ -109,17 +109,8 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
         }
     };
 
-    if (loading) return <div className="text-center p-10 text-muted-foreground animate-pulse">Brewing the roast...</div>;
-
-    if (!stats || (!stats.robbery && !stats.worstManager)) return (
-        <div className="text-center p-16 text-muted-foreground space-y-3">
-            <div className="text-4xl">🔥</div>
-            <h3 className="text-lg font-semibold text-foreground">No Roast Material Yet</h3>
-            <p className="text-sm max-w-md mx-auto">The Roast fires up once the NFL season kicks off and your league has completed matchups. Check back after Week 1!</p>
-        </div>
-    );
-
-    const leagueUrl = `${window.location.origin}/league/${league.league_id}`;
+    const leagueUrl = league ? `${window.location.origin}/league/${league.league_id}` : '';
+    const hasWeeklyData = stats && (stats.robbery || stats.worstManager || stats.tankCommander || stats.boomGame);
 
     // Helper to render a roast card
     const RoastCard = ({ category, icon: Icon, iconColor, borderColor, bgColor, title, manager, children }) => {
@@ -180,6 +171,15 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
                 </TabsList>
 
                 <TabsContent value="weekly" className="space-y-6">
+                    {loading ? (
+                        <div className="text-center p-10 text-muted-foreground animate-pulse">Brewing the roast...</div>
+                    ) : !hasWeeklyData ? (
+                        <div className="text-center p-16 text-muted-foreground space-y-3">
+                            <div className="text-4xl">🔥</div>
+                            <h3 className="text-lg font-semibold text-foreground">No Roast Material Yet</h3>
+                            <p className="text-sm max-w-md mx-auto">The Roast fires up once the NFL season kicks off and your league has completed matchups. Check back after Week 1!</p>
+                        </div>
+                    ) : (<>
                     {/* Week Selector + Actions */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="flex items-center gap-3">
@@ -472,6 +472,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
                             </div>
                         </div>
                     </div>
+                    </>)}
                 </TabsContent>
 
                 <TabsContent value="season">
