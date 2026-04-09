@@ -8,7 +8,7 @@ export function useSeasonMatchups(leagueId, currentWeek) {
 
     useEffect(() => {
         async function fetchAllMatchups() {
-            if (!leagueId || !currentWeek) {
+            if (!leagueId || !currentWeek || currentWeek < 1) {
                 setLoading(false);
                 return;
             }

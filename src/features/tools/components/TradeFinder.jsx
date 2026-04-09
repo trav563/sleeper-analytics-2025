@@ -56,8 +56,17 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
     const focusTeam = teamAnalysis[selectedRosterId];
     const matches = useMemo(() => findMatches(selectedRosterId), [selectedRosterId, findMatches]);
 
-    if (matchupsLoading || !focusTeam) {
+    if (matchupsLoading && !focusTeam) {
         return <div className="p-8 text-center text-gray-400">Analyzing League Market...</div>;
+    }
+
+    if (!focusTeam) {
+        return (
+            <div className="p-8 text-center text-muted-foreground space-y-2">
+                <ArrowRightLeft className="w-8 h-8 mx-auto opacity-50" />
+                <p className="text-sm">Select a roster to view trade suggestions.</p>
+            </div>
+        );
     }
 
     const getOwner = (rosterId) => users.find(u => u.user_id === rosters.find(r => r.roster_id === rosterId)?.owner_id);
