@@ -3,7 +3,7 @@ import { useSleeper } from '../../../context/SleeperContext';
 import { fetchSeasonStats } from '../../../utils/sleeper';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
-import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { displayTeamName, playerHeadshotUrl } from '../../../utils/nflData';
 import { Loader2, AlertTriangle, TrendingUp, ShieldCheck, Skull } from 'lucide-react';
 
 const RosterClogger = ({ rosters, players, league, state }) => {
@@ -12,12 +12,19 @@ const RosterClogger = ({ rosters, players, league, state }) => {
     const [loading, setLoading] = useState(true);
     const [candidates, setCandidates] = useState([]);
 
-    // 1. Fetch Season Stats for PPG/Production
+    // 1. Fetch Season Stats for PPG/Production (fall back to previous season if current has no data)
     useEffect(() => {
         const loadStats = async () => {
             const season = league?.season || '2025';
             try {
-                const data = await fetchSeasonStats(season);
+                let data = await fetchSeasonStats(season);
+                // Check if current season has meaningful data
+                const hasData = data && Object.values(data).some(s => s?.gp > 0);
+                if (!hasData) {
+                    // Fall back to previous season
+                    const prevSeason = String(parseInt(season) - 1);
+                    data = await fetchSeasonStats(prevSeason);
+                }
                 setStats(data);
             } catch (e) {
                 console.error("Failed to fetch season stats", e);
@@ -49,11 +56,18 @@ const RosterClogger = ({ rosters, players, league, state }) => {
         // Actually, 'players' is huge. We need to be efficient.
         // Let's filter players who are NOT in allRosteredIds AND have a search_rank < 1000.
         const freeAgents = Object.values(players)
-            .filter(p => !allRosteredIds.has(p.player_id) && p.search_rank < 1000 && ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+            .filter(p =>
+                !allRosteredIds.has(p.player_id) &&
+                p.search_rank < 1000 &&
+                ['QB', 'RB', 'WR', 'TE'].includes(p.position) &&
+                p.team && // Must be on an NFL team
+                (p.status === 'Active' || !p.status) // Must be active (not suspended/imprisoned)
+            )
             .sort((a, b) => (a.search_rank || 9999) - (b.search_rank || 9999))
             .slice(0, 50);
 
         const results = [];
+        const usedUpgradeIds = new Set(); // Track suggested FAs to prevent duplicates
 
         benchIds.forEach(playerId => {
             const player = players[playerId];
@@ -118,9 +132,9 @@ const RosterClogger = ({ rosters, players, league, state }) => {
             }
 
             if (reason) {
-                // Find Upgrade
-                // Logic: Find a FA with better search_rank OR better PPG in same position
+                // Find Upgrade (exclude already-suggested FAs)
                 const upgrade = freeAgents.find(fa => {
+                    if (usedUpgradeIds.has(fa.player_id)) return false;
                     if (fa.position !== player.position) return false;
                     const faStats = stats[fa.player_id];
                     const faPpg = faStats?.pts_ppr && faStats?.gp ? (faStats.pts_ppr / faStats.gp) : 0;
@@ -132,6 +146,8 @@ const RosterClogger = ({ rosters, players, league, state }) => {
 
                     return false;
                 });
+
+                if (upgrade) usedUpgradeIds.add(upgrade.player_id);
 
                 results.push({
                     player,
@@ -178,7 +194,12 @@ const RosterClogger = ({ rosters, players, league, state }) => {
 
         return (
             <div className={`flex items-center gap-3 p-2 rounded bg-slate-900/50 border border-slate-800 ${color ? 'border-l-2 ' + color : ''}`}>
-                <img src={avatarUrl(player.avatar || player.player_id)} alt={player.last_name} className="w-10 h-10 rounded-full bg-slate-800" />
+                <img
+                    src={playerHeadshotUrl(player.player_id)}
+                    alt={player.last_name}
+                    className="w-10 h-10 rounded-full bg-slate-800 object-cover"
+                    onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
+                />
                 <div>
                     <div className="font-bold text-sm text-white leading-none mb-1">{player.first_name} {player.last_name}</div>
                     <div className="text-[10px] text-slate-400 flex gap-2">
@@ -233,7 +254,9 @@ const RosterClogger = ({ rosters, players, league, state }) => {
                                     </div>
                                     <PlayerInfo
                                         player={item.upgrade}
-                                        ppg={stats && item.upgrade ? (stats[item.upgrade.player_id]?.pts_ppr / stats[item.upgrade.player_id]?.gp) : 0}
+                                        ppg={stats && item.upgrade && stats[item.upgrade.player_id]?.gp
+                                            ? (stats[item.upgrade.player_id].pts_ppr / stats[item.upgrade.player_id].gp)
+                                            : 0}
                                         color="border-l-green-500"
                                     />
                                     {!item.upgrade && <span className="text-xs text-slate-500 mt-1">No clear upgrade on waivers.</span>}

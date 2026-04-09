@@ -129,7 +129,7 @@ const LeagueLayout = () => {
                         players,
                         user,
                         state,
-                        currentWeek: state?.display_week || state?.week || state?.leg,
+                        currentWeek: state?.display_week ?? state?.week ?? state?.leg ?? 1,
                         matchups,
                         transactions,
                         tradedPicks,

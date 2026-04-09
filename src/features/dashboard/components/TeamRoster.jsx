@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Users, Flame, Snowflake, ChevronRight } from 'lucide-react';
-import { avatarUrl } from '../../../utils/nflData';
+import { avatarUrl, playerHeadshotUrl } from '../../../utils/nflData';
 import { fetchTrendingPlayers } from '../../../utils/sleeper';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import PlayerDossier from './PlayerDossier';
@@ -117,7 +117,12 @@ const TeamRoster = ({ roster, players, users, currentWeek, transactions, seasonM
                     {player.position}
                 </div>
                 <div className="flex items-center gap-3">
-                    <img src={avatarUrl(player.player_id)} alt="" className="w-8 h-8 rounded-full bg-slate-800" />
+                    <img
+                        src={playerHeadshotUrl(player.player_id)}
+                        alt=""
+                        className="w-8 h-8 rounded-full bg-slate-800 object-cover"
+                        onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
+                    />
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="font-bold text-sm text-slate-200">{player.first_name[0]}. {player.last_name}</span>
@@ -180,6 +185,7 @@ const TeamRoster = ({ roster, players, users, currentWeek, transactions, seasonM
                 seasonMatchups={seasonMatchups}
                 users={users}
                 rosters={rosters}
+                league={league}
             />
         </>
     );

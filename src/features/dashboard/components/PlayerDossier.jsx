@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
 import { Card } from '../../../components/ui/Card';
 import { ScrollArea } from '../../../components/ui/ScrollArea';
-import { avatarUrl, displayTeamName } from '../../../utils/nflData';
+import { playerHeadshotUrl, displayTeamName } from '../../../utils/nflData';
 import { fetchFullTransactionHistory } from '../../../utils/sleeper';
 import { ArrowLeftRight, Activity, TrendingUp, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -99,9 +99,10 @@ const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters
                 <DialogHeader>
                     <div className="flex items-center gap-4">
                         <img
-                            src={avatarUrl(player.player_id)}
+                            src={playerHeadshotUrl(player.player_id)}
                             alt={player.last_name}
-                            className="w-16 h-16 rounded-full border-2 border-slate-600"
+                            className="w-16 h-16 rounded-full border-2 border-slate-600 object-cover"
+                            onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
                         />
                         <div>
                             <DialogTitle className="text-2xl font-bold">{player.first_name} {player.last_name}</DialogTitle>
@@ -124,34 +125,44 @@ const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters
                     </TabsList>
 
                     <TabsContent value="pulse" className="space-y-4 mt-4">
-                        <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                            <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Consistency Grade</p>
-                                <p className={`text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {subText}
-                                </p>
+                        {performanceData.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-slate-500 space-y-2">
+                                <Activity className="w-8 h-8" />
+                                <p className="text-sm font-medium">No scoring data available</p>
+                                <p className="text-xs text-center max-w-xs">Season hasn't started yet. Performance stats will appear once games are played.</p>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-slate-400 uppercase tracking-wider">Avg PPG</p>
-                                <p className="text-xl font-bold text-blue-400">{avg.toFixed(1)}</p>
-                            </div>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Consistency Grade</p>
+                                        <p className={`text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                            {subText}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider">Avg PPG</p>
+                                        <p className="text-xl font-bold text-blue-400">{avg.toFixed(1)}</p>
+                                    </div>
+                                </div>
 
-                        <div className="h-[250px] w-full bg-slate-800/20 rounded-lg p-2 border border-slate-800">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={performanceData}>
-                                    <XAxis dataKey="week" stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                                        itemStyle={{ color: '#60a5fa' }}
-                                    />
-                                    <ReferenceLine y={avg} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: 'AVG', fill: '#94a3b8', fontSize: 10 }} />
-                                    <Line type="monotone" dataKey="points" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#1d4ed8' }} activeDot={{ r: 6 }} connectNulls={false} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                                <div className="h-[250px] w-full bg-slate-800/20 rounded-lg p-2 border border-slate-800">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={performanceData}>
+                                            <XAxis dataKey="week" stroke="#64748b" fontSize={10} tickLine={false} />
+                                            <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                                                itemStyle={{ color: '#60a5fa' }}
+                                            />
+                                            <ReferenceLine y={avg} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: 'AVG', fill: '#94a3b8', fontSize: 10 }} />
+                                            <Line type="monotone" dataKey="points" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#1d4ed8' }} activeDot={{ r: 6 }} connectNulls={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="ledger" className="mt-4">
