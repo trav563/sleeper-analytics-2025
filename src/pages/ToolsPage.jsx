@@ -3,6 +3,7 @@ import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
 import RosterClogger from '../features/tools/components/RosterClogger';
+import ScheduleGenerator from '../features/tools/components/ScheduleGenerator';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
@@ -16,6 +17,12 @@ const ToolsPage = () => {
 
     return (
         <div className="space-y-8">
+            <ScheduleGenerator
+                league={league}
+                rosters={rosters}
+                users={users}
+            />
+
             <DynastyLandscape
                 rosters={rosters}
                 users={users}
