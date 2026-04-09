@@ -28,10 +28,10 @@ const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = true) =
 const calculateFallbackValue = (ppg, age, position, isSuperflex = true, searchRank = 9999) => {
     // If no PPG data, estimate value from search_rank (lower rank = higher value)
     if (!ppg || ppg <= 0) {
-        if (searchRank >= 9999) return 0;
-        // Map search_rank to a 0-8000 value scale
-        // Rank 1 ~ 8000, Rank 50 ~ 5000, Rank 200 ~ 2000, Rank 500 ~ 500
-        let value = Math.max(0, 8000 - (searchRank * 15));
+        if (searchRank >= 9999 || !searchRank) return 0;
+        // Exponential decay: top players get high value, drops off fast
+        // Rank 1 → ~9000, Rank 25 → ~5500, Rank 75 → ~3000, Rank 150 → ~1500, Rank 300 → ~600
+        let value = 9000 * Math.exp(-0.018 * searchRank);
 
         const safeAge = age || 25;
         if (safeAge < 24) value *= 1.3;
