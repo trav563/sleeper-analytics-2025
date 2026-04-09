@@ -227,13 +227,15 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="text-xs w-full">
+            <table className="text-xs w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="px-1 py-1 text-left text-muted-foreground"></th>
+                  <th className="px-2 py-1.5 text-left text-muted-foreground sticky left-0 bg-slate-800/50 z-10"></th>
                   {teams.map(t => (
-                    <th key={t.id} className="px-1 py-1 text-center text-muted-foreground font-normal" title={t.name}>
-                      {t.name.slice(0, 3)}
+                    <th key={t.id} className="px-2 py-1.5 text-center text-muted-foreground font-normal min-w-[40px]" title={t.name}>
+                      <span className="writing-mode-vertical inline-block max-w-[80px] truncate" title={t.name}>
+                        {t.name.length > 8 ? t.name.slice(0, 8) + '…' : t.name}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -241,8 +243,8 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
               <tbody>
                 {teams.map(t => (
                   <tr key={t.id}>
-                    <td className="px-1 py-1 text-muted-foreground whitespace-nowrap" title={t.name}>
-                      {t.name.slice(0, 6)}
+                    <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap sticky left-0 bg-slate-800/50 z-10 font-medium" title={t.name}>
+                      {t.name.length > 12 ? t.name.slice(0, 12) + '…' : t.name}
                     </td>
                     {teams.map(t2 => {
                       if (t.id === t2.id) {

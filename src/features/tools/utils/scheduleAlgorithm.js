@@ -131,7 +131,7 @@ function generateCircleRounds(teams) {
     // Pair remaining teams from outside in
     for (let i = 1; i < n / 2; i++) {
       const teamA = rotating[i];
-      const teamB = rotating[n - 2 - i];
+      const teamB = rotating[n - 1 - i];
       round.push([teamA, teamB]);
     }
 
