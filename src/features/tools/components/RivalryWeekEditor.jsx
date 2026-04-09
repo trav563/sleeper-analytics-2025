@@ -5,10 +5,19 @@ import { Shuffle, Trash2 } from 'lucide-react';
 const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) => {
   const expectedPairs = Math.floor(teams.length / 2);
 
+  // Ensure we always have the right number of rows (moved above handlers)
+  const rows = useMemo(() => {
+    const result = [...matchups];
+    while (result.length < expectedPairs) {
+      result.push({ teamA: null, teamB: null });
+    }
+    return result.slice(0, expectedPairs);
+  }, [matchups, expectedPairs]);
+
   // Derive available teams per row from current selections
   const getAvailableTeams = (rowIndex, slot) => {
     const usedIds = new Set();
-    matchups.forEach((m, i) => {
+    rows.forEach((m, i) => {
       if (i === rowIndex) {
         // For this row, only exclude the OTHER slot's selection
         if (slot === 'A' && m.teamB) usedIds.add(m.teamB);
@@ -23,15 +32,15 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
 
   const unassignedTeams = useMemo(() => {
     const used = new Set();
-    matchups.forEach(m => {
+    rows.forEach(m => {
       if (m.teamA) used.add(m.teamA);
       if (m.teamB) used.add(m.teamB);
     });
     return teams.filter(t => !used.has(t.id));
-  }, [teams, matchups]);
+  }, [teams, rows]);
 
   const handleTeamChange = (rowIndex, slot, teamId) => {
-    const updated = matchups.map((m, i) => {
+    const updated = rows.map((m, i) => {
       if (i !== rowIndex) return m;
       return slot === 'A' ? { ...m, teamA: teamId || null } : { ...m, teamB: teamId || null };
     });
@@ -44,7 +53,7 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
 
   const handleAutoFill = () => {
     const used = new Set();
-    const updated = [...matchups];
+    const updated = [...rows];
 
     // Collect already-assigned teams
     updated.forEach(m => {
@@ -73,15 +82,6 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
 
     onChange(updated);
   };
-
-  // Ensure we always have the right number of rows
-  const rows = useMemo(() => {
-    const result = [...matchups];
-    while (result.length < expectedPairs) {
-      result.push({ teamA: null, teamB: null });
-    }
-    return result.slice(0, expectedPairs);
-  }, [matchups, expectedPairs]);
 
   return (
     <div className="space-y-3">
