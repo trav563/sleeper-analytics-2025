@@ -25,8 +25,22 @@ const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = true) =
 };
 
 // 2. Player Value Calculation (Fallback only)
-const calculateFallbackValue = (ppg, age, position, isSuperflex = true) => {
-    if (!ppg || ppg <= 0) return 0;
+const calculateFallbackValue = (ppg, age, position, isSuperflex = true, searchRank = 9999) => {
+    // If no PPG data, estimate value from search_rank (lower rank = higher value)
+    if (!ppg || ppg <= 0) {
+        if (searchRank >= 9999) return 0;
+        // Map search_rank to a 0-8000 value scale
+        // Rank 1 ~ 8000, Rank 50 ~ 5000, Rank 200 ~ 2000, Rank 500 ~ 500
+        let value = Math.max(0, 8000 - (searchRank * 15));
+
+        const safeAge = age || 25;
+        if (safeAge < 24) value *= 1.3;
+        else if (safeAge > 28) value *= 0.8;
+
+        if (isSuperflex && position === 'QB') value *= 1.3;
+
+        return Math.round(Math.max(0, value));
+    }
 
     // 1. Base Score
     let value = ppg * 150;
@@ -184,7 +198,7 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                     // Priority: Real Market Data > Fallback Formula
                     let tradeValue = marketValues[pid];
                     if (!tradeValue) {
-                        tradeValue = calculateFallbackValue(ppg, p.age, p.position, isSuperflex);
+                        tradeValue = calculateFallbackValue(ppg, p.age, p.position, isSuperflex, p.search_rank);
                     }
 
                     const nickname = roster.metadata?.[`p_nick_${pid}`];
