@@ -64,21 +64,20 @@ const Navbar = () => {
                         {leagueId && (
                             <div className="hidden md:flex items-center gap-1">
                                 {navItems.map((item) => (
-                                    <Button
+                                    <Link
                                         key={item.href}
-                                        variant="ghost"
-                                        size="sm"
-                                        asChild
+                                        to={item.href}
                                         className={cn(
+                                            "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "h-9 rounded-md px-3",
+                                            "hover:bg-accent hover:text-accent-foreground",
                                             "gap-2 text-muted-foreground hover:text-primary",
                                             isActive(item.exact ? '' : item.href.split('/').pop()) && "bg-accent text-accent-foreground"
                                         )}
                                     >
-                                        <Link to={item.href}>
-                                            <item.icon className="w-4 h-4" />
-                                            {item.label}
-                                        </Link>
-                                    </Button>
+                                        <item.icon className="w-4 h-4" />
+                                        {item.label}
+                                    </Link>
                                 ))}
                             </div>
                         )}
@@ -146,20 +145,20 @@ const Navbar = () => {
             {isMobileMenuOpen && (
                 <div className="md:hidden border-t border-border bg-background/95 backdrop-blur px-2 pt-2 pb-3 space-y-1 animate-accordion-down">
                     {leagueId && navItems.map((item) => (
-                        <Button
+                        <Link
                             key={item.href}
-                            variant="ghost"
-                            asChild
+                            to={item.href}
                             className={cn(
+                                "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                "h-10 px-4 py-2",
+                                "hover:bg-accent hover:text-accent-foreground",
                                 "w-full justify-start gap-2",
                                 isActive(item.exact ? '' : item.href.split('/').pop()) && "bg-accent text-accent-foreground"
                             )}
                         >
-                            <Link to={item.href}>
-                                <item.icon className="w-5 h-5" />
-                                {item.label}
-                            </Link>
-                        </Button>
+                            <item.icon className="w-5 h-5" />
+                            {item.label}
+                        </Link>
                     ))}
 
                     {user && (

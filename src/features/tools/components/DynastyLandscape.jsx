@@ -1,46 +1,64 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Switch } from '../../../components/ui/Switch';
+import { fetchLeagueRosters } from '../../../utils/sleeper';
 
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [useMaxPf, setUseMaxPf] = useState(false);
+    const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
+    const [usingPrevSeason, setUsingPrevSeason] = useState(false);
+
+    // Check if current season has any points data
+    const hasCurrentSeasonData = useMemo(() => {
+        if (!rosters) return false;
+        return rosters.some(r => (r.settings?.fpts || 0) > 0);
+    }, [rosters]);
+
+    // Fetch previous season rosters if current season has no data
+    useEffect(() => {
+        if (hasCurrentSeasonData || !league?.previous_league_id) {
+            setUsingPrevSeason(false);
+            return;
+        }
+        let cancelled = false;
+        fetchLeagueRosters(league.previous_league_id).then(data => {
+            if (!cancelled && data) {
+                setPrevSeasonRosters(data);
+                setUsingPrevSeason(true);
+            }
+        }).catch(() => {});
+        return () => { cancelled = true; };
+    }, [hasCurrentSeasonData, league?.previous_league_id]);
+
+    // Use previous season rosters for PPG when current season has no data
+    const effectiveRosters = usingPrevSeason && prevSeasonRosters ? prevSeasonRosters : rosters;
 
     const data = useMemo(() => {
         if (!rosters || !users || !players || !league) return [];
 
         const currentLeg = state?.leg || 1;
-        const medianScoring = league.settings?.league_average_match === 1;
 
         const teams = rosters.map(roster => {
             const owner = users.find(u => u.user_id === roster.owner_id);
 
-            // 1. Calculate Production (Y-Axis)
-            // Logic: Use state.leg (current week number) - 1 for games played.
-            // If median scoring is enabled, we need to account for double games per week?
-            // User requested: "roster.settings.fpts / (state.leg - 1)"
-            // Fallback: If (wins + losses) > 18, divide by 2.
+            // Find the matching roster from effective data for PPG calculation
+            const ppgRoster = usingPrevSeason
+                ? effectiveRosters?.find(r => r.owner_id === roster.owner_id) || roster
+                : roster;
 
-            let gamesPlayed = Math.max(1, currentLeg - 1);
-
-            // Correction for median scoring if detected via high win/loss count
-            const totalRecord = (roster.settings?.wins || 0) + (roster.settings?.losses || 0) + (roster.settings?.ties || 0);
-            if (totalRecord > 18) { // Heuristic: 18 games implies median scoring or long season
-                // However, user said "Fallback: If (wins + losses) > 18, divide by 2".
-                // This implies we are looking at total games played recorded in settings.
-                // But usually we just want PPG. Total FPTS / Total Weeks Played.
-                // Sleeper 'fpts' is cumulative.
-                // So dividing by (leg - 1) is generally correct for "Points Per Week".
-                // Median scoring doesn't affect 'fpts', only 'wins/losses'.
-                // So fpts / (leg - 1) is the correct "Points Per Game" (or Points Per Week).
-                // The user logic about dividing by 2 seems to refer to win% calculation or something else, 
-                // BUT I will stick to the simplest PPG: Total Points / Weeks Played.
-                // (state.leg - 1) is Weeks Played.
+            // Calculate games played from the effective roster's record
+            let gamesPlayed;
+            if (usingPrevSeason) {
+                const totalRecord = (ppgRoster.settings?.wins || 0) + (ppgRoster.settings?.losses || 0) + (ppgRoster.settings?.ties || 0);
+                gamesPlayed = Math.max(1, totalRecord > 18 ? totalRecord / 2 : totalRecord);
+            } else {
+                gamesPlayed = Math.max(1, currentLeg - 1);
             }
 
-            const ppg = ((roster.settings?.fpts || 0) + (roster.settings?.fpts_decimal || 0) / 100) / gamesPlayed;
-            const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
+            const ppg = ((ppgRoster.settings?.fpts || 0) + (ppgRoster.settings?.fpts_decimal || 0) / 100) / gamesPlayed;
+            const maxPf = (ppgRoster.settings?.ppts || 0) + (ppgRoster.settings?.ppts_decimal || 0) / 100;
             const productionMetric = useMaxPf ? maxPf : ppg;
 
             // 2. Calculate Average Age (X-Axis)
@@ -62,7 +80,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         });
 
         return teams.filter(t => t.age > 0);
-    }, [rosters, users, players, league, state, useMaxPf]);
+    }, [rosters, users, players, league, state, useMaxPf, usingPrevSeason, effectiveRosters]);
 
     // Calculate Averages for Quadrants
     const averages = useMemo(() => {
@@ -145,7 +163,10 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                     <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
                         <span className="text-xl">🌍</span> <span className="hidden sm:inline">Dynasty Landscape</span><span className="sm:hidden">Landscape</span>
                     </CardTitle>
-                    <p className="text-[10px] sm:text-xs text-slate-400">Competitive Window (Age vs Prod)</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400">
+                        Competitive Window (Age vs Prod)
+                        {usingPrevSeason && <span className="text-amber-400 ml-1">— Using {parseInt(state?.season || '2026') - 1} season data</span>}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] sm:text-xs font-medium text-slate-400">{useMaxPf ? 'Max PF' : 'PPG'}</span>

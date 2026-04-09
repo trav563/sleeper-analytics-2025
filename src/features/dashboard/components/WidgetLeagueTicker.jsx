@@ -99,7 +99,6 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-sm text-muted-foreground text-center py-4">No recent activity</div>
-                    <div className="text-sm text-slate-400 text-center py-4">No recent activity</div>
                 </CardContent>
             </Card>
         );

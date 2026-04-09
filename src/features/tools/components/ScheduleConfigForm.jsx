@@ -21,6 +21,26 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
 
   const expectedPairs = Math.floor(teams.length / 2);
 
+  // Compute weeks already claimed by rivalry or locked week pickers
+  const getAvailableWeeks = (currentValue, excludeIndex, isRivalry) => {
+    const used = new Set();
+    if (rivalryWeekEnabled && rivalryWeek?.week && !isRivalry) {
+      used.add(rivalryWeek.week);
+    }
+    lockedWeeks.forEach((lw, i) => {
+      if (isRivalry || i !== excludeIndex) {
+        used.add(lw.week);
+      }
+    });
+    const available = [];
+    for (let w = 1; w <= weeks; w++) {
+      if (!used.has(w) || w === currentValue) {
+        available.push(w);
+      }
+    }
+    return available;
+  };
+
   // Build validation config
   const validationConfig = useMemo(() => ({
     teams,
@@ -167,10 +187,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
           <div className="space-y-3 pl-2 border-l-2 border-amber-500/30">
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Week number</label>
-              <input
-                type="number"
-                min={1}
-                max={weeks}
+              <select
                 value={rivalryWeek?.week || 1}
                 onChange={(e) => update({
                   rivalryWeek: {
@@ -180,7 +197,11 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
                   },
                 })}
                 className="w-24 px-2 py-1.5 rounded-md border border-input bg-background/50 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+              >
+                {getAvailableWeeks(rivalryWeek?.week || 1, -1, true).map(w => (
+                  <option key={w} value={w}>Week {w}</option>
+                ))}
+              </select>
             </div>
             <RivalryWeekEditor
               teams={teams}
@@ -205,14 +226,15 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-muted-foreground">Week</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={weeks}
+                <select
                   value={lw.week}
                   onChange={(e) => updateLockedWeek(idx, { week: parseInt(e.target.value) || 1 })}
-                  className="w-20 px-2 py-1 rounded-md border border-input bg-background/50 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                />
+                  className="w-24 px-2 py-1 rounded-md border border-input bg-background/50 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {getAvailableWeeks(lw.week, idx, false).map(w => (
+                    <option key={w} value={w}>Week {w}</option>
+                  ))}
+                </select>
               </div>
               <Button
                 variant="ghost"

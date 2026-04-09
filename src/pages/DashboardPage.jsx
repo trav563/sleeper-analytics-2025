@@ -147,6 +147,7 @@ const DashboardPage = () => {
                         selectedUserId={selectedUserId}
                         league={league}
                         currentWeek={selectedWeek}
+                        seasonMatchups={seasonMatchups}
                     />
 
                     {/* Team Roster with Dossier */}

@@ -3,7 +3,7 @@ import { Trophy, TrendingUp, BarChart2, HelpCircle } from 'lucide-react';
 import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 
-const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek }) => {
+const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups }) => {
     const { odds, loading: oddsLoading } = usePlayoffOdds(league, rosters, currentWeek);
 
     const stats = useMemo(() => {
@@ -18,7 +18,37 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek }) => {
         });
 
         const rank = sortedRosters.findIndex(r => r.roster_id === roster.roster_id) + 1;
-        const streak = Math.max(1, (roster.roster_id * 3) % 5) + 'W';
+
+        // Calculate real streak from matchup data
+        let streak = '—';
+        if (seasonMatchups && Object.keys(seasonMatchups).length > 0) {
+            let streakCount = 0;
+            let streakType = null; // 'W' or 'L'
+            const weeks = Object.keys(seasonMatchups).map(Number).sort((a, b) => b - a);
+            for (const week of weeks) {
+                const weekData = seasonMatchups[week];
+                if (!weekData) continue;
+                const userMatch = weekData.find(m => m.roster_id === roster.roster_id);
+                if (!userMatch || userMatch.matchup_id == null) continue;
+                const opponent = weekData.find(m => m.matchup_id === userMatch.matchup_id && m.roster_id !== roster.roster_id);
+                if (!opponent) continue;
+                // Skip weeks where neither team has scored (future/unplayed)
+                if ((userMatch.points || 0) === 0 && (opponent.points || 0) === 0) continue;
+                const won = (userMatch.points || 0) > (opponent.points || 0);
+                const result = won ? 'W' : 'L';
+                if (streakType === null) {
+                    streakType = result;
+                    streakCount = 1;
+                } else if (result === streakType) {
+                    streakCount++;
+                } else {
+                    break;
+                }
+            }
+            if (streakCount > 0) {
+                streak = `${streakCount}${streakType}`;
+            }
+        }
 
         let playoffOddsDisplay = '...';
         let playoffStatus = '';
@@ -38,7 +68,7 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek }) => {
             playoffStatus,
             streak
         };
-    }, [selectedUserId, rosters, odds]);
+    }, [selectedUserId, rosters, odds, seasonMatchups]);
 
     if (!stats) return null;
 

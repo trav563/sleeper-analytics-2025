@@ -42,9 +42,9 @@ export const STATUS_COLORS = {
         INCOMPLETE: "bg-rose-600",
     },
     LIGHT: {
-        OK: "bg-emerald-50 border border-emerald-200",
-        POTENTIAL: "bg-amber-50 border border-amber-200",
-        INCOMPLETE: "bg-rose-50 border border-rose-200",
+        OK: "bg-emerald-500/10 border border-emerald-500/30",
+        POTENTIAL: "bg-amber-500/10 border border-amber-500/30",
+        INCOMPLETE: "bg-rose-500/10 border border-rose-500/30",
     },
     DOT: {
         OK: "bg-emerald-600",

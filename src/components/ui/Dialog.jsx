@@ -15,25 +15,25 @@ const Dialog = ({ open, onOpenChange, children }) => {
 };
 
 const DialogContent = ({ className, children }) => (
-    <div className={`relative z-50 w-full overflow-hidden rounded-lg shadow-lg ${className}`}>
+    <div className={cn("relative z-50 w-full overflow-hidden rounded-lg shadow-lg", className)}>
         {children}
     </div>
 );
 
 const DialogHeader = ({ className, children }) => (
-    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
+    <div className={cn("flex flex-col space-y-1.5 p-6", className)}>
         {children}
     </div>
 );
 
 const DialogTitle = ({ className, children }) => (
-    <h3 className={`font-semibold leading-none tracking-tight ${className}`}>
+    <h3 className={cn("font-semibold leading-none tracking-tight", className)}>
         {children}
     </h3>
 );
 
 const DialogDescription = ({ className, children }) => (
-    <div className={`text-sm text-muted-foreground ${className}`}>
+    <div className={cn("text-sm text-muted-foreground", className)}>
         {children}
     </div>
 );
