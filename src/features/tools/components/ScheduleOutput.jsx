@@ -123,10 +123,27 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
     <div className="space-y-6">
       {/* Header: Fairness + Export */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className={`px-3 py-2 rounded-lg border ${fairnessColor}`}>
-            <p className="text-2xl font-bold">{fairness.score}</p>
-            <p className="text-xs">{fairness.label}</p>
+        <div className="flex items-center gap-4">
+          <div className={`px-4 py-3 rounded-lg border ${fairnessColor}`}>
+            <div className="flex items-baseline gap-1.5">
+              <p className="text-2xl font-bold">{fairness.score}</p>
+              <p className="text-sm opacity-70">/ 100</p>
+            </div>
+            <p className="text-xs font-medium mt-0.5">{fairness.label}</p>
+          </div>
+          <div className="text-xs text-muted-foreground max-w-[280px] space-y-1">
+            <p>
+              {fairness.mode === 'performance'
+                ? 'Measures how evenly opponent strength is distributed across all teams based on actual performance data.'
+                : 'Measures how evenly matchups are distributed. Higher means each team faces a similar spread of opponents.'}
+            </p>
+            {fairness.breakdown?.details && (
+              <p className="text-[10px] opacity-70">
+                Matchup variance: {fairness.breakdown.details.matchupVariance ?? '—'}
+                {fairness.breakdown.details.coefficientOfVariation != null &&
+                  ` · SOS variance: ${fairness.breakdown.details.coefficientOfVariation}`}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
