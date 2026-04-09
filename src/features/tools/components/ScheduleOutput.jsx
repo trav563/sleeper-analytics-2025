@@ -59,13 +59,19 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
 
   // Export formats
   const generateCSV = () => {
-    const rows = [`League,${leagueName || 'Fantasy League'}`, `Generated,${new Date().toLocaleDateString()}`, '', 'Week,Matchup,Team A,Team B'];
+    const csvField = (val) => {
+      const str = String(val);
+      return str.includes(',') || str.includes('"') || str.includes('\n')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    };
+    const rows = ['League,' + csvField(leagueName || 'Fantasy League'), `Generated,${new Date().toLocaleDateString()}`, '', 'Week,Matchup,Team A,Team B'];
     for (const week of schedule) {
       week.matchups.forEach((m, idx) => {
-        rows.push(`${week.week},${idx + 1},${getTeamDisplay(m.teamA)},${getTeamDisplay(m.teamB)}`);
+        rows.push(`${week.week},${idx + 1},${csvField(getTeamDisplay(m.teamA))},${csvField(getTeamDisplay(m.teamB))}`);
       });
       if (week.byes?.length > 0) {
-        rows.push(`${week.week},BYE,${week.byes.map(b => getTeamDisplay(b)).join('; ')},`);
+        rows.push(`${week.week},BYE,${csvField(week.byes.map(b => getTeamDisplay(b)).join('; '))},`);
       }
     }
     return rows.join('\n');
