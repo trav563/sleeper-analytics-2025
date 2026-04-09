@@ -286,7 +286,114 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             }
         });
 
-        return { robbery, topRookie, worstManager, bagCarrier, coinFlipFail, cardioKing };
+        // 7. "Tank Commander" (Lowest Score)
+        let tankCommander = null;
+        let lowestTeamScore = Infinity;
+
+        matchups.forEach(m => {
+            if (m.points < lowestTeamScore && m.points > 0) {
+                lowestTeamScore = m.points;
+                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                tankCommander = {
+                    manager: displayTeamName(user),
+                    avatar: user?.avatar,
+                    score: m.points.toFixed(2)
+                };
+            }
+        });
+
+        // 8. "Lucky Charm" (Lowest Score That Won)
+        let luckyCharm = null;
+        let lowestWinnerScore = Infinity;
+
+        Object.values(matchGroups).forEach(group => {
+            if (group.length !== 2) return;
+            const [t1, t2] = group;
+            const winner = t1.points > t2.points ? t1 : t2.points > t1.points ? t2 : null;
+            if (winner && winner.points < lowestWinnerScore) {
+                lowestWinnerScore = winner.points;
+                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === winner.roster_id)?.owner_id);
+                const loser = winner === t1 ? t2 : t1;
+                const oppUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === loser.roster_id)?.owner_id);
+                luckyCharm = {
+                    manager: displayTeamName(user),
+                    avatar: user?.avatar,
+                    score: winner.points.toFixed(2),
+                    opponent: displayTeamName(oppUser),
+                    opponentScore: loser.points.toFixed(2)
+                };
+            }
+        });
+
+        // 9. "Close Call" (Narrowest Margin)
+        let closeCall = null;
+        let narrowestMargin = Infinity;
+
+        Object.values(matchGroups).forEach(group => {
+            if (group.length !== 2) return;
+            const [t1, t2] = group;
+            if (t1.points === t2.points) return; // Skip ties
+            const margin = Math.abs(t1.points - t2.points);
+            if (margin < narrowestMargin) {
+                narrowestMargin = margin;
+                const winner = t1.points > t2.points ? t1 : t2;
+                const loser = t1.points > t2.points ? t2 : t1;
+                const winUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === winner.roster_id)?.owner_id);
+                const loseUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === loser.roster_id)?.owner_id);
+                closeCall = {
+                    winner: displayTeamName(winUser),
+                    loser: displayTeamName(loseUser),
+                    winnerScore: winner.points.toFixed(2),
+                    loserScore: loser.points.toFixed(2),
+                    margin: margin.toFixed(2)
+                };
+            }
+        });
+
+        // 10. "The Ghost" (Starter with 0 Points)
+        let ghost = null;
+        let ghostCount = 0; // Track most ghosts on one team for extra shame
+
+        matchups.forEach(m => {
+            const squadPoints = m.players_points || {};
+            let teamGhosts = [];
+            (m.starters || []).forEach(pid => {
+                if ((squadPoints[pid] || 0) === 0 && players[pid]) {
+                    teamGhosts.push(players[pid]);
+                }
+            });
+            if (teamGhosts.length > ghostCount) {
+                ghostCount = teamGhosts.length;
+                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                ghost = {
+                    manager: displayTeamName(user),
+                    players: teamGhosts,
+                    count: teamGhosts.length
+                };
+            }
+        });
+
+        // 11. "Boom Game" (Highest Single Player Performance - Starters Only)
+        let boomGame = null;
+        let highestPlayerScore = -1;
+
+        matchups.forEach(m => {
+            const squadPoints = m.players_points || {};
+            (m.starters || []).forEach(pid => {
+                const pts = squadPoints[pid] || 0;
+                if (pts > highestPlayerScore && players[pid]) {
+                    highestPlayerScore = pts;
+                    const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                    boomGame = {
+                        player: players[pid],
+                        points: pts.toFixed(2),
+                        manager: displayTeamName(user)
+                    };
+                }
+            });
+        });
+
+        return { robbery, topRookie, worstManager, bagCarrier, coinFlipFail, cardioKing, tankCommander, luckyCharm, closeCall, ghost, boomGame };
 
     }, [league, matchups, rosters, users, players]);
 

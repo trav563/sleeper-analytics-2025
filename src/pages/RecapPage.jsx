@@ -1,8 +1,10 @@
 import { useOutletContext } from 'react-router-dom';
 import WeeklyRecap from '../features/recap/components/WeeklyRecap';
+import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 
 const RecapPage = () => {
     const { league, rosters, users, players, currentWeek } = useOutletContext();
+    const { seasonMatchups, loading: seasonMatchupsLoading } = useSeasonMatchups(league?.league_id, currentWeek);
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -12,6 +14,8 @@ const RecapPage = () => {
                 users={users}
                 players={players}
                 currentWeek={currentWeek}
+                seasonMatchups={seasonMatchups}
+                seasonMatchupsLoading={seasonMatchupsLoading}
             />
         </div>
     );

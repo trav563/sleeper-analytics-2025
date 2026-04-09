@@ -1,36 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Trophy, AlertTriangle, TrendingUp, Share2, Download, Copy, Dumbbell, Percent, Shuffle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
+import { Trophy, AlertTriangle, TrendingUp, TrendingDown, Share2, Download, Copy, Dumbbell, Percent, Shuffle, Sparkles, Timer, Ghost, Flame } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useWeeklyRecap } from '../hooks/useWeeklyRecap';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
+import { WEEKLY_COPY, getRandomCopy, fillTemplate } from '../data/roastCopy';
 import { toPng } from 'html-to-image';
 import QRCode from 'react-qr-code';
+import SeasonSuperlativesView from './SeasonSuperlativesView';
 
-const WeeklyRecap = ({ league, rosters, users, players, currentWeek }) => {
-    const [recapWeek, setRecapWeek] = useState(null);
+const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatchups, seasonMatchupsLoading }) => {
+    const [selectedWeek, setSelectedWeek] = useState(null);
     const [matchups, setMatchups] = useState([]);
     const [loading, setLoading] = useState(true);
     const captureRef = useRef(null);
 
+    // Set default selected week
     useEffect(() => {
-        if (!league?.league_id || !currentWeek) {
+        if (!currentWeek) return;
+        const target = currentWeek > 1 ? currentWeek - 1 : 1;
+        setSelectedWeek(target);
+    }, [currentWeek]);
+
+    // Fetch matchups for selected week
+    useEffect(() => {
+        if (!league?.league_id || !selectedWeek) {
             setLoading(false);
             return;
         }
 
-        // Target previous week, but ensure we don't go below 1
-        const target = currentWeek > 1 ? currentWeek - 1 : 1;
-        setRecapWeek(target);
-
         const load = async () => {
             setLoading(true);
             try {
-                // If currentWeek is 1, we normally wouldn't have a recap unless we want to show Week 1 *after* it's done.
-                // Assuming this component is viewed during the season.
-                // If currentWeek (display_week) is 1, the season just started, no previous week.
-                // We'll fetch 'target' week anyway.
-                const data = await fetchLeagueMatchups(league.league_id, target);
+                const data = await fetchLeagueMatchups(league.league_id, selectedWeek);
                 setMatchups(data);
             } catch (e) {
                 console.error(e);
@@ -39,25 +42,57 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek }) => {
             }
         };
         load();
-    }, [league, currentWeek]);
+    }, [league, selectedWeek]);
 
-    const stats = useWeeklyRecap(league, matchups, rosters, users, players, recapWeek);
+    const stats = useWeeklyRecap(league, matchups, rosters, users, players, selectedWeek);
+
+    // Lock in random copy on stats change so it doesn't shuffle on re-renders
+    const roastCopy = useMemo(() => {
+        if (!stats) return {};
+        const picks = {};
+        Object.keys(WEEKLY_COPY).forEach(key => {
+            picks[key] = getRandomCopy(WEEKLY_COPY, key);
+        });
+        return picks;
+    }, [stats]);
+
+    // Build available weeks for selector
+    const availableWeeks = useMemo(() => {
+        if (!currentWeek || currentWeek < 1) return [];
+        const weeks = [];
+        const max = currentWeek > 1 ? currentWeek - 1 : 1;
+        for (let w = max; w >= 1; w--) {
+            weeks.push(w);
+        }
+        return weeks;
+    }, [currentWeek]);
 
     const copyToClipboard = () => {
         if (!stats) return;
-        let text = `🔥 Week ${recapWeek} Roast 🔥\n\n`;
+        let text = `🔥 Week ${selectedWeek} Roast 🔥\n\n`;
 
-        if (stats.robbery) text += `🤡 The Robbery:\n${stats.robbery.manager} scored ${stats.robbery.score} (would have beaten ${stats.robbery.percentile}% of league) but lost to ${stats.robbery.opponent}.\n\n`;
-        if (stats.worstManager) text += `📉 Manager Malpractice:\n${stats.worstManager.manager} left ${stats.worstManager.benchPoints} pts (${stats.worstManager.benchPlayer.first_name}) on the bench.\n\n`;
-        if (stats.topRookie) text += `👶 The Dynasty Flex:\n${stats.topRookie.player.first_name} ${stats.topRookie.player.last_name} (${stats.topRookie.points} pts) managed by ${stats.topRookie.manager}.\n\n`;
-        if (stats.bagCarrier) text += `🎒 The Backpack:\n${stats.bagCarrier.player.last_name} carried ${stats.bagCarrier.manager} by scoring ${stats.bagCarrier.percentage}% of the team's points.\n\n`;
-        if (stats.coinFlipFail) text += `🪙 Coin Flip Fail:\n${stats.coinFlipFail.manager} started ${stats.coinFlipFail.starter.last_name} (${stats.coinFlipFail.starterPoints}) over ${stats.coinFlipFail.bench.last_name} (${stats.coinFlipFail.benchPoints}). Ouch.\n\n`;
-        if (stats.cardioKing) text += `💤 Cardio Kings:\n${stats.cardioKing.manager} had ${stats.cardioKing.count} starters score under 5 points. Doing cardio.\n`;
+        const add = (emoji, label, category, data) => {
+            if (!data) return;
+            const copy = roastCopy[category];
+            if (copy) text += `${emoji} ${label}:\n${data.manager || data.winner || ''} — ${fillTemplate(copy.text, data)}\n\n`;
+        };
+
+        if (stats.robbery) add('🤡', 'The Robbery', 'robbery', { ...stats.robbery });
+        if (stats.worstManager) add('📉', 'Manager Malpractice', 'worstManager', { ...stats.worstManager, benchPlayer: `${stats.worstManager.benchPlayer.first_name} ${stats.worstManager.benchPlayer.last_name}` });
+        if (stats.boomGame) add('💥', 'Boom Game', 'boomGame', { ...stats.boomGame, playerName: `${stats.boomGame.player.first_name} ${stats.boomGame.player.last_name}` });
+        if (stats.bagCarrier) add('🎒', 'The Backpack', 'bagCarrier', { ...stats.bagCarrier, playerName: `${stats.bagCarrier.player.first_name} ${stats.bagCarrier.player.last_name}` });
+        if (stats.tankCommander) add('💀', 'Tank Commander', 'tankCommander', { ...stats.tankCommander });
+        if (stats.luckyCharm) add('🍀', 'Lucky Charm', 'luckyCharm', { ...stats.luckyCharm });
+        if (stats.closeCall) add('⏱️', 'Close Call', 'closeCall', { ...stats.closeCall });
+        if (stats.coinFlipFail) add('🪙', 'Coin Flip Fail', 'coinFlipFail', { ...stats.coinFlipFail, starter: stats.coinFlipFail.starter.last_name, bench: stats.coinFlipFail.bench.last_name });
+        if (stats.ghost) add('👻', 'The Ghost', 'ghost', { ...stats.ghost, ghostNames: stats.ghost.players.map(p => p.last_name).join(', ') });
+        if (stats.topRookie) add('👶', 'Dynasty Flex', 'topRookie', { ...stats.topRookie, playerName: `${stats.topRookie.player.first_name} ${stats.topRookie.player.last_name}` });
+        if (stats.cardioKing) add('💤', 'Cardio Kings', 'cardioKing', { ...stats.cardioKing });
 
         const leagueUrl = `${window.location.origin}/league/${league.league_id}`;
-        text += `\nAnalyzed by League Analysis\n${leagueUrl}`;
+        text += `\nGenerated by League Analysis\n${leagueUrl}`;
         navigator.clipboard.writeText(text);
-        alert("Recap copied to clipboard!");
+        alert("Roast copied to clipboard!");
     };
 
     const downloadImage = async () => {
@@ -65,7 +100,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek }) => {
             try {
                 const dataUrl = await toPng(captureRef.current, { cacheBust: true, backgroundColor: '#0f172a' });
                 const link = document.createElement('a');
-                link.download = `week-${recapWeek}-roast.png`;
+                link.download = `week-${selectedWeek}-roast.png`;
                 link.href = dataUrl;
                 link.click();
             } catch (err) {
@@ -75,7 +110,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek }) => {
     };
 
     if (loading) return <div className="text-center p-10 text-muted-foreground animate-pulse">Brewing the roast...</div>;
-    // Basic check if data exists
+
     if (!stats || (!stats.robbery && !stats.worstManager)) return (
         <div className="text-center p-16 text-muted-foreground space-y-3">
             <div className="text-4xl">🔥</div>
@@ -86,180 +121,371 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek }) => {
 
     const leagueUrl = `${window.location.origin}/league/${league.league_id}`;
 
+    // Helper to render a roast card
+    const RoastCard = ({ category, icon: Icon, iconColor, borderColor, bgColor, title, manager, children }) => {
+        if (!stats[category]) return null;
+        const copy = roastCopy[category];
+        return (
+            <Card className={`${borderColor} ${bgColor} backdrop-blur-sm`}>
+                <CardHeader className="pb-2">
+                    <div className={`flex items-center gap-2 ${iconColor} mb-2`}>
+                        <Icon className="w-5 h-5" />
+                        <span className="font-bold uppercase tracking-wider text-xs">{title}</span>
+                    </div>
+                    <CardTitle className="text-xl md:text-2xl">{manager}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {children}
+                    {copy?.sub && (
+                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(copy.sub, getCardData(category))}</p>
+                    )}
+                </CardContent>
+            </Card>
+        );
+    };
+
+    // Build template data for each category
+    const getCardData = (category) => {
+        const s = stats[category];
+        if (!s) return {};
+        switch (category) {
+            case 'robbery': return { ...s };
+            case 'worstManager': return { ...s, benchPlayer: `${s.benchPlayer.first_name} ${s.benchPlayer.last_name}`, diff: s.diff };
+            case 'topRookie': return { ...s, playerName: `${s.player.first_name} ${s.player.last_name}`, points: s.points };
+            case 'bagCarrier': return { ...s, playerName: `${s.player.first_name} ${s.player.last_name}` };
+            case 'coinFlipFail': return { ...s, starter: s.starter.last_name, bench: s.bench.last_name };
+            case 'cardioKing': return { ...s };
+            case 'tankCommander': return { ...s };
+            case 'luckyCharm': return { ...s };
+            case 'closeCall': return { ...s };
+            case 'ghost': return { ...s, ghostNames: s.players.map(p => p.last_name).join(', ') };
+            case 'boomGame': return { ...s, playerName: `${s.player.first_name} ${s.player.last_name}`, points: s.points };
+            default: return {};
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">The Roast</h2>
-                    <p className="text-muted-foreground">Weekly Recap for Week {recapWeek}</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button onClick={copyToClipboard} variant="outline" className="gap-2">
-                        <Copy className="w-4 h-4" /> Copy Text
-                    </Button>
-                    <Button onClick={downloadImage} className="gap-2">
-                        <Download className="w-4 h-4" /> Save Image
-                    </Button>
+                    <p className="text-muted-foreground">Weekly awards & season superlatives</p>
                 </div>
             </div>
 
-            {/* Capture Area */}
-            <div ref={captureRef} className="p-8 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
-                {/* Background Pattern */}
-                <div className="absolute top-0 right-0 p-10 opacity-5">
-                    <Trophy className="w-64 h-64" />
-                </div>
+            <Tabs defaultValue="weekly" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-800 mb-6">
+                    <TabsTrigger value="weekly">Weekly Roast 🔥</TabsTrigger>
+                    <TabsTrigger value="season">Season Superlatives 🏆</TabsTrigger>
+                </TabsList>
 
-                <div className="mb-8 relative z-10">
-                    <h3 className="text-2xl font-bold text-white mb-1">{league.name}</h3>
-                    <p className="text-orange-500 font-bold uppercase tracking-widest text-sm">Week {recapWeek} Recap</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-                    {/* 1. The Robbery */}
-                    {stats.robbery && (
-                        <Card className="border-red-900/50 bg-red-950/20 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-red-500 mb-2">
-                                    <AlertTriangle className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">The Robbery</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">{stats.robbery.manager}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-slate-300 text-sm md:text-base">
-                                    Scored <span className="font-bold text-white">{stats.robbery.score}</span> points (would beat <span className="font-bold text-red-400">{stats.robbery.percentile}%</span>) yet lost to {stats.robbery.opponent}. Call the cops.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 2. Manager Malpractice */}
-                    {stats.worstManager && (
-                        <Card className="border-orange-900/50 bg-orange-950/20 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-orange-500 mb-2">
-                                    <TrendingUp className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">Manager Malpractice</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">{stats.worstManager.manager}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-slate-300 text-sm md:text-base">
-                                    Left <span className="font-bold text-white">{stats.worstManager.benchPoints}</span> points on the bench from <span className="text-orange-300 font-medium">{stats.worstManager.benchPlayer.first_name} {stats.worstManager.benchPlayer.last_name}</span>.
-                                </p>
-                                <p className="mt-2 text-xs text-muted-foreground">Efficiency Rating: <span className="text-red-400">Low</span></p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 3. The Dynasty Flex */}
-                    {stats.topRookie && (
-                        <Card className="border-green-900/50 bg-green-950/20 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-green-500 mb-2">
-                                    <Trophy className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">The Dynasty Flex</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">Rookie of the Week</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-full overflow-hidden bg-slate-800 border border-green-500/30 shrink-0">
-                                        <img
-                                            src={`https://sleepercdn.com/content/nfl/players/${stats.topRookie.player.player_id}.jpg`}
-                                            alt={stats.topRookie.player.last_name}
-                                            className="h-full w-full object-cover"
-                                            onError={(e) => e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'}
-                                        />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-white text-sm">{stats.topRookie.player.first_name} {stats.topRookie.player.last_name}</div>
-                                        <div className="text-green-400 font-mono font-bold text-sm">{stats.topRookie.points} pts</div>
-                                        <div className="text-xs text-muted-foreground">Mgr: {stats.topRookie.manager}</div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 4. The Backpack Award */}
-                    {stats.bagCarrier && (
-                        <Card className="border-blue-900/50 bg-blue-950/20 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-blue-500 mb-2">
-                                    <Dumbbell className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">The Backpack Award</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">{stats.bagCarrier.manager}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-slate-300 text-sm md:text-base">
-                                    Carried by <span className="font-bold text-white">{stats.bagCarrier.player.first_name} {stats.bagCarrier.player.last_name}</span> working overtime.
-                                </p>
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    Accounted for <span className="text-blue-400 font-bold">{stats.bagCarrier.percentage}%</span> of total team score.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 5. The Coin Flip Fail */}
-                    {stats.coinFlipFail && (
-                        <Card className="border-yellow-900/50 bg-yellow-950/20 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-yellow-500 mb-2">
-                                    <Shuffle className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">The Coin Flip Fail</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">{stats.coinFlipFail.manager}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-slate-300 text-sm md:text-base">
-                                    Started <span className="text-red-400">{stats.coinFlipFail.starter.last_name} ({stats.coinFlipFail.starterPoints})</span> over <span className="text-green-400">{stats.coinFlipFail.bench.last_name} ({stats.coinFlipFail.benchPoints})</span>.
-                                </p>
-                                <p className="mt-2 text-xs text-muted-foreground italic">Trust issues loading...</p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 6. The Cardio Kings */}
-                    {stats.cardioKing && (
-                        <Card className="border-gray-700 bg-gray-900/40 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-gray-400 mb-2">
-                                    <Percent className="w-5 h-5" />
-                                    <span className="font-bold uppercase tracking-wider text-xs">The Cardio Kings</span>
-                                </div>
-                                <CardTitle className="text-xl md:text-2xl">{stats.cardioKing.manager}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-slate-300 text-sm md:text-base">
-                                    Had <span className="font-bold text-white">{stats.cardioKing.count}</span> starters score under 5 points.
-                                </p>
-                                <p className="mt-2 text-xs text-muted-foreground">True team effort in doing absolutely nothing.</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-
-                {/* Viral Footer */}
-                <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between relative z-10">
-                    <div>
-                        <p className="text-xs text-slate-400 uppercase tracking-wider font-bold">Generated by</p>
-                        <p className="text-lg font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">League Analysis</p>
-                        <p className="text-xs text-slate-500 mt-1">Find your league's roast at {window.location.host}</p>
+                <TabsContent value="weekly" className="space-y-6">
+                    {/* Week Selector + Actions */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <label className="text-sm text-slate-400">Week:</label>
+                            <select
+                                value={selectedWeek || ''}
+                                onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                                className="bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            >
+                                {availableWeeks.map(w => (
+                                    <option key={w} value={w}>Week {w}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button onClick={copyToClipboard} variant="outline" className="gap-2">
+                                <Copy className="w-4 h-4" /> Copy Text
+                            </Button>
+                            <Button onClick={downloadImage} className="gap-2">
+                                <Download className="w-4 h-4" /> Save Image
+                            </Button>
+                        </div>
                     </div>
-                    <div className="bg-white p-2 rounded-lg">
-                        <QRCode
-                            size={64}
-                            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                            value={leagueUrl}
-                            viewBox={`0 0 256 256`}
-                        />
+
+                    {/* Capture Area */}
+                    <div ref={captureRef} className="p-8 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
+                        {/* Background Pattern */}
+                        <div className="absolute top-0 right-0 p-10 opacity-5">
+                            <Trophy className="w-64 h-64" />
+                        </div>
+
+                        <div className="mb-8 relative z-10">
+                            <h3 className="text-2xl font-bold text-white mb-1">{league.name}</h3>
+                            <p className="text-orange-500 font-bold uppercase tracking-widest text-sm">Week {selectedWeek} Recap</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+                            {/* 1. The Robbery */}
+                            {stats.robbery && (
+                                <Card className="border-red-900/50 bg-red-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-red-500 mb-2">
+                                            <AlertTriangle className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Robbery</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.robbery.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.robbery?.text || '', getCardData('robbery'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.robbery?.sub || '', getCardData('robbery'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 2. Manager Malpractice */}
+                            {stats.worstManager && (
+                                <Card className="border-orange-900/50 bg-orange-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-orange-500 mb-2">
+                                            <TrendingUp className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">Manager Malpractice</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.worstManager.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.worstManager?.text || '', getCardData('worstManager'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.worstManager?.sub || '', getCardData('worstManager'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 3. Boom Game (NEW) */}
+                            {stats.boomGame && (
+                                <Card className="border-orange-900/50 bg-gradient-to-br from-red-950/20 to-orange-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-orange-400 mb-2">
+                                            <Flame className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">Boom Game</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">Player of the Week</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-10 w-10 rounded-full overflow-hidden bg-slate-800 border border-orange-500/30 shrink-0">
+                                                <img
+                                                    src={`https://sleepercdn.com/content/nfl/players/${stats.boomGame.player.player_id}.jpg`}
+                                                    alt={stats.boomGame.player.last_name}
+                                                    className="h-full w-full object-cover"
+                                                    onError={(e) => e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-white text-sm">{stats.boomGame.player.first_name} {stats.boomGame.player.last_name}</div>
+                                                <div className="text-orange-400 font-mono font-bold text-sm">{stats.boomGame.points} pts</div>
+                                            </div>
+                                        </div>
+                                        <p className="text-slate-300 text-sm">
+                                            {fillTemplate(roastCopy.boomGame?.text || '', getCardData('boomGame'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.boomGame?.sub || '', getCardData('boomGame'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 4. The Dynasty Flex */}
+                            {stats.topRookie && (
+                                <Card className="border-green-900/50 bg-green-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-green-500 mb-2">
+                                            <Trophy className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Dynasty Flex</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">Rookie of the Week</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-10 w-10 rounded-full overflow-hidden bg-slate-800 border border-green-500/30 shrink-0">
+                                                <img
+                                                    src={`https://sleepercdn.com/content/nfl/players/${stats.topRookie.player.player_id}.jpg`}
+                                                    alt={stats.topRookie.player.last_name}
+                                                    className="h-full w-full object-cover"
+                                                    onError={(e) => e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-white text-sm">{stats.topRookie.player.first_name} {stats.topRookie.player.last_name}</div>
+                                                <div className="text-green-400 font-mono font-bold text-sm">{stats.topRookie.points} pts</div>
+                                                <div className="text-xs text-muted-foreground">Mgr: {stats.topRookie.manager}</div>
+                                            </div>
+                                        </div>
+                                        <p className="text-slate-300 text-sm">
+                                            {fillTemplate(roastCopy.topRookie?.text || '', getCardData('topRookie'))}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 5. The Backpack Award */}
+                            {stats.bagCarrier && (
+                                <Card className="border-blue-900/50 bg-blue-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-blue-500 mb-2">
+                                            <Dumbbell className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Backpack Award</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.bagCarrier.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.bagCarrier?.text || '', getCardData('bagCarrier'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.bagCarrier?.sub || '', getCardData('bagCarrier'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 6. Tank Commander (NEW) */}
+                            {stats.tankCommander && (
+                                <Card className="border-purple-900/50 bg-purple-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-purple-400 mb-2">
+                                            <TrendingDown className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">Tank Commander</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.tankCommander.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.tankCommander?.text || '', getCardData('tankCommander'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.tankCommander?.sub || '', getCardData('tankCommander'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 7. Lucky Charm (NEW) */}
+                            {stats.luckyCharm && (
+                                <Card className="border-emerald-900/50 bg-emerald-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                                            <Sparkles className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">Lucky Charm</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.luckyCharm.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.luckyCharm?.text || '', getCardData('luckyCharm'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.luckyCharm?.sub || '', getCardData('luckyCharm'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 8. Close Call (NEW) */}
+                            {stats.closeCall && (
+                                <Card className="border-cyan-900/50 bg-cyan-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                                            <Timer className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">Close Call</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.closeCall.winner}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.closeCall?.text || '', getCardData('closeCall'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.closeCall?.sub || '', getCardData('closeCall'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 9. The Coin Flip Fail */}
+                            {stats.coinFlipFail && (
+                                <Card className="border-yellow-900/50 bg-yellow-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-yellow-500 mb-2">
+                                            <Shuffle className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Coin Flip Fail</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.coinFlipFail.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.coinFlipFail?.text || '', getCardData('coinFlipFail'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.coinFlipFail?.sub || '', getCardData('coinFlipFail'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 10. The Ghost (NEW) */}
+                            {stats.ghost && (
+                                <Card className="border-slate-600/50 bg-slate-800/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-slate-400 mb-2">
+                                            <Ghost className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Ghost</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.ghost.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.ghost?.text || '', getCardData('ghost'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.ghost?.sub || '', getCardData('ghost'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 11. The Cardio Kings */}
+                            {stats.cardioKing && (
+                                <Card className="border-gray-700 bg-gray-900/40 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-gray-400 mb-2">
+                                            <Percent className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Cardio Kings</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.cardioKing.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.cardioKing?.text || '', getCardData('cardioKing'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.cardioKing?.sub || '', getCardData('cardioKing'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+
+                        {/* Viral Footer */}
+                        <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-xs text-slate-400 uppercase tracking-wider font-bold">Generated by</p>
+                                <p className="text-lg font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">League Analysis</p>
+                                <p className="text-xs text-slate-500 mt-1">Find your league's roast at {window.location.host}</p>
+                            </div>
+                            <div className="bg-white p-2 rounded-lg">
+                                <QRCode
+                                    size={64}
+                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                    value={leagueUrl}
+                                    viewBox={`0 0 256 256`}
+                                />
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </TabsContent>
+
+                <TabsContent value="season">
+                    <SeasonSuperlativesView
+                        league={league}
+                        rosters={rosters}
+                        users={users}
+                        players={players}
+                        seasonMatchups={seasonMatchups}
+                        seasonMatchupsLoading={seasonMatchupsLoading}
+                        currentWeek={currentWeek}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 };
