@@ -183,9 +183,9 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
     const sections = parseMarkdownSections(analysis);
     const hasResult = analysis.length > 0;
 
-    const handleAnalyze = () => {
+    const handleAnalyze = (force = false) => {
         setExpandedSections(new Set());
-        analyze();
+        analyze({ force });
     };
 
     const toggleSection = (idx) => {
@@ -273,12 +273,12 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                             Stop
                         </Button>
                     ) : isOnCooldown ? (
-                        <Button disabled size="sm" className="shrink-0 bg-slate-700 text-slate-400 cursor-not-allowed">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {cooldownMinutes}m
+                        <Button onClick={() => handleAnalyze(true)} size="sm" className="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-300">
+                            <Sparkles className="w-4 h-4 mr-1" />
+                            Refresh
                         </Button>
                     ) : (
-                        <Button onClick={handleAnalyze} size="sm" className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white">
+                        <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white">
                             <Sparkles className="w-4 h-4 mr-1" />
                             {hasResult ? 'Re-analyze' : 'Analyze'}
                         </Button>

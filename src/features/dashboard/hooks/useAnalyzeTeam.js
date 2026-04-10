@@ -76,11 +76,11 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
         return () => clearInterval(timerRef.current);
     }, [cooldownRemaining, cacheKey]);
 
-    const analyze = useCallback(async () => {
+    const analyze = useCallback(async ({ force = false } = {}) => {
         if (!leagueId || !userId || !week) return;
 
-        // Check cooldown
-        if (cacheKey) {
+        // Check cooldown (skip if force refresh)
+        if (!force && cacheKey) {
             const cached = readCache(cacheKey);
             const remaining = getCooldownRemaining(cached);
             if (remaining > 0) {
@@ -88,6 +88,11 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
                 setError(`Analysis cached. Re-analyze available in ${Math.ceil(remaining / 60000)} minutes.`);
                 return;
             }
+        }
+
+        // Clear old cache if forcing
+        if (force && cacheKey) {
+            try { localStorage.removeItem(cacheKey); } catch {}
         }
 
         // Abort any in-progress request
