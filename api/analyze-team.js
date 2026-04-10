@@ -351,14 +351,15 @@ Use this EXACT numbered format for each target (3-5 targets from the FREE AGENTS
 
 ## Trade Opportunities
 DYNASTY TRADE RULES:
-- Dynasty Value is the consensus market value. NEVER propose sending more dynasty value than you receive unless there is a critical positional need AND values are within 20%.
-- Young players (≤ 25) with high dynasty value are PREMIUM assets. Do NOT trade them for older players (≥ 29) even if the older player scores more right now.
-- Always compare ages AND dynasty values when proposing trades.
+- Dynasty values for YOUR players are in the "Dynasty Value" column of your roster tables above.
+- Dynasty values for OTHER teams' players are shown as "val:XXXX" in the OTHER TEAMS section below.
+- NEVER propose sending more dynasty value than you receive unless values are within 20%.
+- Young players (≤ 25) with high dynasty value are PREMIUM. Do NOT trade them for older players (≥ 29).
 
 Use this EXACT format for each trade (2-3 trades). NEVER suggest acquiring players already on my roster.
 **Trade 1: [My Team] ↔ [Other Team Name]**
-- Send: [Player(s)] (Age [X], Value: [X])
-- Receive: [Player(s)] (Age [X], Value: [X])
+- Send: [Player(s)] (Age [X], Dynasty Value: [look up from roster table])
+- Receive: [Player(s)] (Age [X], Dynasty Value: [look up from OTHER TEAMS])
 - Why: [1-2 sentences explaining why both sides benefit, referencing age and dynasty value]
 
 ## Outlook
@@ -398,18 +399,19 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
         trades: `You MUST use EXACTLY this format. ALL players on MY ROSTER are already mine — NEVER suggest acquiring them.
 
 DYNASTY TRADE RULES:
-- Dynasty Value is the consensus market value. NEVER propose sending more dynasty value than you receive unless there is a critical positional need AND values are within 20%.
-- Young players (≤ 25) with high dynasty value are PREMIUM assets. Do NOT trade them for older players (≥ 29) even if the older player scores more right now.
-- Always compare ages AND dynasty values when proposing trades.
+- Dynasty values for YOUR players are in the "Dynasty Value" column of your roster tables above.
+- Dynasty values for OTHER teams' players are shown as "val:XXXX" in the OTHER TEAMS section.
+- NEVER propose sending more dynasty value than you receive unless values are within 20%.
+- Young players (≤ 25) with high dynasty value are PREMIUM. Do NOT trade them for older players (≥ 29).
 
 ## Trade Opportunities
 **Trade 1: [My Team] ↔ [Other Team Name]**
-- Send: [Player(s)] (Age [X], Dynasty Value: [X])
-- Receive: [Player(s)] (Age [X], Dynasty Value: [X])
+- Send: [Player(s)] (Age [X], Dynasty Value: [look up from roster table])
+- Receive: [Player(s)] (Age [X], Dynasty Value: [look up from OTHER TEAMS])
 - Why it works for me: [1 sentence referencing age and value]
 - Why it works for them: [1 sentence]
 
-(Repeat for 2-3 total trades. Reference actual players from the OTHER TEAMS' rosters listed above.)
+(Repeat for 2-3 total trades. Reference actual players from the OTHER TEAMS' rosters.)
 
 ## Trade Strategy
 - **Sell high:** [Player(s) to sell and why — only older or declining assets]
