@@ -86,22 +86,33 @@ function getStatsPPG(stats, pprField) {
     return { pts: pts, gp, ppg: (pts / gp).toFixed(1) };
 }
 
-function getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprField) {
-    // 1. Previous season positional rank (most reliable indicator of actual production)
-    const prev = prevStats?.[pid];
-    const posRankField = pprField === 'pts_ppr' ? 'pos_rank_ppr' : pprField === 'pts_half_ppr' ? 'pos_rank_half_ppr' : 'pos_rank_std';
-    const posRank = prev?.[posRankField] ?? prev?.pos_rank_ppr;
+function tierFromRank(pos, posRank, yearLabel) {
+    const label = `${pos}${posRank} in ${yearLabel}`;
+    if (posRank <= 5) return `Elite (${label})`;
+    if (posRank <= 12) return `Starter (${label})`;
+    if (posRank <= 24) return `Depth (${label})`;
+    if (posRank <= 36) return `Deep (${label})`;
+    return `Fringe (${label})`;
+}
 
-    if (posRank && posRank > 0) {
-        const label = `${pos}${posRank} in '24`;
-        if (posRank <= 5) return `Elite (${label})`;
-        if (posRank <= 12) return `Starter (${label})`;
-        if (posRank <= 24) return `Depth (${label})`;
-        if (posRank <= 36) return `Deep (${label})`;
-        return `Fringe (${label})`;
+function getPlayerTier(pid, pos, currentStats, prevStats, weekProjections, marketValues, pprField, season, prevSeason) {
+    const posRankField = pprField === 'pts_ppr' ? 'pos_rank_ppr' : pprField === 'pts_half_ppr' ? 'pos_rank_half_ppr' : 'pos_rank_std';
+
+    // 1. Current season stats (most recent completed season — e.g. 2025)
+    const cur = currentStats?.[pid];
+    const curRank = cur?.[posRankField] ?? cur?.pos_rank_ppr;
+    if (curRank && curRank > 0) {
+        return tierFromRank(pos, curRank, `'${season.slice(-2)}`);
     }
 
-    // 2. Dynasty ADP from projections (good for players with limited stats — rookies, injured)
+    // 2. Previous season stats (fallback — e.g. 2024)
+    const prev = prevStats?.[pid];
+    const prevRank = prev?.[posRankField] ?? prev?.pos_rank_ppr;
+    if (prevRank && prevRank > 0) {
+        return tierFromRank(pos, prevRank, `'${prevSeason.slice(-2)}`);
+    }
+
+    // 3. Dynasty ADP from projections (good for rookies, injured players with limited stats)
     const proj = weekProjections?.[pid];
     const posAdp = proj?.pos_adp_dd_ppr;
     if (posAdp && posAdp > 0 && posAdp < 500) {
@@ -112,7 +123,7 @@ function getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprFi
         return `Deep (${label})`;
     }
 
-    // 3. FantasyCalc dynasty value as final fallback
+    // 4. FantasyCalc dynasty value as final fallback
     const value = marketValues[pid] || 0;
     if (value > 7000) return 'Elite (dynasty)';
     if (value > 4000) return 'Starter (dynasty)';
@@ -122,7 +133,7 @@ function getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprFi
     return 'Unranked';
 }
 
-function playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField) {
+function playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField, season, prevSeason) {
     const p = players[pid];
     if (!p) return null;
     const name = pName(p);
@@ -131,17 +142,17 @@ function playerLine(pid, players, marketValues, currentStats, prevStats, weekPro
     const age = p.age || '?';
     const injury = p.injury_status || 'Healthy';
     const value = marketValues[pid] || 0;
-    const tier = getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprField);
+    const tier = getPlayerTier(pid, pos, currentStats, prevStats, weekProjections, marketValues, pprField, season, prevSeason);
 
-    // Current season stats
+    // Current season stats (most recent completed season)
     const cur = getStatsPPG(currentStats?.[pid], pprField);
-    let curStr = 'No 2025 stats yet';
-    if (cur) curStr = `2025: ${cur.pts.toFixed(0)} pts, ${cur.gp} GP, ${cur.ppg} PPG`;
+    let curStr = `No ${season} stats`;
+    if (cur) curStr = `${season}: ${cur.pts.toFixed(0)} pts, ${cur.gp} GP, ${cur.ppg} PPG`;
 
-    // Previous season stats with positional rank
+    // Previous season stats
     const prev = getStatsPPG(prevStats?.[pid], pprField);
     let prevStr = '';
-    if (prev) prevStr = `2024: ${prev.pts.toFixed(0)} pts, ${prev.gp} GP, ${prev.ppg} PPG`;
+    if (prev) prevStr = `${prevSeason}: ${prev.pts.toFixed(0)} pts, ${prev.gp} GP, ${prev.ppg} PPG`;
 
     // This week's projection
     const proj = weekProjections?.[pid];
@@ -161,7 +172,8 @@ function buildPrompt(data, analysisType) {
     const {
         league, userRoster, opponentRoster, players, users, rosters,
         freeAgents, matchups, transactions, week, marketValues,
-        currentStats, prevStats, weekProjections, allMatchupHistory, pprField
+        currentStats, prevStats, weekProjections, allMatchupHistory, pprField,
+        playerNews
     } = data;
 
     const settings = league.settings || {};
@@ -212,7 +224,9 @@ function buildPrompt(data, analysisType) {
     const allPlayerIds = userRoster.players || [];
     const benchIds = allPlayerIds.filter(pid => !starterIds.includes(pid));
 
-    const makeRow = (pid) => playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField);
+    const season = league.season || '2025';
+    const prevSeason = String(Number(season) - 1);
+    const makeRow = (pid) => playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField, season, prevSeason);
 
     const starterLines = [];
     rosterPositions.forEach((slot, idx) => {
@@ -314,6 +328,27 @@ ${oppLines.join('\n')}`;
                 return `Wk${w}: ${my.points?.toFixed(1) || 0} vs ${oppName} (${opp?.points?.toFixed(1) || 0}) → ${result}`;
             }).filter(Boolean);
         if (weekScores.length > 0) matchupHistoryText = `\nMY GAME LOG:\n${weekScores.join('\n')}`;
+    }
+
+    // ── Player news matching ──
+    const allRosterPids = [...(userRoster.players || [])];
+    const rosterPlayerNames = allRosterPids.map(pid => {
+        const p = players[pid];
+        if (!p) return null;
+        return `${p.first_name || ''} ${p.last_name || ''}`.trim().replace(/\s+(Jr\.?|Sr\.?|III|II|IV)$/i, '');
+    }).filter(Boolean);
+
+    const matchedNews = (playerNews || []).filter(item => {
+        if (!item?.title) return false;
+        return rosterPlayerNames.some(name => name && item.title.toLowerCase().includes(name.toLowerCase()));
+    }).slice(0, 10).map(item => {
+        const daysAgo = item.pubDate ? Math.floor((Date.now() - new Date(item.pubDate).getTime()) / 86400000) : '?';
+        return `- "${item.title}" (${daysAgo}d ago)`;
+    });
+
+    let playerNewsText = '';
+    if (matchedNews.length > 0) {
+        playerNewsText = `\nPLAYER NEWS (recent headlines about your roster players — use these for context on trades, injuries, role changes):\n${matchedNews.join('\n')}`;
     }
 
     // ── Instructions per analysis type (strict templates for consistent output) ──
@@ -472,6 +507,7 @@ BENCH:
 |------|--------|-----|------|-----|--------|------|---------------------|-------|
 ${benchLines.join('\n')}
 ${matchupHistoryText}
+${playerNewsText}
 
 ═══════════════════════════════════════
 ${opponentSection}
@@ -561,6 +597,26 @@ export default async function handler(req, res) {
             }
         } catch (e) { /* non-critical */ }
 
+        // Fetch player news (RSS) — cached, shared across users
+        let playerNews = [];
+        try {
+            const Parser = (await import('rss-parser')).default;
+            const parser = new Parser();
+            const cached = dataCache.get('rss-news');
+            let newsItems;
+            if (cached && Date.now() - cached.time < CACHE_TTL) {
+                newsItems = cached.data;
+            } else {
+                const feed = await parser.parseURL('https://fftoday.com/rss/news.xml');
+                newsItems = (feed.items || []).map(item => ({
+                    title: item.title,
+                    pubDate: item.pubDate,
+                }));
+                dataCache.set('rss-news', { data: newsItems, time: Date.now() });
+            }
+            playerNews = newsItems || [];
+        } catch (e) { /* non-critical */ }
+
         // Find user's roster & opponent
         const userRoster = rosters.find(r => r.owner_id === userId);
         if (!userRoster) return res.status(404).json({ error: 'Roster not found' });
@@ -596,7 +652,8 @@ export default async function handler(req, res) {
             players: nflPlayers, users, rosters,
             freeAgents, matchups, transactions,
             week, marketValues, currentStats, prevStats,
-            weekProjections, allMatchupHistory, pprField
+            weekProjections, allMatchupHistory, pprField,
+            playerNews
         }, analysisType);
 
         // Stream from Gemini
