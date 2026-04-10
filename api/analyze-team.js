@@ -498,11 +498,14 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-    const { leagueId, userId, week, analysisType = 'full' } = req.body;
+    const { leagueId, userId, week, analysisType = 'full', debug = false } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
-    const rateCheck = checkRateLimit(userId);
-    if (!rateCheck.allowed) return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
+    let rateCheck = { allowed: true, remaining: RATE_LIMIT_PER_DAY };
+    if (!debug) {
+        rateCheck = checkRateLimit(userId);
+        if (!rateCheck.allowed) return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
+    }
 
     try {
         // Determine PPR field based on league settings (fetched first)
@@ -615,6 +618,45 @@ export default async function handler(req, res) {
             weekProjections, allMatchupHistory, pprField,
             playerNews
         }, analysisType);
+
+        // Debug mode — return data inspection instead of calling Gemini
+        if (debug) {
+            const currentHasData = Object.keys(currentStats || {}).length > 100;
+            const samplePlayers = (userRoster.players || []).slice(0, 25).map(pid => {
+                const p = nflPlayers[pid];
+                if (!p) return { pid, error: 'not found' };
+                const curS = currentStats?.[pid];
+                const prevS = prevStats?.[pid];
+                return {
+                    pid,
+                    name: pName(p),
+                    pos: p.position,
+                    team: p.team,
+                    [`stats_${leagueSeason}_gp`]: curS?.gp,
+                    [`stats_${leagueSeason}_${pprField}`]: curS?.[pprField],
+                    [`stats_${leagueSeason}_ppg`]: curS?.gp ? ((curS[pprField] || 0) / curS.gp).toFixed(1) : null,
+                    [`stats_${leaguePrevSeason}_gp`]: prevS?.gp,
+                    [`stats_${leaguePrevSeason}_${pprField}`]: prevS?.[pprField],
+                    [`proj_week_${week}`]: weekProjections?.[pid]?.[pprField] ?? null,
+                    dynastyValue: marketValues[pid] || 0,
+                };
+            });
+            return res.status(200).json({
+                seasonDetection: {
+                    leagueSeason,
+                    leaguePrevSeason,
+                    pprField,
+                    recSetting: recPts,
+                    currentStatsCount: Object.keys(currentStats || {}).length,
+                    prevStatsCount: Object.keys(prevStats || {}).length,
+                    currentHasData,
+                    projectionCount: Object.keys(weekProjections || {}).length,
+                },
+                rosterPlayers: samplePlayers,
+                promptLength: prompt.length,
+                promptPreview: prompt.substring(0, 2000) + '...',
+            });
+        }
 
         // Stream from Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
