@@ -45,20 +45,20 @@ async function fetchJSON(url) {
 
 // ── Helpers ──
 
-function getScoringFormat(settings) {
-    const recPts = settings?.rec ?? 0;
+function getScoringFormat(scoringSettings) {
+    const recPts = scoringSettings?.rec ?? 0;
     if (recPts >= 1) return 'Full PPR (1.0 pts/rec)';
     if (recPts >= 0.5) return 'Half PPR (0.5 pts/rec)';
     return 'Standard (0 pts/rec)';
 }
 
-function describeScoringSettings(settings) {
-    if (!settings) return '';
+function describeScoringSettings(scoringSettings) {
+    if (!scoringSettings) return '';
     const lines = [];
-    if (settings.pass_yd) lines.push(`Passing: ${settings.pass_yd} pts/yd, ${settings.pass_td || 4} pts/TD, ${settings.pass_int || -1} pts/INT`);
-    if (settings.rush_yd) lines.push(`Rushing: ${settings.rush_yd} pts/yd, ${settings.rush_td || 6} pts/TD`);
-    if (settings.rec_yd) lines.push(`Receiving: ${settings.rec_yd} pts/yd, ${settings.rec_td || 6} pts/TD, ${settings.rec || 0} pts/rec`);
-    if (settings.bonus_rec_te) lines.push(`TE Premium: +${settings.bonus_rec_te} pts/rec for TEs`);
+    if (scoringSettings.pass_yd) lines.push(`Passing: ${scoringSettings.pass_yd} pts/yd, ${scoringSettings.pass_td || 4} pts/TD, ${scoringSettings.pass_int || -1} pts/INT`);
+    if (scoringSettings.rush_yd) lines.push(`Rushing: ${scoringSettings.rush_yd} pts/yd, ${scoringSettings.rush_td || 6} pts/TD`);
+    if (scoringSettings.rec_yd) lines.push(`Receiving: ${scoringSettings.rec_yd} pts/yd, ${scoringSettings.rec_td || 6} pts/TD, ${scoringSettings.rec || 0} pts/rec`);
+    if (scoringSettings.bonus_rec_te) lines.push(`TE Premium: +${scoringSettings.bonus_rec_te} pts/rec for TEs`);
     return lines.join('\n');
 }
 
@@ -135,9 +135,10 @@ function buildPrompt(data, analysisType) {
     } = data;
 
     const settings = league.settings || {};
-    const scoringFormat = getScoringFormat(settings);
+    const scoringSettings = league.scoring_settings || {};
+    const scoringFormat = getScoringFormat(scoringSettings);
     const rosterSlotDesc = describeRosterSlots(league.roster_positions);
-    const scoringDetail = describeScoringSettings(settings);
+    const scoringDetail = describeScoringSettings(scoringSettings);
     const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
     const numTeams = settings.num_teams || rosters.length;
     const rosterPositions = league.roster_positions || [];
@@ -521,7 +522,8 @@ export default async function handler(req, res) {
         // Determine PPR field based on league settings (fetched first)
         const league = await fetchJSON(`${SLEEPER_BASE}/league/${leagueId}`);
         const settings = league.settings || {};
-        const recPts = settings.rec ?? 0;
+        const scoringSettings = league.scoring_settings || {};
+        const recPts = scoringSettings.rec ?? 0;
         const pprField = recPts >= 1 ? 'pts_ppr' : recPts >= 0.5 ? 'pts_half_ppr' : 'pts_std';
         const leagueSeason = league.season || '2025';
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
