@@ -73,6 +73,12 @@ function describeRosterSlots(positions) {
         }).join(', ');
 }
 
+function hasActualScoring(stats) {
+    if (!stats) return false;
+    const sample = Object.values(stats).slice(0, 50);
+    return sample.some(s => (s.pts_ppr > 0 || s.pts_half_ppr > 0 || s.gp > 0));
+}
+
 function pName(p) {
     if (!p) return 'Unknown';
     return `${p.first_name || ''} ${p.last_name || ''}`.trim();
@@ -176,11 +182,13 @@ function buildPrompt(data, analysisType) {
     const allPlayerIds = userRoster.players || [];
     const benchIds = allPlayerIds.filter(pid => !starterIds.includes(pid));
 
-    // Detect which season has real data (if league is 2026, currentStats may be empty)
+    // Detect which season has actual scoring data
+    // The 2026 endpoint returns entries with ranking fields but NO pts/gp data since the season hasn't started
+    // We need to check for actual scoring data, not just entry count
     const leagueSeason = league.season || '2025';
     const leaguePrevSeason = String(Number(leagueSeason) - 1);
-    const currentHasData = Object.keys(currentStats || {}).length > 100;
-    const [primaryStats, secondaryStats, primaryYear, secondaryYear] = currentHasData
+    const currentHasScoring = hasActualScoring(currentStats);
+    const [primaryStats, secondaryStats, primaryYear, secondaryYear] = currentHasScoring
         ? [currentStats, prevStats, leagueSeason, leaguePrevSeason]
         : [prevStats, currentStats, leaguePrevSeason, leagueSeason];
 
@@ -621,7 +629,7 @@ export default async function handler(req, res) {
 
         // Debug mode — return data inspection instead of calling Gemini
         if (debug) {
-            const currentHasData = Object.keys(currentStats || {}).length > 100;
+            const currentHasData = hasActualScoring(currentStats);
             const samplePlayers = (userRoster.players || []).slice(0, 25).map(pid => {
                 const p = nflPlayers[pid];
                 if (!p) return { pid, error: 'not found' };
