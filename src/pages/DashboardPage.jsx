@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { displayTeamName } from '../utils/nflData';
 import WidgetLineupStatus from '../features/dashboard/components/WidgetLineupStatus';
 import WidgetMatchupPreview from '../features/dashboard/components/WidgetMatchupPreview';
@@ -9,7 +8,6 @@ import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTic
 import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
-import { fetchMarketValues } from '../utils/fantasyCalc';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import TeamRoster from '../features/dashboard/components/TeamRoster';
@@ -61,18 +59,6 @@ const DashboardPage = () => {
 
     // Fetch historical data for projections (always needed for smart projections)
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
-
-    // Fetch dynasty market values (shared cache with TradeFinder via same queryKey)
-    const { data: marketValues, isLoading: marketValuesLoading } = useQuery({
-        queryKey: ['fantasyCalc', league?.league_id],
-        queryFn: () => fetchMarketValues(
-            league?.roster_positions?.includes('SUPER_FLEX'),
-            rosters?.length || 12,
-            league?.scoring_settings?.rec ?? 0.5
-        ),
-        staleTime: 60 * 60 * 1000,
-        enabled: !!league,
-    });
 
     // Default to logged-in user if available, otherwise first user
     useEffect(() => {
@@ -161,7 +147,6 @@ const DashboardPage = () => {
                         leagueId={league?.league_id}
                         userId={selectedUserId}
                         week={selectedWeek}
-                        marketValues={marketValues}
                     />
 
                     {/* Quick Stats Row */}

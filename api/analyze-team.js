@@ -546,7 +546,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-    const { leagueId, userId, week, analysisType = 'full', debug = false, clientMarketValues = {} } = req.body;
+    const { leagueId, userId, week, analysisType = 'full', debug = false } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
     let rateCheck = { allowed: true, remaining: RATE_LIMIT_PER_DAY };
@@ -597,15 +597,38 @@ export default async function handler(req, res) {
         const allMatchupHistory = {};
         pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
 
-        // Market values (dynasty) — provided by client via React Query (same as TradeFinder)
-        console.log('[AI Analysis] Received clientMarketValues:', Object.keys(clientMarketValues || {}).length, 'players');
-        const marketValues = clientMarketValues && Object.keys(clientMarketValues).length > 0
-            ? clientMarketValues
-            : {};
-        const dynastyAvailable = Object.keys(marketValues).length > 50;
-        if (!dynastyAvailable) {
-            console.log('[AI Analysis] Dynasty values empty - clientMarketValues was:', typeof clientMarketValues, JSON.stringify(clientMarketValues).substring(0, 200));
+        // Market values (dynasty) — fetch from FantasyCalc server-side with full logging
+        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
+        const numQbs = isSuperflex ? 2 : 1;
+        const fcNumTeams = settings.num_teams || rosters.length || 12;
+        const fcUrl = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
+        let marketValues = {};
+        try {
+            console.log('[FantasyCalc] Fetching:', fcUrl);
+            const fcRes = await fetch(fcUrl, {
+                headers: {
+                    'User-Agent': 'SleeperAnalytics/1.0',
+                    'Accept': 'application/json'
+                }
+            });
+            console.log('[FantasyCalc] Response status:', fcRes.status, fcRes.statusText);
+            if (!fcRes.ok) {
+                const errorBody = await fcRes.text().catch(() => 'could not read body');
+                console.error('[FantasyCalc] Error response body:', errorBody.substring(0, 500));
+            } else {
+                const fcData = await fcRes.json();
+                console.log('[FantasyCalc] Received', Array.isArray(fcData) ? fcData.length : 0, 'players');
+                if (Array.isArray(fcData)) {
+                    fcData.forEach(p => {
+                        if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
+                    });
+                }
+                console.log('[FantasyCalc] Mapped', Object.keys(marketValues).length, 'values');
+            }
+        } catch (e) {
+            console.error('[FantasyCalc] Fetch error:', e.message, e.stack);
         }
+        const dynastyAvailable = Object.keys(marketValues).length > 50;
 
         // Fetch player news (RSS) — cached, shared across users
         let playerNews = [];

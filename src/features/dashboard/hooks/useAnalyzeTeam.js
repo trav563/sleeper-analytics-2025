@@ -32,7 +32,7 @@ function getCooldownRemaining(cached) {
     return Math.max(0, COOLDOWN_MS - elapsed);
 }
 
-export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', marketValues } = {}) {
+export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' } = {}) {
     const [analysis, setAnalysis] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -104,14 +104,11 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
         setError(null);
         setAnalysis('');
 
-        const mvToSend = marketValues || {};
-        console.log('[AI Analysis] Sending marketValues:', Object.keys(mvToSend).length, 'players. Sample:', Object.entries(mvToSend).slice(0, 3));
-
         try {
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: mvToSend }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType }),
                 signal: controller.signal,
             });
 
@@ -171,7 +168,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
             setLoading(false);
             abortRef.current = null;
         }
-    }, [leagueId, userId, week, analysisType, cacheKey, marketValues]);
+    }, [leagueId, userId, week, analysisType, cacheKey]);
 
     const cancel = useCallback(() => {
         if (abortRef.current) {
