@@ -11,6 +11,7 @@ import { fetchLeagueMatchups } from '../utils/sleeper';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import TeamRoster from '../features/dashboard/components/TeamRoster';
+import AnalyzeMyTeam from '../features/dashboard/components/AnalyzeMyTeam';
 
 const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, transactions, loading, error, user, league } = useOutletContext();
@@ -139,6 +140,13 @@ const DashboardPage = () => {
                         matchups={viewMatchups}
                         players={players}
                         selectedUserId={selectedUserId}
+                    />
+
+                    {/* AI Team Analysis */}
+                    <AnalyzeMyTeam
+                        leagueId={league?.league_id}
+                        userId={selectedUserId}
+                        week={selectedWeek}
                     />
 
                     {/* Quick Stats Row */}
