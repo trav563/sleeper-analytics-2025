@@ -216,6 +216,11 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2">
+                        {marketValues && Object.keys(marketValues).length > 0 && (
+                            <span className="text-[10px] text-emerald-500/60">
+                                Values loaded
+                            </span>
+                        )}
                         {cachedAt && !loading && (
                             <span className="text-[10px] text-slate-500 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />

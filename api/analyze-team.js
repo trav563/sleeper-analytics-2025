@@ -565,8 +565,12 @@ export default async function handler(req, res) {
         const leagueSeason = league.season || '2025';
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
-        // Fetch all Sleeper data in parallel
-        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
+        // FantasyCalc URL for server-side fallback
+        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
+        const fcUrl = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${isSuperflex ? 2 : 1}&numTeams=${settings.num_teams || 12}&ppr=${recPts}`;
+
+        // Fetch all data in parallel — including FantasyCalc as server-side fallback
+        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections, fcServerData] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
@@ -574,15 +578,24 @@ export default async function handler(req, res) {
             fetchCached(`stats-${leagueSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leagueSeason}`).catch(() => ({})),
             fetchCached(`stats-${leaguePrevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leaguePrevSeason}`).catch(() => ({})),
             fetchCached(`proj-${leagueSeason}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${leagueSeason}/${week}`).catch(() => ({})),
+            // FantasyCalc server-side (may fail/timeout — that's OK, client values are primary)
+            fetchCached(`fantasycalc`, fcUrl).catch(() => []),
         ]);
 
-        // Dynasty values — use client-provided values (fetched via React Query in browser)
-        // FantasyCalc blocks server-side requests from Vercel but works from browser
-        const marketValues = (clientMarketValues && typeof clientMarketValues === 'object' && Object.keys(clientMarketValues).length > 0)
-            ? clientMarketValues
-            : {};
+        // Dynasty values: prefer client-provided (works on production domain)
+        // Fall back to server-fetched (works when parallel fetch completes in time)
+        let marketValues = {};
+        const clientCount = clientMarketValues ? Object.keys(clientMarketValues).length : 0;
+        if (clientCount > 50) {
+            marketValues = clientMarketValues;
+            console.log('[Dynasty] Using client values:', clientCount);
+        } else if (Array.isArray(fcServerData) && fcServerData.length > 0) {
+            fcServerData.forEach(p => { if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value; });
+            console.log('[Dynasty] Using server values:', Object.keys(marketValues).length);
+        } else {
+            console.log('[Dynasty] No values available from client or server');
+        }
         const dynastyAvailable = Object.keys(marketValues).length > 50;
-        console.log('[AI Analysis] Dynasty values:', Object.keys(marketValues).length, dynastyAvailable ? '(available)' : '(unavailable)');
 
         // Transactions (current + prev week)
         let transactions = [];
