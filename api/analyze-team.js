@@ -199,16 +199,16 @@ function buildPrompt(data, analysisType) {
     rosterPositions.forEach((slot, idx) => {
         if (slot === 'BN' || slot === 'IR') return;
         const pid = starterIds[idx];
-        if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - |`); return; }
+        if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - | - |`); return; }
         const d = makeRow(pid);
         if (!d) return;
-        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.injury} | ${d.statsLine} | ${d.value} |`);
+        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.statsLine} | ${d.value} |`);
     });
 
     const benchLines = benchIds.map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.injury} | ${d.statsLine} | ${d.value} |`;
+        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Opponent ──
@@ -222,15 +222,15 @@ function buildPrompt(data, analysisType) {
         rosterPositions.forEach((slot, idx) => {
             if (slot === 'BN' || slot === 'IR') return;
             const pid = (opponentRoster.starters || [])[idx];
-            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - |`); return; }
+            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - | - |`); return; }
             const d = makeRow(pid);
             if (!d) return;
-            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.statsLine} | ${d.injury} |`);
+            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.age} | ${d.statsLine} | ${d.injury} |`);
         });
 
         opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL})
-| Slot | Player | Pos | Stats & Projection | Injury |
-|------|--------|-----|--------------------|--------|
+| Slot | Player | Pos | Age | Stats & Projection | Injury |
+|------|--------|-----|-----|--------------------|--------|
 ${oppLines.join('\n')}`;
     }
 
@@ -254,7 +254,7 @@ ${oppLines.join('\n')}`;
     const topFA = freeAgents.slice(0, 25).map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.statsLine} | ${d.value} |`;
+        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.age} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Transactions ──
@@ -345,16 +345,22 @@ Use this EXACT table format for the optimal lineup:
 (List each bench player)
 
 ## Waiver Wire Targets
-Use this EXACT numbered format for each target (3-5 targets):
-1. **[Player Name]** ([Pos], [Team]) — Proj: [X.X] pts | [Stats line] | Drop: [Player to drop] | [1 sentence why]
+Players on my BENCH (listed above) are ALREADY ON MY ROSTER — never suggest adding them.
+Use this EXACT numbered format for each target (3-5 targets from the FREE AGENTS list only):
+1. **[Player Name]** ([Pos], [Team], Age [X]) — Proj: [X.X] pts | [Stats line] | Drop: [Player to drop] | [1 sentence why]
 2. ...
 
 ## Trade Opportunities
+DYNASTY TRADE RULES:
+- Dynasty Value is the consensus market value. NEVER propose sending more dynasty value than you receive unless there is a critical positional need AND values are within 20%.
+- Young players (≤ 25) with high dynasty value are PREMIUM assets. Do NOT trade them for older players (≥ 29) even if the older player scores more right now.
+- Always compare ages AND dynasty values when proposing trades.
+
 Use this EXACT format for each trade (2-3 trades). NEVER suggest acquiring players already on my roster.
 **Trade 1: [My Team] ↔ [Other Team Name]**
-- Send: [Player(s)] (Value: [X])
-- Receive: [Player(s)] (Value: [X])
-- Why: [1-2 sentences explaining why both sides benefit]
+- Send: [Player(s)] (Age [X], Value: [X])
+- Receive: [Player(s)] (Age [X], Value: [X])
+- Why: [1-2 sentences explaining why both sides benefit, referencing age and dynasty value]
 
 ## Outlook
 Use this EXACT bullet format:
@@ -377,10 +383,11 @@ Use bullet format for each close call:
 - **[Player A] over [Player B] at [Slot]:** [Reasoning with projected points comparison]`,
 
         waivers: `You MUST use EXACTLY this format.
+Players on my BENCH (listed above) are ALREADY ON MY ROSTER — never suggest adding them.
 
 ## Waiver Wire Targets
-Use this EXACT numbered format (5-7 targets from the FREE AGENTS list):
-1. **[Player Name]** ([Pos], [Team]) — Proj: [X.X] pts | [Season/last season stats] | Drop: [Player] | Priority: [Must-Add / Strong Add / Speculative]
+Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
+1. **[Player Name]** ([Pos], [Team], Age [X]) — Proj: [X.X] pts | [Season/last season stats] | Drop: [Player] | Priority: [Must-Add / Strong Add / Speculative]
 2. ...
 
 ## Summary
@@ -388,17 +395,22 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list):
 
         trades: `You MUST use EXACTLY this format. ALL players on MY ROSTER are already mine — NEVER suggest acquiring them.
 
+DYNASTY TRADE RULES:
+- Dynasty Value is the consensus market value. NEVER propose sending more dynasty value than you receive unless there is a critical positional need AND values are within 20%.
+- Young players (≤ 25) with high dynasty value are PREMIUM assets. Do NOT trade them for older players (≥ 29) even if the older player scores more right now.
+- Always compare ages AND dynasty values when proposing trades.
+
 ## Trade Opportunities
 **Trade 1: [My Team] ↔ [Other Team Name]**
-- Send: [Player(s)] (Dynasty Value: [X])
-- Receive: [Player(s)] (Dynasty Value: [X])
-- Why it works for me: [1 sentence]
+- Send: [Player(s)] (Age [X], Dynasty Value: [X])
+- Receive: [Player(s)] (Age [X], Dynasty Value: [X])
+- Why it works for me: [1 sentence referencing age and value]
 - Why it works for them: [1 sentence]
 
 (Repeat for 2-3 total trades. Reference actual players from the OTHER TEAMS' rosters listed above.)
 
 ## Trade Strategy
-- **Sell high:** [Player(s) to sell and why]
+- **Sell high:** [Player(s) to sell and why — only older or declining assets]
 - **Buy low:** [Player(s) on OTHER teams to target and why]
 - **Deadline note:** [Relevance of Week ${settings.trade_deadline || 11} deadline]`,
 
@@ -470,13 +482,13 @@ MY TEAM: ${teamName} (${record}, #${myRank}, ${ppg} PPG)
 ═══════════════════════════════════════
 
 STARTERS:
-| Slot | Player | Pos | Team | Injury | Stats & Projection | Dynasty Value |
-|------|--------|-----|------|--------|---------------------|---------------|
+| Slot | Player | Pos | Team | Age | Injury | Stats & Projection | Dynasty Value |
+|------|--------|-----|------|-----|--------|---------------------|---------------|
 ${starterLines.join('\n')}
 
 BENCH:
-| Slot | Player | Pos | Team | Injury | Stats & Projection | Dynasty Value |
-|------|--------|-----|------|--------|---------------------|---------------|
+| Slot | Player | Pos | Team | Age | Injury | Stats & Projection | Dynasty Value |
+|------|--------|-----|------|-----|--------|---------------------|---------------|
 ${benchLines.join('\n')}
 ${matchupHistoryText}
 ${playerNewsText}
@@ -490,8 +502,8 @@ ${leagueRostersText}
 
 ═══════════════════════════════════════
 FREE AGENTS (unowned, available to add):
-| Pos | Player | Team | Stats & Projection | Dynasty Value |
-|-----|--------|------|---------------------|---------------|
+| Pos | Player | Team | Age | Stats & Projection | Dynasty Value |
+|-----|--------|------|-----|--------------------|---------------|
 ${topFA.join('\n')}
 
 RECENT TRANSACTIONS:
