@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 const FANTASY_CALC_API = 'https://api.fantasycalc.com/values/current';
 
-// Simple in-memory rate limiting (per serverless instance)
+// ── Rate Limiting (in-memory, per serverless instance) ──
 const rateLimitMap = new Map();
 const RATE_LIMIT_PER_DAY = 10;
 const RATE_LIMIT_PER_HOUR = 3;
@@ -12,23 +12,29 @@ function checkRateLimit(userId) {
     const now = Date.now();
     const key = `rate:${userId}`;
     let entry = rateLimitMap.get(key);
-    if (!entry) {
-        entry = { hourly: [], daily: [] };
-        rateLimitMap.set(key, entry);
-    }
-    const oneHourAgo = now - 60 * 60 * 1000;
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
-    entry.hourly = entry.hourly.filter(t => t > oneHourAgo);
-    entry.daily = entry.daily.filter(t => t > oneDayAgo);
-    if (entry.daily.length >= RATE_LIMIT_PER_DAY) {
+    if (!entry) { entry = { hourly: [], daily: [] }; rateLimitMap.set(key, entry); }
+    entry.hourly = entry.hourly.filter(t => t > now - 3600000);
+    entry.daily = entry.daily.filter(t => t > now - 86400000);
+    if (entry.daily.length >= RATE_LIMIT_PER_DAY)
         return { allowed: false, reason: 'Daily limit reached (10/day). Try again tomorrow.', remaining: 0 };
-    }
-    if (entry.hourly.length >= RATE_LIMIT_PER_HOUR) {
+    if (entry.hourly.length >= RATE_LIMIT_PER_HOUR)
         return { allowed: false, reason: 'Hourly limit reached (3/hour). Try again shortly.', remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
-    }
     entry.hourly.push(now);
     entry.daily.push(now);
     return { allowed: true, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
+}
+
+// ── Simple in-memory cache for shared data (projections, stats) ──
+// This survives across requests within the same serverless instance (~5-15 min on Vercel)
+const dataCache = new Map();
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+async function fetchCached(key, url) {
+    const cached = dataCache.get(key);
+    if (cached && Date.now() - cached.time < CACHE_TTL) return cached.data;
+    const data = await fetchJSON(url);
+    dataCache.set(key, { data, time: Date.now() });
+    return data;
 }
 
 async function fetchJSON(url) {
@@ -41,19 +47,18 @@ async function fetchJSON(url) {
 
 function getScoringFormat(settings) {
     const recPts = settings?.rec ?? 0;
-    if (recPts >= 1) return 'Full PPR (1.0 points per reception)';
-    if (recPts >= 0.5) return 'Half PPR (0.5 points per reception)';
-    return 'Standard (0 points per reception)';
+    if (recPts >= 1) return 'Full PPR (1.0 pts/rec)';
+    if (recPts >= 0.5) return 'Half PPR (0.5 pts/rec)';
+    return 'Standard (0 pts/rec)';
 }
 
 function describeScoringSettings(settings) {
     if (!settings) return '';
     const lines = [];
-    if (settings.pass_yd) lines.push(`Passing: ${settings.pass_yd} pts/yard, ${settings.pass_td || 4} pts/TD, ${settings.pass_int || -1} pts/INT`);
-    if (settings.rush_yd) lines.push(`Rushing: ${settings.rush_yd} pts/yard, ${settings.rush_td || 6} pts/TD`);
-    if (settings.rec_yd) lines.push(`Receiving: ${settings.rec_yd} pts/yard, ${settings.rec_td || 6} pts/TD, ${settings.rec || 0} pts/reception`);
-    if (settings.bonus_rec_te) lines.push(`TE Premium: +${settings.bonus_rec_te} pts/reception for TEs`);
-    if (settings.fum_lost) lines.push(`Fumble Lost: ${settings.fum_lost} pts`);
+    if (settings.pass_yd) lines.push(`Passing: ${settings.pass_yd} pts/yd, ${settings.pass_td || 4} pts/TD, ${settings.pass_int || -1} pts/INT`);
+    if (settings.rush_yd) lines.push(`Rushing: ${settings.rush_yd} pts/yd, ${settings.rush_td || 6} pts/TD`);
+    if (settings.rec_yd) lines.push(`Receiving: ${settings.rec_yd} pts/yd, ${settings.rec_td || 6} pts/TD, ${settings.rec || 0} pts/rec`);
+    if (settings.bonus_rec_te) lines.push(`TE Premium: +${settings.bonus_rec_te} pts/rec for TEs`);
     return lines.join('\n');
 }
 
@@ -65,45 +70,67 @@ function describeRosterSlots(positions) {
         .map(([pos, count]) => {
             const label = pos === 'BN' ? 'Bench' : pos === 'SUPER_FLEX' ? 'Superflex' : pos;
             return count > 1 ? `${count} ${label}` : label;
-        })
-        .join(', ');
+        }).join(', ');
 }
 
-function playerName(p) {
+function pName(p) {
     if (!p) return 'Unknown';
     return `${p.first_name || ''} ${p.last_name || ''}`.trim();
 }
 
-function playerDetail(pid, players, marketValues, seasonStats) {
+function getStatsPPG(stats, pprField) {
+    if (!stats) return null;
+    const gp = stats.gp || 0;
+    const pts = stats[pprField] ?? stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std ?? 0;
+    if (gp === 0) return null;
+    return { pts: pts, gp, ppg: (pts / gp).toFixed(1) };
+}
+
+function playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField) {
     const p = players[pid];
     if (!p) return null;
-    const name = playerName(p);
+    const name = pName(p);
     const pos = p.position || '?';
     const team = p.team || 'FA';
     const age = p.age || '?';
     const injury = p.injury_status || 'Healthy';
     const value = marketValues[pid] || 0;
-    const depthOrder = p.depth_chart_order || '?';
-    const nflStarter = depthOrder === 1 ? 'Starter' : depthOrder === 2 ? 'Backup' : depthOrder === 3 ? '3rd String' : '';
+    const depthOrder = p.depth_chart_order;
+    const nflRole = depthOrder === 1 ? 'NFL Starter' : depthOrder === 2 ? 'NFL Backup' : depthOrder === 3 ? 'NFL 3rd' : '';
 
-    // Last season stats
-    const stats = seasonStats?.[pid];
-    let statsStr = 'No stats';
-    if (stats) {
-        const gp = stats.gp || 0;
-        const pts = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std ?? 0;
-        const ppg = gp > 0 ? (pts / gp).toFixed(1) : '0.0';
-        statsStr = `${pts.toFixed(0)} pts in ${gp} games (${ppg} PPG)`;
+    // Current season stats
+    const cur = getStatsPPG(currentStats?.[pid], pprField);
+    let curStr = 'No 2025 stats yet';
+    if (cur) curStr = `2025: ${cur.pts.toFixed(0)} pts, ${cur.gp} GP, ${cur.ppg} PPG`;
+
+    // Previous season stats
+    const prev = getStatsPPG(prevStats?.[pid], pprField);
+    let prevStr = '';
+    if (prev) prevStr = `2024: ${prev.pts.toFixed(0)} pts, ${prev.gp} GP, ${prev.ppg} PPG`;
+
+    // This week's projection
+    const proj = weekProjections?.[pid];
+    let projStr = '';
+    if (proj) {
+        const projPts = proj[pprField] ?? proj.pts_ppr ?? 0;
+        if (projPts > 0) projStr = `Proj: ${projPts.toFixed(1)}`;
+
+        // Add positional rank from projections
+        const posRank = proj.pos_rank_ppr ?? proj.pos_rank_half_ppr;
+        if (posRank) projStr += ` (${pos}${posRank})`;
     }
 
-    return { pid, name, pos, team, age, injury, value, nflStarter, statsStr };
+    const statsLine = [curStr, prevStr, projStr].filter(Boolean).join(' | ');
+    return { pid, name, pos, team, age, injury, value, nflRole, statsLine };
 }
+
+// ── Prompt Builder ──
 
 function buildPrompt(data, analysisType) {
     const {
         league, userRoster, opponentRoster, players, users, rosters,
         freeAgents, matchups, transactions, week, marketValues,
-        seasonStats, allMatchupHistory
+        currentStats, prevStats, weekProjections, allMatchupHistory, pprField
     } = data;
 
     const settings = league.settings || {};
@@ -114,18 +141,13 @@ function buildPrompt(data, analysisType) {
     const numTeams = settings.num_teams || rosters.length;
     const rosterPositions = league.roster_positions || [];
 
-    // Count starting slots by type
     const slotCounts = {};
     rosterPositions.forEach(pos => {
-        if (pos !== 'BN' && pos !== 'IR') {
-            slotCounts[pos] = (slotCounts[pos] || 0) + 1;
-        }
+        if (pos !== 'BN' && pos !== 'IR') slotCounts[pos] = (slotCounts[pos] || 0) + 1;
     });
-    const startingSlotsDesc = Object.entries(slotCounts)
-        .map(([pos, count]) => `${count}x ${pos}`)
-        .join(', ');
+    const startingSlotsDesc = Object.entries(slotCounts).map(([p, c]) => `${c}x ${p}`).join(', ');
 
-    // ── User team info ──
+    // ── User team ──
     const userOwner = users.find(u => u.user_id === userRoster.owner_id);
     const teamName = userOwner?.metadata?.team_name || userOwner?.display_name || userOwner?.username || 'My Team';
     const wins = userRoster.settings?.wins || 0;
@@ -133,233 +155,195 @@ function buildPrompt(data, analysisType) {
     const ties = userRoster.settings?.ties || 0;
     const record = `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`;
     const fpts = (userRoster.settings?.fpts || 0) + ((userRoster.settings?.fpts_decimal || 0) / 100);
-    const gamesPlayed = wins + losses + ties;
-    const ppg = gamesPlayed > 0 ? (fpts / gamesPlayed).toFixed(1) : 'N/A (preseason)';
+    const gp = wins + losses + ties;
+    const ppg = gp > 0 ? (fpts / gp).toFixed(1) : 'N/A (preseason)';
 
-    // ── League standings ──
+    // ── Standings ──
     const standings = [...rosters].sort((a, b) => {
         const aw = a.settings?.wins || 0, bw = b.settings?.wins || 0;
         if (aw !== bw) return bw - aw;
-        const af = (a.settings?.fpts || 0) + ((a.settings?.fpts_decimal || 0) / 100);
-        const bf = (b.settings?.fpts || 0) + ((b.settings?.fpts_decimal || 0) / 100);
-        return bf - af;
+        return ((b.settings?.fpts || 0) + ((b.settings?.fpts_decimal || 0) / 100)) -
+               ((a.settings?.fpts || 0) + ((a.settings?.fpts_decimal || 0) / 100));
     });
     const myRank = standings.findIndex(r => r.roster_id === userRoster.roster_id) + 1;
 
     const standingsText = standings.map((r, i) => {
-        const owner = users.find(u => u.user_id === r.owner_id);
-        const name = owner?.metadata?.team_name || owner?.display_name || owner?.username || `Team ${r.roster_id}`;
-        const w = r.settings?.wins || 0;
-        const l = r.settings?.losses || 0;
+        const o = users.find(u => u.user_id === r.owner_id);
+        const name = o?.metadata?.team_name || o?.display_name || o?.username || `Team ${r.roster_id}`;
+        const w = r.settings?.wins || 0, l = r.settings?.losses || 0;
         const pts = ((r.settings?.fpts || 0) + ((r.settings?.fpts_decimal || 0) / 100)).toFixed(1);
-        const isMe = r.roster_id === userRoster.roster_id ? ' ← YOUR TEAM' : '';
-        return `${i + 1}. ${name} (${w}-${l}, ${pts} PF)${isMe}`;
+        const me = r.roster_id === userRoster.roster_id ? ' ← YOU' : '';
+        return `${i + 1}. ${name} (${w}-${l}, ${pts} PF)${me}`;
     }).join('\n');
 
-    // ── My roster with lineup slot mapping ──
+    // ── My roster mapped to lineup slots ──
     const starterIds = userRoster.starters || [];
     const allPlayerIds = userRoster.players || [];
     const benchIds = allPlayerIds.filter(pid => !starterIds.includes(pid));
 
-    // Map starters to their lineup slots
+    const makeRow = (pid) => playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField);
+
     const starterLines = [];
     rosterPositions.forEach((slot, idx) => {
         if (slot === 'BN' || slot === 'IR') return;
         const pid = starterIds[idx];
-        if (!pid || pid === '0') {
-            starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - |`);
-            return;
-        }
-        const detail = playerDetail(pid, players, marketValues, seasonStats);
-        if (!detail) return;
-        starterLines.push(`| ${slot} | ${detail.name} | ${detail.pos} | ${detail.team} | ${detail.age} | ${detail.injury} | ${detail.nflStarter} | ${detail.statsStr} | ${detail.value} |`);
+        if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - | - |`); return; }
+        const d = makeRow(pid);
+        if (!d) return;
+        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`);
     });
 
     const benchLines = benchIds.map(pid => {
-        const detail = playerDetail(pid, players, marketValues, seasonStats);
-        if (!detail) return null;
-        return `| BN | ${detail.name} | ${detail.pos} | ${detail.team} | ${detail.age} | ${detail.injury} | ${detail.nflStarter} | ${detail.statsStr} | ${detail.value} |`;
+        const d = makeRow(pid);
+        if (!d) return null;
+        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
-    // ── Opponent info ──
+    // ── Opponent ──
     let opponentSection = 'No opponent data available for this week.';
     if (opponentRoster) {
         const oppOwner = users.find(u => u.user_id === opponentRoster.owner_id);
         const oppName = oppOwner?.metadata?.team_name || oppOwner?.display_name || oppOwner?.username || 'Opponent';
-        const oppW = opponentRoster.settings?.wins || 0;
-        const oppL = opponentRoster.settings?.losses || 0;
-        const oppPts = ((opponentRoster.settings?.fpts || 0) + ((opponentRoster.settings?.fpts_decimal || 0) / 100)).toFixed(1);
+        const oppW = opponentRoster.settings?.wins || 0, oppL = opponentRoster.settings?.losses || 0;
 
-        const oppStarterLines = [];
+        const oppLines = [];
         rosterPositions.forEach((slot, idx) => {
             if (slot === 'BN' || slot === 'IR') return;
             const pid = (opponentRoster.starters || [])[idx];
-            if (!pid || pid === '0') {
-                oppStarterLines.push(`| ${slot} | EMPTY | - | - |`);
-                return;
-            }
-            const detail = playerDetail(pid, players, marketValues, seasonStats);
-            if (!detail) return;
-            oppStarterLines.push(`| ${slot} | ${detail.name} | ${detail.pos} | ${detail.statsStr} | ${detail.injury} |`);
+            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - |`); return; }
+            const d = makeRow(pid);
+            if (!d) return;
+            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.statsLine} | ${d.injury} |`);
         });
 
-        opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL}, ${oppPts} PF)
-| Slot | Player | Pos | Last Season Stats | Injury |
-|------|--------|-----|-------------------|--------|
-${oppStarterLines.join('\n')}`;
+        opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL})
+| Slot | Player | Pos | Stats & Projection | Injury |
+|------|--------|-----|--------------------|--------|
+${oppLines.join('\n')}`;
     }
 
-    // ── All league rosters (condensed) ──
-    const leagueRostersText = rosters.map(r => {
-        if (r.roster_id === userRoster.roster_id) return null; // Skip user's own
-        const owner = users.find(u => u.user_id === r.owner_id);
-        const name = owner?.metadata?.team_name || owner?.display_name || owner?.username || `Team ${r.roster_id}`;
-        const w = r.settings?.wins || 0;
-        const l = r.settings?.losses || 0;
-
-        // Show key players (starters only, top by value)
-        const keyPlayers = (r.starters || [])
-            .filter(pid => pid && pid !== '0')
-            .map(pid => {
-                const p = players[pid];
-                if (!p) return null;
-                return `${p.position}:${playerName(p)}`;
-            })
-            .filter(Boolean)
-            .join(', ');
-
+    // ── Other teams ──
+    const leagueRostersText = rosters.filter(r => r.roster_id !== userRoster.roster_id).map(r => {
+        const o = users.find(u => u.user_id === r.owner_id);
+        const name = o?.metadata?.team_name || o?.display_name || o?.username || `Team ${r.roster_id}`;
+        const w = r.settings?.wins || 0, l = r.settings?.losses || 0;
+        const keyPlayers = (r.starters || []).filter(pid => pid && pid !== '0').map(pid => {
+            const p = players[pid];
+            if (!p) return null;
+            const proj = weekProjections?.[pid];
+            const projPts = proj ? (proj[pprField] ?? proj.pts_ppr ?? 0) : 0;
+            const projStr = projPts > 0 ? ` [${projPts.toFixed(0)}p]` : '';
+            return `${p.position}:${pName(p)}${projStr}`;
+        }).filter(Boolean).join(', ');
         return `${name} (${w}-${l}): ${keyPlayers}`;
-    }).filter(Boolean).join('\n');
+    }).join('\n');
 
-    // ── Free agents (top 25 with stats) ──
+    // ── Free agents with projections ──
     const topFA = freeAgents.slice(0, 25).map(pid => {
-        const detail = playerDetail(pid, players, marketValues, seasonStats);
-        if (!detail) return null;
-        return `| ${detail.pos} | ${detail.name} | ${detail.team} | ${detail.nflStarter} | ${detail.statsStr} | ${detail.value} |`;
+        const d = makeRow(pid);
+        if (!d) return null;
+        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
-    // ── Recent transactions ──
+    // ── Transactions ──
     const recentTx = (transactions || []).slice(0, 20).map(tx => {
-        const rosterOwner = users.find(u => {
-            const r = rosters.find(r2 => tx.roster_ids?.includes(r2.roster_id) && r2.owner_id === u.user_id);
-            return !!r;
-        });
-        const txName = rosterOwner?.display_name || 'Unknown';
-
         if (tx.type === 'trade') {
             const details = (tx.roster_ids || []).map(rid => {
                 const r = rosters.find(r2 => r2.roster_id === rid);
                 const owner = users.find(u => u.user_id === r?.owner_id);
                 const tName = owner?.display_name || 'Unknown';
                 const got = Object.entries(tx.adds || {}).filter(([, v]) => v === rid).map(([pid]) => {
-                    const p = players[pid];
-                    return p ? playerName(p) : pid;
+                    const p = players[pid]; return p ? pName(p) : pid;
                 });
                 return got.length > 0 ? `${tName} gets ${got.join(', ')}` : null;
             }).filter(Boolean);
             return `- TRADE: ${details.join(' | ')}`;
         }
-
-        const adds = tx.adds ? Object.keys(tx.adds).map(pid => {
-            const p = players[pid];
-            return p ? `+${playerName(p)}` : `+${pid}`;
-        }).join(', ') : '';
-        const drops = tx.drops ? Object.keys(tx.drops).map(pid => {
-            const p = players[pid];
-            return p ? `-${playerName(p)}` : `-${pid}`;
-        }).join(', ') : '';
-        return `- ${tx.type}: ${txName} | ${adds} ${drops}`.trim();
+        const rosterOwner = users.find(u => {
+            return rosters.find(r2 => tx.roster_ids?.includes(r2.roster_id) && r2.owner_id === u.user_id);
+        });
+        const adds = tx.adds ? Object.keys(tx.adds).map(pid => { const p = players[pid]; return p ? `+${pName(p)}` : `+${pid}`; }).join(', ') : '';
+        const drops = tx.drops ? Object.keys(tx.drops).map(pid => { const p = players[pid]; return p ? `-${pName(p)}` : `-${pid}`; }).join(', ') : '';
+        return `- ${tx.type}: ${rosterOwner?.display_name || '?'} | ${adds} ${drops}`.trim();
     });
 
-    // ── Matchup history (PPG by week) ──
+    // ── Game log ──
     let matchupHistoryText = '';
     if (allMatchupHistory && Object.keys(allMatchupHistory).length > 0) {
         const weekScores = Object.entries(allMatchupHistory)
             .sort(([a], [b]) => Number(a) - Number(b))
-            .map(([w, matchups]) => {
-                const myMatch = matchups.find(m => m.roster_id === userRoster.roster_id);
-                if (!myMatch) return null;
-                const opp = matchups.find(m => m.matchup_id === myMatch.matchup_id && m.roster_id !== myMatch.roster_id);
-                const oppRoster = opp ? rosters.find(r => r.roster_id === opp.roster_id) : null;
-                const oppOwner = oppRoster ? users.find(u => u.user_id === oppRoster.owner_id) : null;
-                const oppName = oppOwner ? (oppOwner.display_name || oppOwner.username) : '?';
-                const result = myMatch.points > (opp?.points || 0) ? 'W' : myMatch.points < (opp?.points || 0) ? 'L' : 'T';
-                return `Week ${w}: ${myMatch.points?.toFixed(1) || 0} vs ${oppName} (${opp?.points?.toFixed(1) || 0}) → ${result}`;
-            })
-            .filter(Boolean);
-        if (weekScores.length > 0) {
-            matchupHistoryText = `\nMY GAME LOG THIS SEASON:\n${weekScores.join('\n')}`;
-        }
+            .map(([w, wMatchups]) => {
+                const my = wMatchups.find(m => m.roster_id === userRoster.roster_id);
+                if (!my) return null;
+                const opp = wMatchups.find(m => m.matchup_id === my.matchup_id && m.roster_id !== my.roster_id);
+                const oppR = opp ? rosters.find(r => r.roster_id === opp.roster_id) : null;
+                const oppO = oppR ? users.find(u => u.user_id === oppR.owner_id) : null;
+                const oppName = oppO?.display_name || '?';
+                const result = my.points > (opp?.points || 0) ? 'W' : my.points < (opp?.points || 0) ? 'L' : 'T';
+                return `Wk${w}: ${my.points?.toFixed(1) || 0} vs ${oppName} (${opp?.points?.toFixed(1) || 0}) → ${result}`;
+            }).filter(Boolean);
+        if (weekScores.length > 0) matchupHistoryText = `\nMY GAME LOG:\n${weekScores.join('\n')}`;
     }
 
-    // ── Analysis type instructions ──
+    // ── Instructions per analysis type ──
     const typeInstructions = {
-        full: `Provide a comprehensive analysis with these sections:
+        full: `Provide a comprehensive analysis with these exact sections:
 ## Roster Grade
-Give a letter grade (A+ to F) for each position group and overall. Base grades on player talent, depth, and the league's scoring format.
+Grade each position group A+ to F. Use the PROJECTION and STATS data provided — do not guess. A player projected as a top-5 at their position should be graded highly. Reference their actual PPG and projection numbers.
 ## This Week: Start/Sit
-Recommend the OPTIMAL LINEUP for this week. You MUST fill every starting slot listed above. Account for FLEX and SUPER_FLEX slots — any eligible player can fill them. Don't tell me to sit a good player when they could go in a FLEX spot.
+Recommend the OPTIMAL LINEUP filling every slot (${startingSlotsDesc}). Use each player's weekly projection (Proj column) as the primary factor. FLEX slots accept RB/WR/TE. SUPER_FLEX accepts QB/RB/WR/TE.
 ## Waiver Wire Targets
-From the FREE AGENTS list above, identify 3-5 players worth adding. These are players NOT on any team in the league. Suggest who to drop.
+From the FREE AGENTS list, identify 3-5 high-value adds. Use their projections and positional rank. Suggest who to drop.
 ## Trade Opportunities
-Suggest 2-3 realistic trades with OTHER TEAMS IN THIS LEAGUE. Name the specific team and their players. ONLY suggest buying players that are on OTHER teams, never players already on MY team.
+Suggest 2-3 realistic trades with OTHER teams. Reference specific players from their rosters. NEVER suggest acquiring a player already on MY roster.
 ## Outlook
-Brief playoff/season outlook based on remaining schedule and roster strength.`,
+Brief playoff path analysis based on standings, schedule, and roster strength.`,
 
-        startsit: `Focus ONLY on filling my starting lineup optimally for this week.
-## Optimal Lineup
-You MUST assign a player to EVERY starting slot (${startingSlotsDesc}). Use the roster slot types above.
-- FLEX slots can be filled by RB, WR, or TE
-- SUPER_FLEX slots can be filled by QB, RB, WR, or TE
-- Don't leave good players on the bench when FLEX/SUPER_FLEX spots are available
-- Consider matchups, recent performance, and injury status
-- Show the full recommended lineup in a clear format
+        startsit: `## Optimal Lineup
+Fill every starting slot (${startingSlotsDesc}). Use the "Proj" (weekly projection) as the PRIMARY factor for decisions.
+- FLEX slots: RB/WR/TE eligible
+- SUPER_FLEX slots: QB/RB/WR/TE eligible
+- Maximize projected points — put the highest-projected eligible player in each slot
+Show the full lineup with projected points for each player.
 
 ## Key Decisions
-Explain the close calls and reasoning for any non-obvious choices.`,
+Explain only the close calls.`,
 
-        waivers: `Focus ONLY on waiver wire/free agent recommendations.
-## Waiver Wire Targets
-The FREE AGENTS listed above are the ONLY players available — they are not owned by any team in this league.
-For each recommendation:
-- Player name and position
-- Their stats and why they're worth adding
-- Who to DROP from my roster to make room (pick my weakest player)
-- Priority ranking (must-add vs speculative)
-Provide 5-7 recommendations.`,
+        waivers: `## Waiver Wire Targets
+From the FREE AGENTS listed below. Use their projections, stats, and positional rank.
+For each (5-7 recommendations):
+- Player name, position, and their THIS WEEK projection
+- Their season stats or last season stats
+- Who to DROP from my roster
+- Priority ranking`,
 
-        trades: `Focus ONLY on trade opportunities with other teams in this league.
-## Trade Opportunities
-IMPORTANT: All players on MY TEAM are listed in my roster above. Do NOT suggest I "buy" any player I already own.
-Look at the OTHER TEAMS' ROSTERS listed below and suggest:
-- 2-3 specific trade proposals (My Player X + Y → Their Player Z)
-- Name the specific team I should trade with
-- Explain why both sides benefit
-- Consider dynasty values, age, and roster needs
-- Factor in the trade deadline (Week ${settings.trade_deadline || 11})`,
+        trades: `## Trade Opportunities
+Look at OTHER TEAMS' rosters. ALL players on MY ROSTER are already mine — NEVER suggest buying them.
+- 2-3 specific proposals naming the team and exact players
+- Use dynasty values and projections to ensure fairness
+- Trade deadline: Week ${settings.trade_deadline || 11}`,
 
-        playoff: `Focus ONLY on playoff path analysis.
-## Playoff Path
-- Current standing: #${myRank} of ${numTeams} (${record})
-- Playoffs: Top ${settings.playoff_teams || 6} teams, starting Week ${settings.playoff_week_start || 15}
-- Analyze what record I need to make playoffs
-- Identify key matchups remaining
-- Strategic advice: compete now or build for future?`
+        playoff: `## Playoff Path
+- Current: #${myRank} of ${numTeams} (${record})
+- Playoffs: Top ${settings.playoff_teams || 6}, starting Week ${settings.playoff_week_start || 15}
+- What record is needed
+- Key remaining matchups
+- Strategic advice`
     };
 
     const instructions = typeInstructions[analysisType] || typeInstructions.full;
 
-    return `You are an expert fantasy football analyst providing advice for a specific team in a Sleeper dynasty/keeper league. You have access to the full league context below.
+    return `You are an expert fantasy football analyst. You have REAL DATA below — projections, stats, and rankings from this season. Use this data to make your analysis. Do NOT rely on prior assumptions about player quality — use the stats and projections provided.
 
 CRITICAL RULES:
-1. Every player listed under "MY ROSTER" is ON MY TEAM. Do NOT suggest I acquire or "buy low" on any of them.
-2. The "LINEUP SLOT" column shows which roster slot each player occupies (QB, RB, WR, TE, FLEX, SUPER_FLEX, K, DEF, BN=bench). Use these slots when making start/sit recommendations.
-3. FLEX slots can be filled by RB/WR/TE. SUPER_FLEX can be filled by QB/RB/WR/TE. Always consider using FLEX for good players who don't fit a position slot.
-4. "NFL Role" tells you if the player is a Starter, Backup, or 3rd String on their real NFL team. Heavily weight this — backups and 3rd stringers are risky.
-5. "Last Season Stats" shows actual fantasy production. Use this data, not guesses.
-6. "Dynasty Value" is from FantasyCalc (0-10,000 scale). Higher = more valuable.
-7. FREE AGENTS listed are the only unowned players. Players on other teams must be acquired via trade.
-8. Be specific and reference actual stats. Do not make up information.
+1. Players under "MY ROSTER" are ON MY TEAM. NEVER suggest acquiring them.
+2. Use the "Proj" column (weekly projection points) as the primary factor for start/sit decisions.
+3. Use "2025 stats" for current season performance and "2024 stats" for last year's context.
+4. The "Lineup Slot" column shows the current slot assignment. FLEX=RB/WR/TE eligible. SUPER_FLEX=QB/RB/WR/TE eligible.
+5. "NFL Role" shows NFL depth chart status. Weight this heavily.
+6. "Dynasty Value" is from FantasyCalc (0-10,000 scale).
+7. FREE AGENTS are unowned players available to add. Players on other teams require trades.
+8. Reference specific stats and projections in your analysis. No guessing.
 
 ═══════════════════════════════════════
 LEAGUE SETTINGS
@@ -367,31 +351,29 @@ LEAGUE SETTINGS
 League: ${league.name || 'Unknown'}
 Format: ${scoringFormat}
 ${scoringDetail}
-Starting Lineup Slots: ${startingSlotsDesc}
+Starting Slots: ${startingSlotsDesc}
 Full Roster: ${rosterSlotDesc}
-Teams: ${numTeams}
-Playoffs: Top ${settings.playoff_teams || 6} teams, starting Week ${settings.playoff_week_start || 15}
-Trade Deadline: Week ${settings.trade_deadline || 11}
-Current Week: ${week}
-${isSuperflex ? '⚠ This is a SUPERFLEX league — QBs are extra valuable.' : ''}
+Teams: ${numTeams} | Playoffs: Top ${settings.playoff_teams || 6}, Week ${settings.playoff_week_start || 15}
+Trade Deadline: Week ${settings.trade_deadline || 11} | Current Week: ${week}
+${isSuperflex ? '⚠ SUPERFLEX league — QBs are extra valuable.' : ''}
 
 ═══════════════════════════════════════
-LEAGUE STANDINGS
+STANDINGS
 ═══════════════════════════════════════
 ${standingsText}
 
 ═══════════════════════════════════════
-MY TEAM: ${teamName} (Record: ${record}, Rank: #${myRank}, PPG: ${ppg})
+MY TEAM: ${teamName} (${record}, #${myRank}, ${ppg} PPG)
 ═══════════════════════════════════════
 
-MY ROSTER (STARTERS):
-| Lineup Slot | Player | Pos | NFL Team | Age | Injury | NFL Role | Last Season Stats | Dynasty Value |
-|-------------|--------|-----|----------|-----|--------|----------|-------------------|---------------|
+STARTERS:
+| Slot | Player | Pos | Team | Age | Injury | NFL Role | Stats & Projection | Value |
+|------|--------|-----|------|-----|--------|----------|---------------------|-------|
 ${starterLines.join('\n')}
 
-MY ROSTER (BENCH):
-| Slot | Player | Pos | NFL Team | Age | Injury | NFL Role | Last Season Stats | Dynasty Value |
-|------|--------|-----|----------|-----|--------|----------|-------------------|---------------|
+BENCH:
+| Slot | Player | Pos | Team | Age | Injury | NFL Role | Stats & Projection | Value |
+|------|--------|-----|------|-----|--------|----------|---------------------|-------|
 ${benchLines.join('\n')}
 ${matchupHistoryText}
 
@@ -399,25 +381,18 @@ ${matchupHistoryText}
 ${opponentSection}
 ═══════════════════════════════════════
 
-═══════════════════════════════════════
-OTHER TEAMS IN THE LEAGUE (key starters):
-═══════════════════════════════════════
+OTHER TEAMS (starters + this week projections):
 ${leagueRostersText}
 
 ═══════════════════════════════════════
-FREE AGENTS (not on any team — available to add):
-═══════════════════════════════════════
-| Pos | Player | NFL Team | NFL Role | Last Season Stats | Dynasty Value |
-|-----|--------|----------|----------|-------------------|---------------|
+FREE AGENTS (unowned, available to add):
+| Pos | Player | Team | NFL Role | Stats & Projection | Value |
+|-----|--------|------|----------|---------------------|-------|
 ${topFA.join('\n')}
 
-═══════════════════════════════════════
-RECENT LEAGUE TRANSACTIONS:
-═══════════════════════════════════════
-${recentTx.length > 0 ? recentTx.join('\n') : 'No recent transactions.'}
+RECENT TRANSACTIONS:
+${recentTx.length > 0 ? recentTx.join('\n') : 'None.'}
 
-═══════════════════════════════════════
-INSTRUCTIONS
 ═══════════════════════════════════════
 ${instructions}`;
 }
@@ -425,124 +400,114 @@ ${instructions}`;
 // ── Handler ──
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ error: 'AI service not configured' });
-    }
+    if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
     const { leagueId, userId, week, analysisType = 'full' } = req.body;
-    if (!leagueId || !userId || !week) {
-        return res.status(400).json({ error: 'Missing required fields: leagueId, userId, week' });
-    }
+    if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
     const rateCheck = checkRateLimit(userId);
-    if (!rateCheck.allowed) {
-        return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
-    }
+    if (!rateCheck.allowed) return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
 
     try {
-        // Fetch all data in parallel
-        const [league, rosters, users, matchups, nflPlayers] = await Promise.all([
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}`),
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
-            fetchJSON(`${SLEEPER_BASE}/players/nfl`),
-        ]);
-
-        // Fetch last season stats + transactions + previous weeks matchups in parallel
+        // Determine PPR field based on league settings (fetched first)
+        const league = await fetchJSON(`${SLEEPER_BASE}/league/${leagueId}`);
+        const settings = league.settings || {};
+        const recPts = settings.rec ?? 0;
+        const pprField = recPts >= 1 ? 'pts_ppr' : recPts >= 0.5 ? 'pts_half_ppr' : 'pts_std';
         const season = league.season || '2025';
         const prevSeason = String(Number(season) - 1);
 
-        const additionalFetches = [
-            // Previous season stats for player evaluation
-            fetchJSON(`${SLEEPER_BASE}/stats/nfl/regular/${prevSeason}`).catch(() => ({})),
-            // Current + previous week transactions
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week}`).catch(() => []),
-            week > 1 ? fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
-        ];
+        // Fetch all data in parallel — shared data uses cache
+        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
+            fetchCached('players', `${SLEEPER_BASE}/players/nfl`),
+            // Current season cumulative stats
+            fetchCached(`stats-${season}`, `${SLEEPER_BASE}/stats/nfl/regular/${season}`).catch(() => ({})),
+            // Previous season stats
+            fetchCached(`stats-${prevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${prevSeason}`).catch(() => ({})),
+            // This week's projections (crucial for start/sit)
+            fetchCached(`proj-${season}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${season}/${week}`).catch(() => ({})),
+        ]);
 
-        // Fetch all past weeks of matchups for game log
+        // Transactions (current + prev week)
+        let transactions = [];
+        try {
+            const [txCur, txPrev] = await Promise.all([
+                fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week}`).catch(() => []),
+                week > 1 ? fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
+            ]);
+            transactions = [...(txCur || []), ...(txPrev || [])];
+        } catch (e) { /* non-critical */ }
+
+        // Past matchups for game log
+        const pastPromises = [];
         for (let w = 1; w < week; w++) {
-            additionalFetches.push(
-                fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null)
-            );
+            pastPromises.push(fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null));
         }
-
-        const [seasonStats, txCurrent, txPrev, ...pastMatchups] = await Promise.all(additionalFetches);
-
-        const transactions = [...(txCurrent || []), ...(txPrev || [])];
-
-        // Build matchup history
+        const pastMatchups = await Promise.all(pastPromises);
         const allMatchupHistory = {};
-        pastMatchups.forEach((m, idx) => {
-            if (m) allMatchupHistory[idx + 1] = m;
-        });
+        pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
 
-        // Fetch market values
-        const settings = league.settings || {};
+        // Market values
         const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
-        const ppr = settings.rec ?? 0.5;
-        const numTeams = settings.num_teams || rosters.length;
         let marketValues = {};
         try {
             const numQbs = isSuperflex ? 2 : 1;
-            const mvRes = await fetch(`${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${numTeams}&ppr=${ppr}`);
+            const mvRes = await fetch(`${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${settings.num_teams || rosters.length}&ppr=${recPts}`);
             if (mvRes.ok) {
                 const mvData = await mvRes.json();
                 mvData.forEach(p => { if (p.sleeperId) marketValues[p.sleeperId] = p.value; });
             }
         } catch (e) { /* non-critical */ }
 
-        // Find user's roster
+        // Find user's roster & opponent
         const userRoster = rosters.find(r => r.owner_id === userId);
-        if (!userRoster) {
-            return res.status(404).json({ error: 'Roster not found for this user in the league' });
-        }
+        if (!userRoster) return res.status(404).json({ error: 'Roster not found' });
 
-        // Find opponent
         const userMatchup = matchups.find(m => m.roster_id === userRoster.roster_id);
         let opponentRoster = null;
         if (userMatchup?.matchup_id != null) {
-            const oppMatchup = matchups.find(m => m.matchup_id === userMatchup.matchup_id && m.roster_id !== userRoster.roster_id);
-            if (oppMatchup) {
-                opponentRoster = rosters.find(r => r.roster_id === oppMatchup.roster_id);
-            }
+            const oppMatch = matchups.find(m => m.matchup_id === userMatchup.matchup_id && m.roster_id !== userRoster.roster_id);
+            if (oppMatch) opponentRoster = rosters.find(r => r.roster_id === oppMatch.roster_id);
         }
 
-        // Determine free agents
-        const rosteredPlayerIds = new Set();
-        rosters.forEach(r => (r.players || []).forEach(pid => rosteredPlayerIds.add(pid)));
+        // Free agents sorted by this week's projection, then dynasty value
+        const rosteredIds = new Set();
+        rosters.forEach(r => (r.players || []).forEach(pid => rosteredIds.add(pid)));
 
         const freeAgents = Object.keys(nflPlayers)
             .filter(pid => {
                 const p = nflPlayers[pid];
-                return !rosteredPlayerIds.has(pid) &&
-                    p.active &&
-                    ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position) &&
-                    p.team;
+                return !rosteredIds.has(pid) && p.active &&
+                    ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position) && p.team;
             })
-            .sort((a, b) => (marketValues[b] || 0) - (marketValues[a] || 0));
+            .sort((a, b) => {
+                // Sort by this week's projection first, then dynasty value
+                const projA = weekProjections?.[a]?.[pprField] ?? weekProjections?.[a]?.pts_ppr ?? 0;
+                const projB = weekProjections?.[b]?.[pprField] ?? weekProjections?.[b]?.pts_ppr ?? 0;
+                if (projB !== projA) return projB - projA;
+                return (marketValues[b] || 0) - (marketValues[a] || 0);
+            });
 
         // Build prompt
         const prompt = buildPrompt({
             league, userRoster, opponentRoster,
             players: nflPlayers, users, rosters,
             freeAgents, matchups, transactions,
-            week, marketValues, seasonStats,
-            allMatchupHistory
+            week, marketValues, currentStats, prevStats,
+            weekProjections, allMatchupHistory, pprField
         }, analysisType);
 
-        // Call Gemini with streaming
+        // Stream from Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
         const result = await model.generateContentStream(prompt);
 
-        // SSE streaming response
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -550,9 +515,7 @@ export default async function handler(req, res) {
 
         for await (const chunk of result.stream) {
             const text = chunk.text();
-            if (text) {
-                res.write(`data: ${JSON.stringify({ text })}\n\n`);
-            }
+            if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
         }
 
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
