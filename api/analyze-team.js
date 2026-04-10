@@ -100,7 +100,7 @@ function playerLine(pid, players, marketValues, primaryStats, secondaryStats, we
     const team = p.team || 'FA';
     const age = p.age || '?';
     const injury = p.injury_status || 'Healthy';
-    const value = marketValues[pid] || 0;
+    const value = marketValues[String(pid)] || marketValues[pid] || 0;
 
     // Primary season stats (most recent completed season with data)
     const pri = getStatsPPG(primaryStats?.[pid], pprField);
@@ -131,7 +131,7 @@ function buildPrompt(data, analysisType) {
         league, userRoster, opponentRoster, players, users, rosters,
         freeAgents, matchups, transactions, week, marketValues,
         currentStats, prevStats, weekProjections, allMatchupHistory, pprField,
-        playerNews
+        playerNews, dynastyAvailable
     } = data;
 
     const settings = league.settings || {};
@@ -242,7 +242,7 @@ ${oppLines.join('\n')}`;
         const keyPlayers = (r.starters || []).filter(pid => pid && pid !== '0').map(pid => {
             const p = players[pid];
             if (!p) return null;
-            const val = marketValues[pid] || 0;
+            const val = marketValues[String(pid)] || marketValues[pid] || 0;
             const age = p.age || '?';
             return `${p.position}:${pName(p)} (${age}yo, val:${val})`;
         }).filter(Boolean).join(', ');
@@ -482,6 +482,7 @@ PLAYER EVALUATION GUIDE — use PPG from the stats columns to judge player quali
 - Dynasty Value > 7000 = elite asset | > 4000 = starter-quality | > 2000 = depth piece
 - If a player has high PPG AND high dynasty value, they are ELITE — grade them accordingly.
 - If a player missed games, their PPG still reflects their talent level when healthy.
+${!dynastyAvailable ? '- ⚠ Dynasty values are currently unavailable. Evaluate trades using PPG, age, and positional scarcity instead.' : ''}
 
 ═══════════════════════════════════════
 LEAGUE SETTINGS
@@ -595,17 +596,24 @@ export default async function handler(req, res) {
         const allMatchupHistory = {};
         pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
 
-        // Market values
+        // Market values (dynasty) — cached to reduce API calls
         const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
+        const numQbs = isSuperflex ? 2 : 1;
+        const fcNumTeams = settings.num_teams || rosters.length || 12;
+        const fcUrl = `${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
         let marketValues = {};
         try {
-            const numQbs = isSuperflex ? 2 : 1;
-            const mvRes = await fetch(`${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${settings.num_teams || rosters.length}&ppr=${recPts}`);
-            if (mvRes.ok) {
-                const mvData = await mvRes.json();
-                mvData.forEach(p => { if (p.sleeperId) marketValues[p.sleeperId] = p.value; });
+            const mvData = await fetchCached(`fantasycalc-${numQbs}-${fcNumTeams}-${recPts}`, fcUrl);
+            if (Array.isArray(mvData)) {
+                mvData.forEach(p => {
+                    if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
+                });
             }
-        } catch (e) { /* non-critical */ }
+            console.log(`FantasyCalc: loaded ${Object.keys(marketValues).length} player values`);
+        } catch (e) {
+            console.error('FantasyCalc fetch failed:', e.message);
+        }
+        const dynastyAvailable = Object.keys(marketValues).length > 50;
 
         // Fetch player news (RSS) — cached, shared across users
         let playerNews = [];
@@ -661,7 +669,8 @@ export default async function handler(req, res) {
             league, userRoster, opponentRoster,
             players: nflPlayers, users, rosters,
             freeAgents, matchups, transactions,
-            week, marketValues, currentStats, prevStats,
+            week, marketValues, dynastyAvailable,
+            currentStats, prevStats,
             weekProjections, allMatchupHistory, pprField,
             playerNews
         }, analysisType);
@@ -698,6 +707,8 @@ export default async function handler(req, res) {
                     prevStatsCount: Object.keys(prevStats || {}).length,
                     currentHasData,
                     projectionCount: Object.keys(weekProjections || {}).length,
+                    dynastyValuesCount: Object.keys(marketValues).length,
+                    dynastyAvailable,
                 },
                 rosterPlayers: samplePlayers,
                 promptLength: prompt.length,
