@@ -86,6 +86,42 @@ function getStatsPPG(stats, pprField) {
     return { pts: pts, gp, ppg: (pts / gp).toFixed(1) };
 }
 
+function getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprField) {
+    // 1. Previous season positional rank (most reliable indicator of actual production)
+    const prev = prevStats?.[pid];
+    const posRankField = pprField === 'pts_ppr' ? 'pos_rank_ppr' : pprField === 'pts_half_ppr' ? 'pos_rank_half_ppr' : 'pos_rank_std';
+    const posRank = prev?.[posRankField] ?? prev?.pos_rank_ppr;
+
+    if (posRank && posRank > 0) {
+        const label = `${pos}${posRank} in '24`;
+        if (posRank <= 5) return `Elite (${label})`;
+        if (posRank <= 12) return `Starter (${label})`;
+        if (posRank <= 24) return `Depth (${label})`;
+        if (posRank <= 36) return `Deep (${label})`;
+        return `Fringe (${label})`;
+    }
+
+    // 2. Dynasty ADP from projections (good for players with limited stats — rookies, injured)
+    const proj = weekProjections?.[pid];
+    const posAdp = proj?.pos_adp_dd_ppr;
+    if (posAdp && posAdp > 0 && posAdp < 500) {
+        const label = `ADP: ${pos}${posAdp}`;
+        if (posAdp <= 5) return `Elite (${label})`;
+        if (posAdp <= 12) return `Starter (${label})`;
+        if (posAdp <= 24) return `Depth (${label})`;
+        return `Deep (${label})`;
+    }
+
+    // 3. FantasyCalc dynasty value as final fallback
+    const value = marketValues[pid] || 0;
+    if (value > 7000) return 'Elite (dynasty)';
+    if (value > 4000) return 'Starter (dynasty)';
+    if (value > 2000) return 'Depth (dynasty)';
+    if (value > 500) return 'Deep';
+
+    return 'Unranked';
+}
+
 function playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField) {
     const p = players[pid];
     if (!p) return null;
@@ -95,15 +131,14 @@ function playerLine(pid, players, marketValues, currentStats, prevStats, weekPro
     const age = p.age || '?';
     const injury = p.injury_status || 'Healthy';
     const value = marketValues[pid] || 0;
-    const depthOrder = p.depth_chart_order;
-    const nflRole = depthOrder === 1 ? 'NFL Starter' : depthOrder === 2 ? 'NFL Backup' : depthOrder === 3 ? 'NFL 3rd' : '';
+    const tier = getPlayerTier(pid, pos, prevStats, weekProjections, marketValues, pprField);
 
     // Current season stats
     const cur = getStatsPPG(currentStats?.[pid], pprField);
     let curStr = 'No 2025 stats yet';
     if (cur) curStr = `2025: ${cur.pts.toFixed(0)} pts, ${cur.gp} GP, ${cur.ppg} PPG`;
 
-    // Previous season stats
+    // Previous season stats with positional rank
     const prev = getStatsPPG(prevStats?.[pid], pprField);
     let prevStr = '';
     if (prev) prevStr = `2024: ${prev.pts.toFixed(0)} pts, ${prev.gp} GP, ${prev.ppg} PPG`;
@@ -114,14 +149,10 @@ function playerLine(pid, players, marketValues, currentStats, prevStats, weekPro
     if (proj) {
         const projPts = proj[pprField] ?? proj.pts_ppr ?? 0;
         if (projPts > 0) projStr = `Proj: ${projPts.toFixed(1)}`;
-
-        // Add positional rank from projections
-        const posRank = proj.pos_rank_ppr ?? proj.pos_rank_half_ppr;
-        if (posRank) projStr += ` (${pos}${posRank})`;
     }
 
     const statsLine = [curStr, prevStr, projStr].filter(Boolean).join(' | ');
-    return { pid, name, pos, team, age, injury, value, nflRole, statsLine };
+    return { pid, name, pos, team, age, injury, value, tier, statsLine };
 }
 
 // ── Prompt Builder ──
@@ -190,13 +221,13 @@ function buildPrompt(data, analysisType) {
         if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - | - |`); return; }
         const d = makeRow(pid);
         if (!d) return;
-        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`);
+        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.tier} | ${d.statsLine} | ${d.value} |`);
     });
 
     const benchLines = benchIds.map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`;
+        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.tier} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Opponent ──
@@ -210,15 +241,15 @@ function buildPrompt(data, analysisType) {
         rosterPositions.forEach((slot, idx) => {
             if (slot === 'BN' || slot === 'IR') return;
             const pid = (opponentRoster.starters || [])[idx];
-            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - |`); return; }
+            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - | - |`); return; }
             const d = makeRow(pid);
             if (!d) return;
-            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.statsLine} | ${d.injury} |`);
+            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.tier} | ${d.statsLine} | ${d.injury} |`);
         });
 
         opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL})
-| Slot | Player | Pos | Stats & Projection | Injury |
-|------|--------|-----|--------------------|--------|
+| Slot | Player | Pos | Tier | Stats & Projection | Injury |
+|------|--------|-----|------|---------------------|--------|
 ${oppLines.join('\n')}`;
     }
 
@@ -242,7 +273,7 @@ ${oppLines.join('\n')}`;
     const topFA = freeAgents.slice(0, 25).map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.nflRole} | ${d.statsLine} | ${d.value} |`;
+        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.tier} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Transactions ──
@@ -399,10 +430,16 @@ CRITICAL RULES:
 2. Use the "Proj" column (weekly projection points) as the primary factor for start/sit decisions.
 3. Use "2025 stats" for current season performance and "2024 stats" for last year's context.
 4. The "Lineup Slot" column shows the current slot assignment. FLEX=RB/WR/TE eligible. SUPER_FLEX=QB/RB/WR/TE eligible.
-5. "NFL Role" shows NFL depth chart status. Weight this heavily.
+5. "Tier" shows the player's ACTUAL production tier based on real data:
+   - "Elite (TE2 in '24)" = Top 5 at position last season — these are PROVEN stars
+   - "Starter (RB10 in '24)" = Top 12 — reliable weekly starters
+   - "Depth (WR20 in '24)" = Top 24 — usable but not premium
+   - Tiers based on "ADP" or "dynasty" indicate projected value when stats are limited (rookies, injured players)
+   - NEVER call an Elite-tier player "unproven", "risky", or a "dart throw"
+   - An Elite or Starter tier player on the bench is a lineup mistake — flag it
 6. "Dynasty Value" is from FantasyCalc (0-10,000 scale).
 7. FREE AGENTS are unowned players available to add. Players on other teams require trades.
-8. Reference specific stats and projections in your analysis. No guessing.
+8. Reference specific stats, projections, AND tier in your analysis. No guessing.
 
 ═══════════════════════════════════════
 LEAGUE SETTINGS
@@ -426,13 +463,13 @@ MY TEAM: ${teamName} (${record}, #${myRank}, ${ppg} PPG)
 ═══════════════════════════════════════
 
 STARTERS:
-| Slot | Player | Pos | Team | Age | Injury | NFL Role | Stats & Projection | Value |
-|------|--------|-----|------|-----|--------|----------|---------------------|-------|
+| Slot | Player | Pos | Team | Age | Injury | Tier | Stats & Projection | Value |
+|------|--------|-----|------|-----|--------|------|---------------------|-------|
 ${starterLines.join('\n')}
 
 BENCH:
-| Slot | Player | Pos | Team | Age | Injury | NFL Role | Stats & Projection | Value |
-|------|--------|-----|------|-----|--------|----------|---------------------|-------|
+| Slot | Player | Pos | Team | Age | Injury | Tier | Stats & Projection | Value |
+|------|--------|-----|------|-----|--------|------|---------------------|-------|
 ${benchLines.join('\n')}
 ${matchupHistoryText}
 
@@ -445,8 +482,8 @@ ${leagueRostersText}
 
 ═══════════════════════════════════════
 FREE AGENTS (unowned, available to add):
-| Pos | Player | Team | NFL Role | Stats & Projection | Value |
-|-----|--------|------|----------|---------------------|-------|
+| Pos | Player | Team | Tier | Stats & Projection | Value |
+|-----|--------|------|------|---------------------|-------|
 ${topFA.join('\n')}
 
 RECENT TRANSACTIONS:
