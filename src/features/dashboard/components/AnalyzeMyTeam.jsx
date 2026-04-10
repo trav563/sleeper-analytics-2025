@@ -60,7 +60,7 @@ function renderMarkdownTable(lines) {
                     {bodyRows.map((cells, ri) => (
                         <tr key={ri} className="border-b border-slate-700/30 hover:bg-slate-700/20">
                             {cells.map((cell, ci) => (
-                                <td key={ci} className={`px-2 py-1.5 text-slate-300 ${ci < 3 ? 'whitespace-nowrap' : ''}`} dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                                <td key={ci} className={`px-2 py-1.5 text-slate-300 ${ci < 2 ? 'whitespace-nowrap' : ''}`} dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
                             ))}
                         </tr>
                     ))}

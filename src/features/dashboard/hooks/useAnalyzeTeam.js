@@ -168,7 +168,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
             setLoading(false);
             abortRef.current = null;
         }
-    }, [leagueId, userId, week, analysisType, cacheKey]);
+    }, [leagueId, userId, week, analysisType, cacheKey, marketValues]);
 
     const cancel = useCallback(() => {
         if (abortRef.current) {
