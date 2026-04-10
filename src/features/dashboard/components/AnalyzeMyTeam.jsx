@@ -47,8 +47,8 @@ function renderMarkdownTable(lines) {
     const bodyRows = rows.slice(1).map(parseRow);
 
     return (
-        <div className="overflow-x-auto my-2">
-            <table className="w-full text-xs">
+        <div className="my-2">
+            <table className="w-full text-xs table-fixed">
                 <thead>
                     <tr className="border-b border-slate-700">
                         {headerCells.map((cell, i) => (
@@ -182,6 +182,7 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
     const selectedType = ANALYSIS_TYPES.find(t => t.value === analysisType);
     const sections = parseMarkdownSections(analysis);
     const hasResult = analysis.length > 0;
+    const valuesLoaded = marketValues && Object.keys(marketValues).length > 0;
 
     const handleAnalyze = (force = false) => {
         setExpandedSections(new Set());
@@ -276,6 +277,11 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                         <Button onClick={() => handleAnalyze(true)} size="sm" className="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-300">
                             <Sparkles className="w-4 h-4 mr-1" />
                             Refresh
+                        </Button>
+                    ) : !valuesLoaded && !hasResult ? (
+                        <Button disabled size="sm" className="shrink-0 bg-slate-700 text-slate-400">
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Loading...
                         </Button>
                     ) : (
                         <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white">

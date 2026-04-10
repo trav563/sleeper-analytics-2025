@@ -104,11 +104,14 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
         setError(null);
         setAnalysis('');
 
+        const mvToSend = marketValues || {};
+        console.log('[AI Analysis] Sending marketValues:', Object.keys(mvToSend).length, 'players. Sample:', Object.entries(mvToSend).slice(0, 3));
+
         try {
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: marketValues || {} }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: mvToSend }),
                 signal: controller.signal,
             });
 

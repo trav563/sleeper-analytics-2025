@@ -598,13 +598,13 @@ export default async function handler(req, res) {
         pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
 
         // Market values (dynasty) — provided by client via React Query (same as TradeFinder)
-        // This avoids server-side FantasyCalc fetch which fails from Vercel
+        console.log('[AI Analysis] Received clientMarketValues:', Object.keys(clientMarketValues || {}).length, 'players');
         const marketValues = clientMarketValues && Object.keys(clientMarketValues).length > 0
             ? clientMarketValues
             : {};
         const dynastyAvailable = Object.keys(marketValues).length > 50;
         if (!dynastyAvailable) {
-            console.log('Dynasty values not provided by client or empty');
+            console.log('[AI Analysis] Dynasty values empty - clientMarketValues was:', typeof clientMarketValues, JSON.stringify(clientMarketValues).substring(0, 200));
         }
 
         // Fetch player news (RSS) — cached, shared across users
