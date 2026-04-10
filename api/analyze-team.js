@@ -565,10 +565,15 @@ export default async function handler(req, res) {
         const leagueSeason = league.season || '2025';
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
-        // Fetch all data in parallel — shared data uses cache
-        // Fetch BOTH the league season AND the previous season stats
-        // (if league is 2026, league season stats will be empty — we detect and swap later)
-        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
+        // Compute FantasyCalc URL before parallel fetch
+        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
+        const numQbs = isSuperflex ? 2 : 1;
+        const fcNumTeams = settings.num_teams || 12;
+        const fcUrl = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
+
+        // Fetch ALL data in parallel — including FantasyCalc to avoid timeout
+        console.log('[AI Analysis] Starting parallel fetch (including FantasyCalc)');
+        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections, fcRawData] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
@@ -576,7 +581,22 @@ export default async function handler(req, res) {
             fetchCached(`stats-${leagueSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leagueSeason}`).catch(() => ({})),
             fetchCached(`stats-${leaguePrevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leaguePrevSeason}`).catch(() => ({})),
             fetchCached(`proj-${leagueSeason}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${leagueSeason}/${week}`).catch(() => ({})),
+            // FantasyCalc — fetched in parallel to avoid timeout
+            fetchCached(`fantasycalc-${numQbs}-${fcNumTeams}-${recPts}`, fcUrl).catch((e) => {
+                console.error('[FantasyCalc] Fetch failed:', e.message);
+                return [];
+            }),
         ]);
+
+        // Process FantasyCalc values
+        let marketValues = {};
+        if (Array.isArray(fcRawData)) {
+            fcRawData.forEach(p => {
+                if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
+            });
+        }
+        console.log('[FantasyCalc] Mapped', Object.keys(marketValues).length, 'dynasty values');
+        const dynastyAvailable = Object.keys(marketValues).length > 50;
 
         // Transactions (current + prev week)
         let transactions = [];
@@ -588,47 +608,16 @@ export default async function handler(req, res) {
             transactions = [...(txCur || []), ...(txPrev || [])];
         } catch (e) { /* non-critical */ }
 
-        // Past matchups for game log
-        const pastPromises = [];
-        for (let w = 1; w < week; w++) {
-            pastPromises.push(fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null));
-        }
-        const pastMatchups = await Promise.all(pastPromises);
+        // Past matchups for game log (skip if week 1 — no past matchups)
         const allMatchupHistory = {};
-        pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
-
-        // Market values (dynasty) — fetch from FantasyCalc server-side with full logging
-        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
-        const numQbs = isSuperflex ? 2 : 1;
-        const fcNumTeams = settings.num_teams || rosters.length || 12;
-        const fcUrl = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
-        let marketValues = {};
-        try {
-            console.log('[FantasyCalc] Fetching:', fcUrl);
-            const fcRes = await fetch(fcUrl, {
-                headers: {
-                    'User-Agent': 'SleeperAnalytics/1.0',
-                    'Accept': 'application/json'
-                }
-            });
-            console.log('[FantasyCalc] Response status:', fcRes.status, fcRes.statusText);
-            if (!fcRes.ok) {
-                const errorBody = await fcRes.text().catch(() => 'could not read body');
-                console.error('[FantasyCalc] Error response body:', errorBody.substring(0, 500));
-            } else {
-                const fcData = await fcRes.json();
-                console.log('[FantasyCalc] Received', Array.isArray(fcData) ? fcData.length : 0, 'players');
-                if (Array.isArray(fcData)) {
-                    fcData.forEach(p => {
-                        if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
-                    });
-                }
-                console.log('[FantasyCalc] Mapped', Object.keys(marketValues).length, 'values');
+        if (week > 1) {
+            const pastPromises = [];
+            for (let w = 1; w < week; w++) {
+                pastPromises.push(fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null));
             }
-        } catch (e) {
-            console.error('[FantasyCalc] Fetch error:', e.message, e.stack);
+            const pastMatchups = await Promise.all(pastPromises);
+            pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
         }
-        const dynastyAvailable = Object.keys(marketValues).length > 50;
 
         // Fetch player news (RSS) — cached, shared across users
         let playerNews = [];
