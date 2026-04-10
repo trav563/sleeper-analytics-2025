@@ -426,6 +426,8 @@ Use bullet format:
 
     return `You are an expert fantasy football analyst. You have REAL DATA below — projections, stats, and rankings from this season. Use this data to make your analysis. Do NOT rely on prior assumptions about player quality — use the stats and projections provided.
 
+[DATA SOURCE: Primary stats from ${primaryYear} season (${pprField}). League is ${leagueSeason}. Secondary stats from ${secondaryYear}.]
+
 CRITICAL RULES:
 1. Players under "MY ROSTER" are ON MY TEAM. NEVER suggest acquiring them.
 2. Use the "Proj" column (weekly projection points) as the primary factor for start/sit decisions.
