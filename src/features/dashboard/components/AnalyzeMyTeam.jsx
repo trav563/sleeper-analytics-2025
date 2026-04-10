@@ -166,14 +166,14 @@ function formatTimeAgo(timestamp) {
     return `${hours} hours ago`;
 }
 
-const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
+const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
     const [analysisType, setAnalysisType] = useState('full');
 
     const {
         analysis, loading, error, remaining,
         cachedAt, isOnCooldown, cooldownMinutes,
         analyze, cancel, clear
-    } = useAnalyzeTeam({ leagueId, userId, week, analysisType });
+    } = useAnalyzeTeam({ leagueId, userId, week, analysisType, marketValues });
 
     const [expandedSections, setExpandedSections] = useState(new Set());
     const [showTypeMenu, setShowTypeMenu] = useState(false);

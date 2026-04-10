@@ -32,7 +32,7 @@ function getCooldownRemaining(cached) {
     return Math.max(0, COOLDOWN_MS - elapsed);
 }
 
-export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' } = {}) {
+export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', marketValues } = {}) {
     const [analysis, setAnalysis] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -41,6 +41,9 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
     const [cooldownRemaining, setCooldownRemaining] = useState(0);
     const abortRef = useRef(null);
     const timerRef = useRef(null);
+    // Use a ref for marketValues to avoid stale closure in useCallback
+    const marketValuesRef = useRef(marketValues);
+    marketValuesRef.current = marketValues;
 
     const cacheKey = leagueId && userId && week ? getCacheKey(leagueId, userId, week, analysisType) : null;
 
@@ -105,10 +108,14 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
         setAnalysis('');
 
         try {
+            // Read marketValues from ref (always current, no stale closure)
+            const mv = marketValuesRef.current || {};
+            console.log('[AI Analysis] Sending marketValues:', Object.keys(mv).length, 'players');
+
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: mv }),
                 signal: controller.signal,
             });
 

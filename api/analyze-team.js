@@ -546,7 +546,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-    const { leagueId, userId, week, analysisType = 'full', debug = false } = req.body;
+    const { leagueId, userId, week, analysisType = 'full', debug = false, clientMarketValues } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
     let rateCheck = { allowed: true, remaining: RATE_LIMIT_PER_DAY };
@@ -565,15 +565,8 @@ export default async function handler(req, res) {
         const leagueSeason = league.season || '2025';
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
-        // Compute FantasyCalc URL before parallel fetch
-        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
-        const numQbs = isSuperflex ? 2 : 1;
-        const fcNumTeams = settings.num_teams || 12;
-        const fcUrl = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
-
-        // Fetch ALL data in parallel — including FantasyCalc to avoid timeout
-        console.log('[AI Analysis] Starting parallel fetch (including FantasyCalc)');
-        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections, fcRawData] = await Promise.all([
+        // Fetch all Sleeper data in parallel
+        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
@@ -581,22 +574,15 @@ export default async function handler(req, res) {
             fetchCached(`stats-${leagueSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leagueSeason}`).catch(() => ({})),
             fetchCached(`stats-${leaguePrevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leaguePrevSeason}`).catch(() => ({})),
             fetchCached(`proj-${leagueSeason}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${leagueSeason}/${week}`).catch(() => ({})),
-            // FantasyCalc — fetched in parallel to avoid timeout
-            fetchCached(`fantasycalc-${numQbs}-${fcNumTeams}-${recPts}`, fcUrl).catch((e) => {
-                console.error('[FantasyCalc] Fetch failed:', e.message);
-                return [];
-            }),
         ]);
 
-        // Process FantasyCalc values
-        let marketValues = {};
-        if (Array.isArray(fcRawData)) {
-            fcRawData.forEach(p => {
-                if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
-            });
-        }
-        console.log('[FantasyCalc] Mapped', Object.keys(marketValues).length, 'dynasty values');
+        // Dynasty values — use client-provided values (fetched via React Query in browser)
+        // FantasyCalc blocks server-side requests from Vercel but works from browser
+        const marketValues = (clientMarketValues && typeof clientMarketValues === 'object' && Object.keys(clientMarketValues).length > 0)
+            ? clientMarketValues
+            : {};
         const dynastyAvailable = Object.keys(marketValues).length > 50;
+        console.log('[AI Analysis] Dynasty values:', Object.keys(marketValues).length, dynastyAvailable ? '(available)' : '(unavailable)');
 
         // Transactions (current + prev week)
         let transactions = [];
