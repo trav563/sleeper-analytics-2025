@@ -32,7 +32,7 @@ function getCooldownRemaining(cached) {
     return Math.max(0, COOLDOWN_MS - elapsed);
 }
 
-export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' } = {}) {
+export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', marketValues } = {}) {
     const [analysis, setAnalysis] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -108,7 +108,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: marketValues || {} }),
                 signal: controller.signal,
             });
 

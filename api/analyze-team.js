@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
-const FANTASY_CALC_API = 'https://api.fantasycalc.com/values/current';
+// FantasyCalc values are now provided by the client (fetched via React Query)
+// to avoid server-side fetch failures from Vercel
 
 // ── Rate Limiting (in-memory, per serverless instance) ──
 const rateLimitMap = new Map();
@@ -545,7 +546,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-    const { leagueId, userId, week, analysisType = 'full', debug = false } = req.body;
+    const { leagueId, userId, week, analysisType = 'full', debug = false, clientMarketValues = {} } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
     let rateCheck = { allowed: true, remaining: RATE_LIMIT_PER_DAY };
@@ -596,24 +597,15 @@ export default async function handler(req, res) {
         const allMatchupHistory = {};
         pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
 
-        // Market values (dynasty) — cached to reduce API calls
-        const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
-        const numQbs = isSuperflex ? 2 : 1;
-        const fcNumTeams = settings.num_teams || rosters.length || 12;
-        const fcUrl = `${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${fcNumTeams}&ppr=${recPts}`;
-        let marketValues = {};
-        try {
-            const mvData = await fetchCached(`fantasycalc-${numQbs}-${fcNumTeams}-${recPts}`, fcUrl);
-            if (Array.isArray(mvData)) {
-                mvData.forEach(p => {
-                    if (p.sleeperId) marketValues[String(p.sleeperId)] = p.value;
-                });
-            }
-            console.log(`FantasyCalc: loaded ${Object.keys(marketValues).length} player values`);
-        } catch (e) {
-            console.error('FantasyCalc fetch failed:', e.message);
-        }
+        // Market values (dynasty) — provided by client via React Query (same as TradeFinder)
+        // This avoids server-side FantasyCalc fetch which fails from Vercel
+        const marketValues = clientMarketValues && Object.keys(clientMarketValues).length > 0
+            ? clientMarketValues
+            : {};
         const dynastyAvailable = Object.keys(marketValues).length > 50;
+        if (!dynastyAvailable) {
+            console.log('Dynasty values not provided by client or empty');
+        }
 
         // Fetch player news (RSS) — cached, shared across users
         let playerNews = [];

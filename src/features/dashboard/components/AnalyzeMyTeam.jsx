@@ -60,7 +60,7 @@ function renderMarkdownTable(lines) {
                     {bodyRows.map((cells, ri) => (
                         <tr key={ri} className="border-b border-slate-700/30 hover:bg-slate-700/20">
                             {cells.map((cell, ci) => (
-                                <td key={ci} className="px-2 py-1.5 text-slate-300 whitespace-nowrap" dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                                <td key={ci} className={`px-2 py-1.5 text-slate-300 ${ci < 3 ? 'whitespace-nowrap' : ''}`} dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
                             ))}
                         </tr>
                     ))}
@@ -166,14 +166,14 @@ function formatTimeAgo(timestamp) {
     return `${hours} hours ago`;
 }
 
-const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
+const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
     const [analysisType, setAnalysisType] = useState('full');
 
     const {
         analysis, loading, error, remaining,
         cachedAt, isOnCooldown, cooldownMinutes,
         analyze, cancel, clear
-    } = useAnalyzeTeam({ leagueId, userId, week, analysisType });
+    } = useAnalyzeTeam({ leagueId, userId, week, analysisType, marketValues });
 
     const [expandedSections, setExpandedSections] = useState(new Set());
     const [showTypeMenu, setShowTypeMenu] = useState(false);
