@@ -130,7 +130,7 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
     const isSectionCollapsed = (idx) => expandedSections.has(idx);
 
     return (
-        <Card className="bg-slate-800/50 border-slate-700 overflow-hidden">
+        <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader className="pb-4 border-b border-slate-700">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
