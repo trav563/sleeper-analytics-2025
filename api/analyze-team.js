@@ -86,54 +86,7 @@ function getStatsPPG(stats, pprField) {
     return { pts: pts, gp, ppg: (pts / gp).toFixed(1) };
 }
 
-function tierFromRank(pos, posRank, yearLabel) {
-    const label = `${pos}${posRank} in ${yearLabel}`;
-    if (posRank <= 5) return `Elite (${label})`;
-    if (posRank <= 12) return `Starter (${label})`;
-    if (posRank <= 24) return `Depth (${label})`;
-    if (posRank <= 36) return `Deep (${label})`;
-    return `Fringe (${label})`;
-}
-
-function getPlayerTier(pid, pos, currentStats, prevStats, weekProjections, marketValues, pprField, season, prevSeason) {
-    const posRankField = pprField === 'pts_ppr' ? 'pos_rank_ppr' : pprField === 'pts_half_ppr' ? 'pos_rank_half_ppr' : 'pos_rank_std';
-
-    // 1. Current season stats (most recent completed season — e.g. 2025)
-    const cur = currentStats?.[pid];
-    const curRank = cur?.[posRankField] ?? cur?.pos_rank_ppr;
-    if (curRank && curRank > 0) {
-        return tierFromRank(pos, curRank, `'${season.slice(-2)}`);
-    }
-
-    // 2. Previous season stats (fallback — e.g. 2024)
-    const prev = prevStats?.[pid];
-    const prevRank = prev?.[posRankField] ?? prev?.pos_rank_ppr;
-    if (prevRank && prevRank > 0) {
-        return tierFromRank(pos, prevRank, `'${prevSeason.slice(-2)}`);
-    }
-
-    // 3. Dynasty ADP from projections (good for rookies, injured players with limited stats)
-    const proj = weekProjections?.[pid];
-    const posAdp = proj?.pos_adp_dd_ppr;
-    if (posAdp && posAdp > 0 && posAdp < 500) {
-        const label = `ADP: ${pos}${posAdp}`;
-        if (posAdp <= 5) return `Elite (${label})`;
-        if (posAdp <= 12) return `Starter (${label})`;
-        if (posAdp <= 24) return `Depth (${label})`;
-        return `Deep (${label})`;
-    }
-
-    // 4. FantasyCalc dynasty value as final fallback
-    const value = marketValues[pid] || 0;
-    if (value > 7000) return 'Elite (dynasty)';
-    if (value > 4000) return 'Starter (dynasty)';
-    if (value > 2000) return 'Depth (dynasty)';
-    if (value > 500) return 'Deep';
-
-    return 'Unranked';
-}
-
-function playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField, season, prevSeason) {
+function playerLine(pid, players, marketValues, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear) {
     const p = players[pid];
     if (!p) return null;
     const name = pName(p);
@@ -142,17 +95,16 @@ function playerLine(pid, players, marketValues, currentStats, prevStats, weekPro
     const age = p.age || '?';
     const injury = p.injury_status || 'Healthy';
     const value = marketValues[pid] || 0;
-    const tier = getPlayerTier(pid, pos, currentStats, prevStats, weekProjections, marketValues, pprField, season, prevSeason);
 
-    // Current season stats (most recent completed season)
-    const cur = getStatsPPG(currentStats?.[pid], pprField);
-    let curStr = `No ${season} stats`;
-    if (cur) curStr = `${season}: ${cur.pts.toFixed(0)} pts, ${cur.gp} GP, ${cur.ppg} PPG`;
+    // Primary season stats (most recent completed season with data)
+    const pri = getStatsPPG(primaryStats?.[pid], pprField);
+    let priStr = `No ${primaryYear} stats`;
+    if (pri) priStr = `${primaryYear}: ${pri.pts.toFixed(0)} pts, ${pri.gp} GP, ${pri.ppg} PPG`;
 
-    // Previous season stats
-    const prev = getStatsPPG(prevStats?.[pid], pprField);
-    let prevStr = '';
-    if (prev) prevStr = `${prevSeason}: ${prev.pts.toFixed(0)} pts, ${prev.gp} GP, ${prev.ppg} PPG`;
+    // Secondary season stats
+    const sec = getStatsPPG(secondaryStats?.[pid], pprField);
+    let secStr = '';
+    if (sec) secStr = `${secondaryYear}: ${sec.pts.toFixed(0)} pts, ${sec.gp} GP, ${sec.ppg} PPG`;
 
     // This week's projection
     const proj = weekProjections?.[pid];
@@ -162,8 +114,8 @@ function playerLine(pid, players, marketValues, currentStats, prevStats, weekPro
         if (projPts > 0) projStr = `Proj: ${projPts.toFixed(1)}`;
     }
 
-    const statsLine = [curStr, prevStr, projStr].filter(Boolean).join(' | ');
-    return { pid, name, pos, team, age, injury, value, tier, statsLine };
+    const statsLine = [priStr, secStr, projStr].filter(Boolean).join(' | ');
+    return { pid, name, pos, team, age, injury, value, statsLine };
 }
 
 // ── Prompt Builder ──
@@ -224,24 +176,30 @@ function buildPrompt(data, analysisType) {
     const allPlayerIds = userRoster.players || [];
     const benchIds = allPlayerIds.filter(pid => !starterIds.includes(pid));
 
-    const season = league.season || '2025';
-    const prevSeason = String(Number(season) - 1);
-    const makeRow = (pid) => playerLine(pid, players, marketValues, currentStats, prevStats, weekProjections, pprField, season, prevSeason);
+    // Detect which season has real data (if league is 2026, currentStats may be empty)
+    const leagueSeason = league.season || '2025';
+    const leaguePrevSeason = String(Number(leagueSeason) - 1);
+    const currentHasData = Object.keys(currentStats || {}).length > 100;
+    const [primaryStats, secondaryStats, primaryYear, secondaryYear] = currentHasData
+        ? [currentStats, prevStats, leagueSeason, leaguePrevSeason]
+        : [prevStats, currentStats, leaguePrevSeason, leagueSeason];
+
+    const makeRow = (pid) => playerLine(pid, players, marketValues, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear);
 
     const starterLines = [];
     rosterPositions.forEach((slot, idx) => {
         if (slot === 'BN' || slot === 'IR') return;
         const pid = starterIds[idx];
-        if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - | - |`); return; }
+        if (!pid || pid === '0') { starterLines.push(`| ${slot} | EMPTY SLOT | - | - | - | - | - |`); return; }
         const d = makeRow(pid);
         if (!d) return;
-        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.tier} | ${d.statsLine} | ${d.value} |`);
+        starterLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.team} | ${d.injury} | ${d.statsLine} | ${d.value} |`);
     });
 
     const benchLines = benchIds.map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.age} | ${d.injury} | ${d.tier} | ${d.statsLine} | ${d.value} |`;
+        return `| BN | ${d.name} | ${d.pos} | ${d.team} | ${d.injury} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Opponent ──
@@ -255,15 +213,15 @@ function buildPrompt(data, analysisType) {
         rosterPositions.forEach((slot, idx) => {
             if (slot === 'BN' || slot === 'IR') return;
             const pid = (opponentRoster.starters || [])[idx];
-            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - | - |`); return; }
+            if (!pid || pid === '0') { oppLines.push(`| ${slot} | EMPTY | - | - | - |`); return; }
             const d = makeRow(pid);
             if (!d) return;
-            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.tier} | ${d.statsLine} | ${d.injury} |`);
+            oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.statsLine} | ${d.injury} |`);
         });
 
         opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL})
-| Slot | Player | Pos | Tier | Stats & Projection | Injury |
-|------|--------|-----|------|---------------------|--------|
+| Slot | Player | Pos | Stats & Projection | Injury |
+|------|--------|-----|--------------------|--------|
 ${oppLines.join('\n')}`;
     }
 
@@ -287,7 +245,7 @@ ${oppLines.join('\n')}`;
     const topFA = freeAgents.slice(0, 25).map(pid => {
         const d = makeRow(pid);
         if (!d) return null;
-        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.tier} | ${d.statsLine} | ${d.value} |`;
+        return `| ${d.pos} | ${d.name} | ${d.team} | ${d.statsLine} | ${d.value} |`;
     }).filter(Boolean);
 
     // ── Transactions ──
@@ -463,18 +421,21 @@ Use bullet format:
 CRITICAL RULES:
 1. Players under "MY ROSTER" are ON MY TEAM. NEVER suggest acquiring them.
 2. Use the "Proj" column (weekly projection points) as the primary factor for start/sit decisions.
-3. Use "2025 stats" for current season performance and "2024 stats" for last year's context.
-4. The "Lineup Slot" column shows the current slot assignment. FLEX=RB/WR/TE eligible. SUPER_FLEX=QB/RB/WR/TE eligible.
-5. "Tier" shows the player's ACTUAL production tier based on real data:
-   - "Elite (TE2 in '24)" = Top 5 at position last season — these are PROVEN stars
-   - "Starter (RB10 in '24)" = Top 12 — reliable weekly starters
-   - "Depth (WR20 in '24)" = Top 24 — usable but not premium
-   - Tiers based on "ADP" or "dynasty" indicate projected value when stats are limited (rookies, injured players)
-   - NEVER call an Elite-tier player "unproven", "risky", or a "dart throw"
-   - An Elite or Starter tier player on the bench is a lineup mistake — flag it
-6. "Dynasty Value" is from FantasyCalc (0-10,000 scale).
-7. FREE AGENTS are unowned players available to add. Players on other teams require trades.
-8. Reference specific stats, projections, AND tier in your analysis. No guessing.
+3. The "Lineup Slot" column shows the current slot assignment. FLEX=RB/WR/TE eligible. SUPER_FLEX=QB/RB/WR/TE eligible.
+4. "Dynasty Value" is from FantasyCalc (0-10,000 scale). Higher = more valuable.
+5. FREE AGENTS are unowned players available to add. Players on other teams require trades.
+6. Reference specific stats and projections in your analysis. No guessing.
+7. Read the PLAYER NEWS section for context on trades, injuries, suspensions, and role changes.
+8. A player with few games played (GP) was likely injured or suspended — judge them by PPG, not total points.
+
+PLAYER EVALUATION GUIDE — use PPG from the stats columns to judge player quality:
+- QB: Elite ≥ 18 PPG | Good ≥ 14 | Average ≥ 10
+- RB: Elite ≥ 15 PPG | Good ≥ 11 | Average ≥ 7
+- WR: Elite ≥ 15 PPG | Good ≥ 11 | Average ≥ 7
+- TE: Elite ≥ 12 PPG | Good ≥ 8 | Average ≥ 5
+- Dynasty Value > 7000 = elite asset | > 4000 = starter-quality | > 2000 = depth piece
+- If a player has high PPG AND high dynasty value, they are ELITE — grade them accordingly.
+- If a player missed games, their PPG still reflects their talent level when healthy.
 
 ═══════════════════════════════════════
 LEAGUE SETTINGS
@@ -498,13 +459,13 @@ MY TEAM: ${teamName} (${record}, #${myRank}, ${ppg} PPG)
 ═══════════════════════════════════════
 
 STARTERS:
-| Slot | Player | Pos | Team | Age | Injury | Tier | Stats & Projection | Value |
-|------|--------|-----|------|-----|--------|------|---------------------|-------|
+| Slot | Player | Pos | Team | Injury | Stats & Projection | Dynasty Value |
+|------|--------|-----|------|--------|---------------------|---------------|
 ${starterLines.join('\n')}
 
 BENCH:
-| Slot | Player | Pos | Team | Age | Injury | Tier | Stats & Projection | Value |
-|------|--------|-----|------|-----|--------|------|---------------------|-------|
+| Slot | Player | Pos | Team | Injury | Stats & Projection | Dynasty Value |
+|------|--------|-----|------|--------|---------------------|---------------|
 ${benchLines.join('\n')}
 ${matchupHistoryText}
 ${playerNewsText}
@@ -518,8 +479,8 @@ ${leagueRostersText}
 
 ═══════════════════════════════════════
 FREE AGENTS (unowned, available to add):
-| Pos | Player | Team | Tier | Stats & Projection | Value |
-|-----|--------|------|------|---------------------|-------|
+| Pos | Player | Team | Stats & Projection | Dynasty Value |
+|-----|--------|------|---------------------|---------------|
 ${topFA.join('\n')}
 
 RECENT TRANSACTIONS:
@@ -549,21 +510,20 @@ export default async function handler(req, res) {
         const settings = league.settings || {};
         const recPts = settings.rec ?? 0;
         const pprField = recPts >= 1 ? 'pts_ppr' : recPts >= 0.5 ? 'pts_half_ppr' : 'pts_std';
-        const season = league.season || '2025';
-        const prevSeason = String(Number(season) - 1);
+        const leagueSeason = league.season || '2025';
+        const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
         // Fetch all data in parallel — shared data uses cache
+        // Fetch BOTH the league season AND the previous season stats
+        // (if league is 2026, league season stats will be empty — we detect and swap later)
         const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
             fetchCached('players', `${SLEEPER_BASE}/players/nfl`),
-            // Current season cumulative stats
-            fetchCached(`stats-${season}`, `${SLEEPER_BASE}/stats/nfl/regular/${season}`).catch(() => ({})),
-            // Previous season stats
-            fetchCached(`stats-${prevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${prevSeason}`).catch(() => ({})),
-            // This week's projections (crucial for start/sit)
-            fetchCached(`proj-${season}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${season}/${week}`).catch(() => ({})),
+            fetchCached(`stats-${leagueSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leagueSeason}`).catch(() => ({})),
+            fetchCached(`stats-${leaguePrevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leaguePrevSeason}`).catch(() => ({})),
+            fetchCached(`proj-${leagueSeason}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${leagueSeason}/${week}`).catch(() => ({})),
         ]);
 
         // Transactions (current + prev week)
