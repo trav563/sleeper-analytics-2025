@@ -285,50 +285,109 @@ ${oppLines.join('\n')}`;
         if (weekScores.length > 0) matchupHistoryText = `\nMY GAME LOG:\n${weekScores.join('\n')}`;
     }
 
-    // ── Instructions per analysis type ──
+    // ── Instructions per analysis type (strict templates for consistent output) ──
     const typeInstructions = {
-        full: `Provide a comprehensive analysis with these exact sections:
-## Roster Grade
-Grade each position group A+ to F. Use the PROJECTION and STATS data provided — do not guess. A player projected as a top-5 at their position should be graded highly. Reference their actual PPG and projection numbers.
-## This Week: Start/Sit
-Recommend the OPTIMAL LINEUP filling every slot (${startingSlotsDesc}). Use each player's weekly projection (Proj column) as the primary factor. FLEX slots accept RB/WR/TE. SUPER_FLEX accepts QB/RB/WR/TE.
-## Waiver Wire Targets
-From the FREE AGENTS list, identify 3-5 high-value adds. Use their projections and positional rank. Suggest who to drop.
-## Trade Opportunities
-Suggest 2-3 realistic trades with OTHER teams. Reference specific players from their rosters. NEVER suggest acquiring a player already on MY roster.
-## Outlook
-Brief playoff path analysis based on standings, schedule, and roster strength.`,
+        full: `You MUST use EXACTLY these sections and formats. Do not deviate.
 
-        startsit: `## Optimal Lineup
-Fill every starting slot (${startingSlotsDesc}). Use the "Proj" (weekly projection) as the PRIMARY factor for decisions.
-- FLEX slots: RB/WR/TE eligible
-- SUPER_FLEX slots: QB/RB/WR/TE eligible
-- Maximize projected points — put the highest-projected eligible player in each slot
-Show the full lineup with projected points for each player.
+## Roster Grade
+Use this EXACT table format:
+| Position | Grade | Key Players | Assessment |
+|----------|-------|-------------|------------|
+| QB | [A+ to F] | [Names] | [1 sentence using their stats/projections] |
+| RB | [A+ to F] | [Names] | [1 sentence] |
+| WR | [A+ to F] | [Names] | [1 sentence] |
+| TE | [A+ to F] | [Names] | [1 sentence] |
+| K | [A+ to F] | [Name] | [1 sentence] |
+| DEF | [A+ to F] | [Name] | [1 sentence] |
+| **Overall** | **[Grade]** | | **[1 sentence summary]** |
+
+## This Week: Start/Sit
+Use this EXACT table format for the optimal lineup:
+| Slot | Player | Proj Pts | Why |
+|------|--------|----------|-----|
+(Fill EVERY starting slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Maximize projected points.)
+
+**On the Bench:**
+- [Player] (Pos) — [Brief reason they're sitting]
+(List each bench player)
+
+## Waiver Wire Targets
+Use this EXACT numbered format for each target (3-5 targets):
+1. **[Player Name]** ([Pos], [Team]) — Proj: [X.X] pts | [Stats line] | Drop: [Player to drop] | [1 sentence why]
+2. ...
+
+## Trade Opportunities
+Use this EXACT format for each trade (2-3 trades). NEVER suggest acquiring players already on my roster.
+**Trade 1: [My Team] ↔ [Other Team Name]**
+- Send: [Player(s)] (Value: [X])
+- Receive: [Player(s)] (Value: [X])
+- Why: [1-2 sentences explaining why both sides benefit]
+
+## Outlook
+Use this EXACT bullet format:
+- **Playoff picture:** [Current standing and what's needed]
+- **Key weeks:** [Identify 2-3 critical upcoming matchups]
+- **Strategy:** [1-2 sentences on compete now vs build for future]`,
+
+        startsit: `You MUST use EXACTLY these sections and formats.
+
+## Optimal Lineup
+| Slot | Player | Proj Pts | Why |
+|------|--------|----------|-----|
+(Fill EVERY slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Use projections as primary factor.)
+
+**On the Bench:**
+- [Player] (Pos) — [Why they're sitting]
 
 ## Key Decisions
-Explain only the close calls.`,
+Use bullet format for each close call:
+- **[Player A] over [Player B] at [Slot]:** [Reasoning with projected points comparison]`,
 
-        waivers: `## Waiver Wire Targets
-From the FREE AGENTS listed below. Use their projections, stats, and positional rank.
-For each (5-7 recommendations):
-- Player name, position, and their THIS WEEK projection
-- Their season stats or last season stats
-- Who to DROP from my roster
-- Priority ranking`,
+        waivers: `You MUST use EXACTLY this format.
 
-        trades: `## Trade Opportunities
-Look at OTHER TEAMS' rosters. ALL players on MY ROSTER are already mine — NEVER suggest buying them.
-- 2-3 specific proposals naming the team and exact players
-- Use dynasty values and projections to ensure fairness
-- Trade deadline: Week ${settings.trade_deadline || 11}`,
+## Waiver Wire Targets
+Use this EXACT numbered format (5-7 targets from the FREE AGENTS list):
+1. **[Player Name]** ([Pos], [Team]) — Proj: [X.X] pts | [Season/last season stats] | Drop: [Player] | Priority: [Must-Add / Strong Add / Speculative]
+2. ...
 
-        playoff: `## Playoff Path
-- Current: #${myRank} of ${numTeams} (${record})
-- Playoffs: Top ${settings.playoff_teams || 6}, starting Week ${settings.playoff_week_start || 15}
-- What record is needed
-- Key remaining matchups
-- Strategic advice`
+## Summary
+- [1-2 sentences on overall waiver strategy for this week]`,
+
+        trades: `You MUST use EXACTLY this format. ALL players on MY ROSTER are already mine — NEVER suggest acquiring them.
+
+## Trade Opportunities
+**Trade 1: [My Team] ↔ [Other Team Name]**
+- Send: [Player(s)] (Dynasty Value: [X])
+- Receive: [Player(s)] (Dynasty Value: [X])
+- Why it works for me: [1 sentence]
+- Why it works for them: [1 sentence]
+
+(Repeat for 2-3 total trades. Reference actual players from the OTHER TEAMS' rosters listed above.)
+
+## Trade Strategy
+- **Sell high:** [Player(s) to sell and why]
+- **Buy low:** [Player(s) on OTHER teams to target and why]
+- **Deadline note:** [Relevance of Week ${settings.trade_deadline || 11} deadline]`,
+
+        playoff: `You MUST use EXACTLY this format.
+
+## Playoff Path
+| Metric | Value |
+|--------|-------|
+| Current Rank | #${myRank} of ${numTeams} |
+| Record | ${record} |
+| Playoff Cutoff | Top ${settings.playoff_teams || 6} |
+| Playoffs Start | Week ${settings.playoff_week_start || 15} |
+| Projected Record Needed | [Your estimate] |
+
+## Key Matchups
+Use bullet format:
+- **Week [X] vs [Team]:** [Why this matters — their record, strength]
+(List 3-4 most important remaining games)
+
+## Strategy
+- **Window:** [Competing now or building for future? Why?]
+- **Moves to make:** [1-2 specific actionable recommendations]`
     };
 
     const instructions = typeInstructions[analysisType] || typeInstructions.full;

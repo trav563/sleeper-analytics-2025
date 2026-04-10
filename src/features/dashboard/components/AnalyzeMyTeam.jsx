@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Brain, Sparkles, ChevronDown, ChevronUp, Loader2, AlertCircle, X } from 'lucide-react';
+import { Brain, Sparkles, ChevronDown, ChevronUp, Loader2, AlertCircle, X, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
@@ -27,7 +27,6 @@ function parseMarkdownSections(text) {
         } else if (currentSection) {
             currentSection.content += line + '\n';
         } else {
-            // Content before first heading
             if (!sections.length && line.trim()) {
                 if (!currentSection) currentSection = { title: '', content: '' };
                 currentSection.content += line + '\n';
@@ -38,60 +37,115 @@ function parseMarkdownSections(text) {
     return sections;
 }
 
+function renderMarkdownTable(lines) {
+    // Parse markdown table lines into header + rows
+    const rows = lines.filter(l => l.trim() && !l.match(/^\|[-\s|]+\|$/)); // Skip separator rows
+    if (rows.length === 0) return null;
+
+    const parseRow = (line) => line.split('|').filter((_, i, a) => i > 0 && i < a.length - 1).map(c => c.trim());
+    const headerCells = parseRow(rows[0]);
+    const bodyRows = rows.slice(1).map(parseRow);
+
+    return (
+        <div className="overflow-x-auto my-2">
+            <table className="w-full text-xs">
+                <thead>
+                    <tr className="border-b border-slate-700">
+                        {headerCells.map((cell, i) => (
+                            <th key={i} className="px-2 py-1.5 text-left text-slate-400 font-medium whitespace-nowrap">{cell}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {bodyRows.map((cells, ri) => (
+                        <tr key={ri} className="border-b border-slate-700/30 hover:bg-slate-700/20">
+                            {cells.map((cell, ci) => (
+                                <td key={ci} className="px-2 py-1.5 text-slate-300 whitespace-nowrap" dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 function renderMarkdown(text) {
     if (!text) return null;
-    // Simple markdown renderer for common patterns
-    return text.split('\n').map((line, i) => {
-        if (!line.trim()) return <br key={i} />;
 
-        // Bold
+    const lines = text.split('\n');
+    const elements = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Collect consecutive table lines
+        if (line.trimStart().startsWith('|')) {
+            const tableLines = [];
+            while (i < lines.length && lines[i].trimStart().startsWith('|')) {
+                tableLines.push(lines[i]);
+                i++;
+            }
+            elements.push(<div key={`table-${i}`}>{renderMarkdownTable(tableLines)}</div>);
+            continue;
+        }
+
+        if (!line.trim()) { elements.push(<br key={i} />); i++; continue; }
+
         let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        // Italic
         processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
         // Bullet points
         if (processed.match(/^[-*] /)) {
             const content = processed.replace(/^[-*] /, '');
-            return (
+            elements.push(
                 <div key={i} className="flex gap-2 py-0.5">
                     <span className="text-primary mt-1 shrink-0">&#8226;</span>
                     <span dangerouslySetInnerHTML={{ __html: content }} />
                 </div>
             );
+            i++; continue;
         }
 
         // Numbered list
         const numMatch = processed.match(/^(\d+)\. (.+)/);
         if (numMatch) {
-            return (
+            elements.push(
                 <div key={i} className="flex gap-2 py-0.5">
                     <span className="text-primary font-medium shrink-0">{numMatch[1]}.</span>
                     <span dangerouslySetInnerHTML={{ __html: numMatch[2] }} />
                 </div>
             );
+            i++; continue;
         }
 
         // H3
         if (processed.startsWith('### ')) {
-            return <h4 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1">{processed.replace('### ', '')}</h4>;
+            elements.push(<h4 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1">{processed.replace('### ', '')}</h4>);
+            i++; continue;
         }
 
-        // Tables - render as-is in monospace
-        if (processed.startsWith('|')) {
-            return <div key={i} className="font-mono text-xs text-slate-400">{processed}</div>;
-        }
+        elements.push(<p key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: processed }} />);
+        i++;
+    }
 
-        return <p key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: processed }} />;
-    });
+    return elements;
 }
 
 const SECTION_ICONS = {
     'Roster Grade': '📊',
     'Start/Sit': '🏈',
+    'Optimal Lineup': '🏈',
     'Waiver Wire': '🎯',
     'Trade': '🔄',
     'Outlook': '🔮',
     'Playoff': '🏆',
+    'Key Decisions': '🤔',
+    'Key Matchups': '📅',
+    'Strategy': '🎯',
+    'Summary': '📋',
+    'Bench': '💺',
 };
 
 function getSectionIcon(title) {
@@ -101,9 +155,26 @@ function getSectionIcon(title) {
     return '📋';
 }
 
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const minutes = Math.floor((Date.now() - timestamp) / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes === 1) return '1 min ago';
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours === 1) return '1 hour ago';
+    return `${hours} hours ago`;
+}
+
 const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
-    const { analysis, loading, error, remaining, analyze, cancel, clear } = useAnalyzeTeam();
     const [analysisType, setAnalysisType] = useState('full');
+
+    const {
+        analysis, loading, error, remaining,
+        cachedAt, isOnCooldown, cooldownMinutes,
+        analyze, cancel, clear
+    } = useAnalyzeTeam({ leagueId, userId, week, analysisType });
+
     const [expandedSections, setExpandedSections] = useState(new Set());
     const [showTypeMenu, setShowTypeMenu] = useState(false);
     const contentRef = useRef(null);
@@ -113,9 +184,8 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
     const hasResult = analysis.length > 0;
 
     const handleAnalyze = () => {
-        // Expand all sections when starting new analysis
         setExpandedSections(new Set());
-        analyze({ leagueId, userId, week, analysisType });
+        analyze();
     };
 
     const toggleSection = (idx) => {
@@ -144,11 +214,19 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                             AI
                         </Badge>
                     </div>
-                    {remaining !== null && (
-                        <span className="text-xs text-slate-500">
-                            {remaining} left today
-                        </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {cachedAt && !loading && (
+                            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatTimeAgo(cachedAt)}
+                            </span>
+                        )}
+                        {remaining !== null && (
+                            <span className="text-xs text-slate-500">
+                                {remaining} left today
+                            </span>
+                        )}
+                    </div>
                 </div>
             </CardHeader>
 
@@ -188,16 +266,21 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                         )}
                     </div>
 
-                    {/* Analyze / Cancel Button */}
+                    {/* Analyze / Cancel / Cooldown Button */}
                     {loading ? (
                         <Button onClick={cancel} variant="destructive" size="sm" className="shrink-0">
                             <X className="w-4 h-4 mr-1" />
                             Stop
                         </Button>
+                    ) : isOnCooldown ? (
+                        <Button disabled size="sm" className="shrink-0 bg-slate-700 text-slate-400 cursor-not-allowed">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {cooldownMinutes}m
+                        </Button>
                     ) : (
                         <Button onClick={handleAnalyze} size="sm" className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white">
                             <Sparkles className="w-4 h-4 mr-1" />
-                            Analyze
+                            {hasResult ? 'Re-analyze' : 'Analyze'}
                         </Button>
                     )}
                 </div>
@@ -232,7 +315,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                             const icon = getSectionIcon(section.title);
 
                             if (!section.title) {
-                                // Intro text before first heading
                                 return (
                                     <div key={idx} className="text-sm text-slate-300 leading-relaxed">
                                         {renderMarkdown(section.content)}
