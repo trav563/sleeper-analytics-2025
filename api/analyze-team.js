@@ -242,10 +242,9 @@ ${oppLines.join('\n')}`;
         const keyPlayers = (r.starters || []).filter(pid => pid && pid !== '0').map(pid => {
             const p = players[pid];
             if (!p) return null;
-            const proj = weekProjections?.[pid];
-            const projPts = proj ? (proj[pprField] ?? proj.pts_ppr ?? 0) : 0;
-            const projStr = projPts > 0 ? ` [${projPts.toFixed(0)}p]` : '';
-            return `${p.position}:${pName(p)}${projStr}`;
+            const val = marketValues[pid] || 0;
+            const age = p.age || '?';
+            return `${p.position}:${pName(p)} (${age}yo, val:${val})`;
         }).filter(Boolean).join(', ');
         return `${name} (${w}-${l}): ${keyPlayers}`;
     }).join('\n');
@@ -363,10 +362,13 @@ Use this EXACT format for each trade (2-3 trades). NEVER suggest acquiring playe
 - Why: [1-2 sentences explaining why both sides benefit, referencing age and dynasty value]
 
 ## Outlook
-Use this EXACT bullet format:
+${gp === 0 ? `This is PRESEASON — no games have been played yet. Use this format:
+- **Roster assessment:** [Overall roster strength and readiness for the season]
+- **Offseason priorities:** [1-2 moves to make before Week 1 — trades, waiver adds, or lineup decisions]
+- **Ceiling/Floor:** [Best and worst case scenarios for this roster]` : `Use this EXACT bullet format:
 - **Playoff picture:** [Current standing and what's needed]
 - **Key weeks:** [Identify 2-3 critical upcoming matchups]
-- **Strategy:** [1-2 sentences on compete now vs build for future]`,
+- **Strategy:** [1-2 sentences on compete now vs build for future]`}`,
 
         startsit: `You MUST use EXACTLY these sections and formats.
 
@@ -414,7 +416,26 @@ DYNASTY TRADE RULES:
 - **Buy low:** [Player(s) on OTHER teams to target and why]
 - **Deadline note:** [Relevance of Week ${settings.trade_deadline || 11} deadline]`,
 
-        playoff: `You MUST use EXACTLY this format.
+        playoff: gp === 0 ? `You MUST use EXACTLY this format. This is PRESEASON — no games have been played yet.
+
+## Season Preview
+| Metric | Value |
+|--------|-------|
+| League Size | ${numTeams} teams |
+| Playoff Cutoff | Top ${settings.playoff_teams || 6} |
+| Playoffs Start | Week ${settings.playoff_week_start || 15} |
+
+## Roster Readiness
+- **Strengths:** [Position groups that are ready for Week 1]
+- **Weaknesses:** [Position groups that need improvement before the season]
+- **Key question marks:** [Players whose roles or health are uncertain]
+
+## Offseason Action Plan
+- **Move 1:** [Specific trade or waiver action to take]
+- **Move 2:** [Another specific action]
+- **Ceiling:** [Best case scenario for this roster]` :
+
+        `You MUST use EXACTLY this format.
 
 ## Playoff Path
 | Metric | Value |
