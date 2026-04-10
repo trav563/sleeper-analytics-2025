@@ -63,7 +63,7 @@ const DashboardPage = () => {
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
 
     // Fetch dynasty market values (shared cache with TradeFinder via same queryKey)
-    const { data: marketValues } = useQuery({
+    const { data: marketValues, isLoading: marketValuesLoading } = useQuery({
         queryKey: ['fantasyCalc', league?.league_id],
         queryFn: () => fetchMarketValues(
             league?.roster_positions?.includes('SUPER_FLEX'),
