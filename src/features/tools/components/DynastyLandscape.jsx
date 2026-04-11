@@ -130,21 +130,24 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     // Custom Scatter Point (Avatar) with highlight for best/worst
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
-        let borderClass = 'border-2 border-white/20';
-        let shadowClass = '';
+        const size = payload.isBest || payload.isWorst ? 48 : 40;
+        const offset = size / 2;
+
+        let borderStyle = {};
         if (payload.isBest) {
-            borderClass = 'border-3 border-yellow-400';
-            shadowClass = 'shadow-[0_0_12px_rgba(250,204,21,0.5)]';
+            borderStyle = { border: '3px solid #facc15', boxShadow: '0 0 14px rgba(250, 204, 21, 0.6)' };
         } else if (payload.isWorst) {
-            borderClass = 'border-3 border-red-400';
-            shadowClass = 'shadow-[0_0_12px_rgba(248,113,113,0.5)]';
+            borderStyle = { border: '3px solid #f87171', boxShadow: '0 0 14px rgba(248, 113, 113, 0.6)' };
+        } else {
+            borderStyle = { border: '2px solid rgba(255,255,255,0.2)' };
         }
+
         return (
-            <foreignObject x={cx - 20} y={cy - 20} width={40} height={40}>
+            <foreignObject x={cx - offset} y={cy - offset} width={size} height={size}>
                 <img
                     src={payload.avatar}
                     alt={payload.name}
-                    className={`w-[40px] h-[40px] rounded-full ${borderClass} ${shadowClass} hover:scale-125 transition-transform cursor-pointer bg-slate-800`}
+                    style={{ width: size, height: size, borderRadius: '50%', ...borderStyle, cursor: 'pointer', background: '#1e293b' }}
                     title={payload.name}
                 />
             </foreignObject>
