@@ -392,28 +392,34 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                         if (Math.abs(theirP.tradeValue - myP.tradeValue) > (myP.tradeValue * 0.1)) return false;
                         if (myP.position === theirP.position) return false; // meaningful swap needed usually
 
+                        // Hard block: never trade away a need position to receive a surplus position
+                        const tradingFromNeed = focusTeam.needs.includes(myP.position);
+                        const receivingSurplus = focusTeam.surplus.some(s => s.position === theirP.position);
+                        if (tradingFromNeed && receivingSurplus) return false;
+
                         // Rules
                         if (focusTeam.status === 'Rebuilder' && theirP.age > 24) return false; // Deny Old
                         if (opponent.status === 'Rebuilder' && myP.age > 25) return false; // Don't insult them
-
-                        // Offseason Buy Low Check
-                        if (!isTradeWindowOpen && focusTeam.status === 'Contender') {
-                            // Buying injured/stashed players?
-                        }
 
                         return true;
                     });
 
                     if (match) {
+                        // Score based on how much the trade improves positional balance
+                        let priority = 30;
+                        if (focusTeam.needs.includes(match.position)) priority += 30; // filling a need
+                        if (focusTeam.surplus.some(s => s.position === myP.position)) priority += 15; // trading from surplus
+                        if (focusTeam.surplus.some(s => s.position === match.position)) priority -= 20; // receiving surplus
+
                         tradeProposals.push({
-                            type: 'Value Swap',
+                            type: focusTeam.needs.includes(match.position) ? 'Perfect Match' : 'Value Swap',
                             message: `Swap ${myP.position} depth for ${match.position} help`,
                             give: [myP],
                             receive: [match],
                             diff: match.tradeValue - myP.tradeValue,
-                            priority: 30
+                            priority
                         });
-                        score += 30;
+                        score += priority;
                     }
                 });
             }
