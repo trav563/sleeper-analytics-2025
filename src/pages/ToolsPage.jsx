@@ -1,4 +1,5 @@
 import { useOutletContext, useParams } from 'react-router-dom';
+import TradeSimulator from '../features/tools/components/TradeSimulator';
 import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
@@ -21,6 +22,14 @@ const ToolsPage = () => {
                 league={league}
                 rosters={rosters}
                 users={users}
+            />
+
+            <TradeSimulator
+                league={league}
+                rosters={rosters}
+                users={users}
+                players={players}
+                currentWeek={currentWeek}
             />
 
             <DynastyLandscape
