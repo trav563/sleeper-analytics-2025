@@ -43,12 +43,10 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         const teams = rosters.map(roster => {
             const owner = users.find(u => u.user_id === roster.owner_id);
 
-            // Find the matching roster from effective data for PPG calculation
             const ppgRoster = usingPrevSeason
                 ? effectiveRosters?.find(r => r.owner_id === roster.owner_id) || roster
                 : roster;
 
-            // Calculate games played from the effective roster's record
             let gamesPlayed;
             if (usingPrevSeason) {
                 const totalRecord = (ppgRoster.settings?.wins || 0) + (ppgRoster.settings?.losses || 0) + (ppgRoster.settings?.ties || 0);
@@ -61,7 +59,6 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             const maxPf = (ppgRoster.settings?.ppts || 0) + (ppgRoster.settings?.ppts_decimal || 0) / 100;
             const productionMetric = useMaxPf ? maxPf : ppg;
 
-            // 2. Calculate Average Age (X-Axis)
             const validPlayers = (roster.players || [])
                 .map(id => players[id])
                 .filter(p => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age);
@@ -93,54 +90,104 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         };
     }, [data]);
 
-    // Custom Scatter Point (Avatar) - Larger for mobile touch
+    // Calculate dynasty score for best/worst highlighting
+    const { bestId, worstId } = useMemo(() => {
+        if (data.length === 0) return { bestId: null, worstId: null };
+
+        const ages = data.map(d => d.age);
+        const prods = data.map(d => d.production);
+        const minAge = Math.min(...ages);
+        const maxAge = Math.max(...ages);
+        const minProd = Math.min(...prods);
+        const maxProd = Math.max(...prods);
+        const ageRange = maxAge - minAge || 1;
+        const prodRange = maxProd - minProd || 1;
+
+        let best = null, worst = null;
+        let bestScore = -Infinity, worstScore = Infinity;
+
+        data.forEach(team => {
+            const normProd = (team.production - minProd) / prodRange; // 0-1, higher is better
+            const normAge = (team.age - minAge) / ageRange; // 0-1, lower is better
+            const score = (normProd * 0.6) + ((1 - normAge) * 0.4);
+
+            if (score > bestScore) { bestScore = score; best = team.rosterId; }
+            if (score < worstScore) { worstScore = score; worst = team.rosterId; }
+        });
+
+        return { bestId: best, worstId: worst };
+    }, [data]);
+
+    // Enrich data with best/worst flags
+    const enrichedData = useMemo(() => {
+        return data.map(d => ({
+            ...d,
+            isBest: d.rosterId === bestId,
+            isWorst: d.rosterId === worstId,
+        }));
+    }, [data, bestId, worstId]);
+
+    // Custom Scatter Point (Avatar) with highlight for best/worst
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
+        let borderClass = 'border-2 border-white/20';
+        let shadowClass = '';
+        if (payload.isBest) {
+            borderClass = 'border-3 border-yellow-400';
+            shadowClass = 'shadow-[0_0_12px_rgba(250,204,21,0.5)]';
+        } else if (payload.isWorst) {
+            borderClass = 'border-3 border-red-400';
+            shadowClass = 'shadow-[0_0_12px_rgba(248,113,113,0.5)]';
+        }
         return (
             <foreignObject x={cx - 20} y={cy - 20} width={40} height={40}>
                 <img
                     src={payload.avatar}
                     alt={payload.name}
-                    className="w-[40px] h-[40px] rounded-full border-2 border-white/20 hover:scale-125 transition-transform cursor-pointer shadow-lg bg-slate-800"
+                    className={`w-[40px] h-[40px] rounded-full ${borderClass} ${shadowClass} hover:scale-125 transition-transform cursor-pointer bg-slate-800`}
                     title={payload.name}
                 />
             </foreignObject>
         );
     };
 
-    // Custom Tooltip
+    // Custom Tooltip with updated labels
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
-            const data = payload[0].payload;
+            const d = payload[0].payload;
 
-            // Classify based on new quadrants
-            let classification = "";
-            // Top-Left (Young & High Prod) -> Dynasty King
-            if (data.production >= averages.production && data.age <= averages.age) classification = "👑 Dynasty King";
-            // Top-Right (Old & High Prod) -> Contender
-            else if (data.production >= averages.production && data.age > averages.age) classification = "🏆 Contender";
-            // Bottom-Left (Young & Low Prod) -> Rebuilder
-            else if (data.production < averages.production && data.age <= averages.age) classification = "🛠️ Rebuilder";
-            // Bottom-Right (Old & Low Prod) -> Danger Zone
-            else classification = "⚠️ Danger Zone";
+            let classification = '';
+            if (d.production >= averages.production && d.age <= averages.age) classification = '🏆 Dynasty Elite';
+            else if (d.production >= averages.production && d.age > averages.age) classification = '⏳ Win-Now';
+            else if (d.production < averages.production && d.age <= averages.age) classification = '🛠️ Rebuilder';
+            else classification = '⚠️ Danger Zone';
+
+            let highlight = '';
+            if (d.isBest) highlight = '👑 Dynasty King';
+            else if (d.isWorst) highlight = '💀 Cellar Dweller';
 
             return (
                 <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl z-50">
-                    <p className="font-bold text-white mb-1">{data.name}</p>
+                    <p className="font-bold text-white mb-1">{d.name}</p>
                     <div className="space-y-1 text-xs text-slate-300">
                         <div className="flex justify-between gap-4">
                             <span>Avg Age:</span>
-                            <span className="font-mono text-white">{data.age} yrs</span>
+                            <span className="font-mono text-white">{d.age} yrs</span>
                         </div>
                         <div className="flex justify-between gap-4">
-                            <span>{data.productionLabel}:</span>
-                            <span className={`font-mono font-bold ${data.production >= averages.production ? 'text-green-400' : 'text-red-400'}`}>
-                                {data.production}
+                            <span>{d.productionLabel}:</span>
+                            <span className={`font-mono font-bold ${d.production >= averages.production ? 'text-green-400' : 'text-red-400'}`}>
+                                {d.production}
                             </span>
                         </div>
                         <div className="pt-2 mt-1 border-t border-slate-800 text-center font-bold text-white">
                             {classification}
                         </div>
+                        {highlight && (
+                            <div className={`text-center font-bold text-sm ${d.isBest ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {highlight}
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -148,13 +195,13 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return null;
     };
 
-    if (!data || data.length === 0) return null;
+    if (!enrichedData || enrichedData.length === 0) return null;
 
     // Axis Domains padding
-    const minAge = Math.floor(Math.min(...data.map(d => d.age)) - 0.5);
-    const maxAge = Math.ceil(Math.max(...data.map(d => d.age)) + 0.5);
-    const minProd = Math.floor(Math.min(...data.map(d => d.production)) * 0.95);
-    const maxProd = Math.ceil(Math.max(...data.map(d => d.production)) * 1.05);
+    const minAge = Math.floor(Math.min(...enrichedData.map(d => d.age)) - 0.5);
+    const maxAge = Math.ceil(Math.max(...enrichedData.map(d => d.age)) + 0.5);
+    const minProd = Math.floor(Math.min(...enrichedData.map(d => d.production)) * 0.95);
+    const maxProd = Math.ceil(Math.max(...enrichedData.map(d => d.production)) * 1.05);
 
     return (
         <Card className="bg-slate-800/50 border-slate-700">
@@ -174,20 +221,15 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 </div>
             </CardHeader>
             <CardContent className="p-0 sm:p-6 sm:pt-0">
-                {/* Fixed height container for consistent mobile view */}
                 <div className="h-[500px] w-full text-xs">
                     <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
 
-                            {/* Color Quadrants based on Averages */}
-                            {/* Top-Left: Young (minAge to avgAge) & Good (avgProd to maxProd) */}
+                            {/* Color Quadrants */}
                             <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill="#4ade80" fillOpacity={0.05} />
-                            {/* Top-Right: Old (avgAge to maxAge) & Good (avgProd to maxProd) */}
                             <ReferenceArea x1={averages.age} x2={maxAge} y1={averages.production} y2={maxProd} fill="#facc15" fillOpacity={0.05} />
-                            {/* Bottom-Left: Young (minAge to avgAge) & Bad (minProd to avgProd) */}
                             <ReferenceArea x1={minAge} x2={averages.age} y1={minProd} y2={averages.production} fill="#60a5fa" fillOpacity={0.05} />
-                            {/* Bottom-Right: Old (avgAge to maxAge) & Bad (minProd to avgProd) */}
                             <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill="#f87171" fillOpacity={0.05} />
 
                             <XAxis
@@ -214,24 +256,23 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
                             <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
 
-                            {/* Center Lines */}
                             <ReferenceLine x={averages.age} stroke="#94a3b8" strokeDasharray="3 3" />
                             <ReferenceLine y={averages.production} stroke="#94a3b8" strokeDasharray="3 3" />
 
-                            <Scatter name="Teams" data={data} shape={<CustomNode />} />
+                            <Scatter name="Teams" data={enrichedData} shape={<CustomNode />} />
                         </ScatterChart>
                     </ResponsiveContainer>
                 </div>
 
-                {/* Legend / Key */}
+                {/* Legend */}
                 <div className="grid grid-cols-2 gap-2 mt-4 px-4 pb-4 sm:px-0 sm:pb-0">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-green-400/20 border border-green-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Dynasty King</span>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Dynasty Elite</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-yellow-400/20 border border-yellow-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Contender</span>
+                        <span className="text-[10px] sm:text-xs text-slate-400">Win-Now</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-blue-400/20 border border-blue-400"></div>
@@ -240,6 +281,14 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-red-400/20 border border-red-400"></div>
                         <span className="text-[10px] sm:text-xs text-slate-400">Danger Zone</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-yellow-400/40 border-2 border-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.5)]"></div>
+                        <span className="text-[10px] sm:text-xs text-yellow-400 font-medium">Dynasty King</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400/40 border-2 border-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]"></div>
+                        <span className="text-[10px] sm:text-xs text-red-400 font-medium">Cellar Dweller</span>
                     </div>
                 </div>
             </CardContent>
