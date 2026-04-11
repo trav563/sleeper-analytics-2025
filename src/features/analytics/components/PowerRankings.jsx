@@ -202,7 +202,15 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
     }, [seasonMatchups, rosters, users, loading, currentWeek]);
 
     if (loading) return <div className="p-4 text-center text-gray-400">Loading Power Rankings...</div>;
-    if (!rankings || rankings.length === 0) return null;
+    if (!rankings || rankings.length === 0) return (
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-5 h-5 text-yellow-500" />
+                <h3 className="text-lg font-semibold text-white">Power Rankings</h3>
+            </div>
+            <p className="text-sm text-slate-400">Power Rankings will appear once the season starts and matchup data is available.</p>
+        </div>
+    );
 
     return (
         <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
