@@ -22,7 +22,7 @@ function writeCache(key, text) {
     try {
         localStorage.setItem(key, JSON.stringify({ text, timestamp: Date.now() }));
     } catch {
-        // localStorage full or unavailable — ignore
+        // localStorage full or unavailable
     }
 }
 
@@ -32,7 +32,7 @@ function getCooldownRemaining(cached) {
     return Math.max(0, COOLDOWN_MS - elapsed);
 }
 
-export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', marketValues } = {}) {
+export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' } = {}) {
     const [analysis, setAnalysis] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -41,9 +41,6 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
     const [cooldownRemaining, setCooldownRemaining] = useState(0);
     const abortRef = useRef(null);
     const timerRef = useRef(null);
-    // Use a ref for marketValues to avoid stale closure in useCallback
-    const marketValuesRef = useRef(marketValues);
-    marketValuesRef.current = marketValues;
 
     const cacheKey = leagueId && userId && week ? getCacheKey(leagueId, userId, week, analysisType) : null;
 
@@ -71,10 +68,10 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
         timerRef.current = setInterval(() => {
             if (!cacheKey) return;
             const cached = readCache(cacheKey);
-            const remaining = getCooldownRemaining(cached);
-            setCooldownRemaining(remaining);
-            if (remaining <= 0) clearInterval(timerRef.current);
-        }, 30000); // Update every 30 seconds
+            const rem = getCooldownRemaining(cached);
+            setCooldownRemaining(rem);
+            if (rem <= 0) clearInterval(timerRef.current);
+        }, 30000);
 
         return () => clearInterval(timerRef.current);
     }, [cooldownRemaining, cacheKey]);
@@ -82,23 +79,20 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
     const analyze = useCallback(async ({ force = false } = {}) => {
         if (!leagueId || !userId || !week) return;
 
-        // Check cooldown (skip if force refresh)
         if (!force && cacheKey) {
             const cached = readCache(cacheKey);
-            const remaining = getCooldownRemaining(cached);
-            if (remaining > 0) {
-                setCooldownRemaining(remaining);
-                setError(`Analysis cached. Re-analyze available in ${Math.ceil(remaining / 60000)} minutes.`);
+            const rem = getCooldownRemaining(cached);
+            if (rem > 0) {
+                setCooldownRemaining(rem);
+                setError(`Analysis cached. Re-analyze available in ${Math.ceil(rem / 60000)} minutes.`);
                 return;
             }
         }
 
-        // Clear old cache if forcing
         if (force && cacheKey) {
             try { localStorage.removeItem(cacheKey); } catch {}
         }
 
-        // Abort any in-progress request
         if (abortRef.current) abortRef.current.abort();
         const controller = new AbortController();
         abortRef.current = controller;
@@ -108,14 +102,10 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
         setAnalysis('');
 
         try {
-            // Read marketValues from ref (always current, no stale closure)
-            const mv = marketValuesRef.current || {};
-            console.log('[AI Analysis] Sending marketValues:', Object.keys(mv).length, 'players');
-
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType, clientMarketValues: mv }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType }),
                 signal: controller.signal,
             });
 
@@ -131,7 +121,6 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
             const remainingHeader = response.headers.get('X-Remaining');
             if (remainingHeader !== null) setRemaining(parseInt(remainingHeader, 10));
 
-            // Read SSE stream
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -161,7 +150,6 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full', 
                 }
             }
 
-            // Cache the completed result
             if (fullText && cacheKey) {
                 writeCache(cacheKey, fullText);
                 setCachedAt(Date.now());

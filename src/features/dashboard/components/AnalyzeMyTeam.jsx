@@ -37,8 +37,7 @@ function parseMarkdownSections(text) {
 }
 
 function renderMarkdownTable(lines) {
-    // Parse markdown table lines into header + rows
-    const rows = lines.filter(l => l.trim() && !l.match(/^\|[-\s|]+\|$/)); // Skip separator rows
+    const rows = lines.filter(l => l.trim() && !l.match(/^\|[-\s|]+\|$/));
     if (rows.length === 0) return null;
 
     const parseRow = (line) => line.split('|').filter((_, i, a) => i > 0 && i < a.length - 1).map(c => c.trim());
@@ -46,8 +45,8 @@ function renderMarkdownTable(lines) {
     const bodyRows = rows.slice(1).map(parseRow);
 
     return (
-        <div className="my-2">
-            <table className="w-full text-xs table-fixed">
+        <div className="my-2 overflow-x-auto">
+            <table className="w-full text-xs">
                 <thead>
                     <tr className="border-b border-slate-700">
                         {headerCells.map((cell, i) => (
@@ -79,7 +78,6 @@ function renderMarkdown(text) {
     while (i < lines.length) {
         const line = lines[i];
 
-        // Collect consecutive table lines
         if (line.trimStart().startsWith('|')) {
             const tableLines = [];
             while (i < lines.length && lines[i].trimStart().startsWith('|')) {
@@ -95,7 +93,6 @@ function renderMarkdown(text) {
         let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-        // Bullet points
         if (processed.match(/^[-*] /)) {
             const content = processed.replace(/^[-*] /, '');
             elements.push(
@@ -107,7 +104,6 @@ function renderMarkdown(text) {
             i++; continue;
         }
 
-        // Numbered list
         const numMatch = processed.match(/^(\d+)\. (.+)/);
         if (numMatch) {
             elements.push(
@@ -119,7 +115,6 @@ function renderMarkdown(text) {
             i++; continue;
         }
 
-        // H3
         if (processed.startsWith('### ')) {
             elements.push(<h4 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1">{processed.replace('### ', '')}</h4>);
             i++; continue;
@@ -137,14 +132,15 @@ const SECTION_ICONS = {
     'Start/Sit': '🏈',
     'Optimal Lineup': '🏈',
     'Waiver Wire': '🎯',
-    'Trade': '🔄',
     'Outlook': '🔮',
     'Playoff': '🏆',
+    'Season Preview': '🏆',
     'Key Decisions': '🤔',
     'Key Matchups': '📅',
     'Strategy': '🎯',
     'Summary': '📋',
-    'Bench': '💺',
+    'Roster Readiness': '📋',
+    'Offseason': '📋',
 };
 
 function getSectionIcon(title) {
@@ -165,14 +161,14 @@ function formatTimeAgo(timestamp) {
     return `${hours} hours ago`;
 }
 
-const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
+const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
     const [analysisType, setAnalysisType] = useState('full');
 
     const {
         analysis, loading, error, remaining,
         cachedAt, isOnCooldown, cooldownMinutes,
         analyze, cancel, clear
-    } = useAnalyzeTeam({ leagueId, userId, week, analysisType, marketValues });
+    } = useAnalyzeTeam({ leagueId, userId, week, analysisType });
 
     const [expandedSections, setExpandedSections] = useState(new Set());
     const [showTypeMenu, setShowTypeMenu] = useState(false);
@@ -181,7 +177,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
     const selectedType = ANALYSIS_TYPES.find(t => t.value === analysisType);
     const sections = parseMarkdownSections(analysis);
     const hasResult = analysis.length > 0;
-    // Don't block on marketValues — analyze works with or without dynasty values
 
     const handleAnalyze = (force = false) => {
         setExpandedSections(new Set());
@@ -215,11 +210,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                        {marketValues && Object.keys(marketValues).length > 0 && (
-                            <span className="text-[10px] text-emerald-500/60">
-                                Values loaded
-                            </span>
-                        )}
                         {cachedAt && !loading && (
                             <span className="text-[10px] text-slate-500 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
@@ -238,7 +228,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
             <CardContent className="pt-4">
                 {/* Controls */}
                 <div className="flex items-center gap-2 mb-4">
-                    {/* Analysis Type Selector */}
                     <div className="relative flex-1">
                         <button
                             onClick={() => setShowTypeMenu(!showTypeMenu)}
@@ -271,7 +260,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                         )}
                     </div>
 
-                    {/* Analyze / Cancel / Cooldown Button */}
                     {loading ? (
                         <Button onClick={cancel} variant="destructive" size="sm" className="shrink-0">
                             <X className="w-4 h-4 mr-1" />
@@ -290,7 +278,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                     )}
                 </div>
 
-                {/* Error State */}
                 {error && (
                     <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-sm text-rose-400 mb-4">
                         <AlertCircle className="w-4 h-4 shrink-0" />
@@ -301,7 +288,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                     </div>
                 )}
 
-                {/* Loading State */}
                 {loading && !hasResult && (
                     <div className="flex flex-col items-center justify-center py-8 gap-3">
                         <div className="relative">
@@ -312,7 +298,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                     </div>
                 )}
 
-                {/* Results */}
                 {hasResult && (
                     <div ref={contentRef} className="space-y-2">
                         {sections.map((section, idx) => {
@@ -328,7 +313,7 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                             }
 
                             return (
-                                <div key={idx} className="bg-slate-900/40 rounded-lg border border-slate-700/50 overflow-hidden">
+                                <div key={idx} className="bg-slate-900/40 rounded-lg border border-slate-700/50">
                                     <button
                                         onClick={() => toggleSection(idx)}
                                         className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-700/30 transition-colors"
@@ -354,7 +339,6 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                             );
                         })}
 
-                        {/* Streaming indicator */}
                         {loading && (
                             <div className="flex items-center gap-2 px-2 py-1">
                                 <Loader2 className="w-3 h-3 text-purple-400 animate-spin" />
@@ -364,12 +348,11 @@ const AnalyzeMyTeam = ({ leagueId, userId, week, marketValues }) => {
                     </div>
                 )}
 
-                {/* Empty State */}
                 {!loading && !hasResult && !error && (
                     <div className="text-center py-6">
                         <Brain className="w-10 h-10 text-slate-600 mx-auto mb-2" />
                         <p className="text-sm text-slate-500">
-                            Get AI-powered insights on your roster, lineup decisions, and trade opportunities.
+                            Get AI-powered insights on your roster, lineup decisions, and waiver targets.
                         </p>
                     </div>
                 )}
