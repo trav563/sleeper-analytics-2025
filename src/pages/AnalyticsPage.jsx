@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
+import PowerRankings from '../features/analytics/components/PowerRankings';
 import TrueStandings from '../features/analytics/components/TrueStandings';
 import TeamRadar from '../features/analytics/components/TeamRadar';
 import RivalryMatrix from '../features/analytics/components/RivalryMatrix';
@@ -109,6 +110,13 @@ const AnalyticsPage = () => {
                     </div>
                 </div>
             </div>
+
+            <PowerRankings
+                leagueId={leagueId}
+                currentWeek={currentWeek}
+                rosters={rosters}
+                users={users}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <TrueStandings
