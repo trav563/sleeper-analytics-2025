@@ -1,23 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getTeamsOnBye } from '../../../services/nflSchedule';
+import { getTeamsOnBye, getGameWeather } from '../../../services/nflSchedule';
 import { isDSTStarterId, classifyInjury, displayTeamName, avatarUrl } from '../../../utils/nflData';
 
 export function useLineupStatus(week, users, rosters, matchups, players) {
     const [byeTeamsThisWeek, setByeTeamsThisWeek] = useState(new Set());
+    const [weatherData, setWeatherData] = useState({});
 
-    // Fetch dynamic bye weeks
+    // Fetch dynamic bye weeks + weather
     useEffect(() => {
         let mounted = true;
 
-        const fetchByes = async () => {
+        const fetchData = async () => {
             if (!week) return;
-            const teams = await getTeamsOnBye(week);
+            const [teams, weather] = await Promise.all([
+                getTeamsOnBye(week),
+                getGameWeather(week).catch(() => ({})),
+            ]);
             if (mounted) {
                 setByeTeamsThisWeek(new Set(teams));
+                setWeatherData(weather || {});
             }
         };
 
-        fetchByes();
+        fetchData();
 
         return () => {
             mounted = false;
@@ -96,6 +101,16 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
                     } else if (bucket === "POTENTIAL" && status !== "INCOMPLETE") {
                         status = "POTENTIAL";
                         flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: p.injury_status || "Questionable" });
+                    }
+
+                    // Weather check (POTENTIAL only, never INCOMPLETE)
+                    const teamWeather = weatherData[team];
+                    if (teamWeather?.isAdverse && !teamWeather?.isIndoor && status !== "INCOMPLETE") {
+                        if (status !== "POTENTIAL") status = "POTENTIAL";
+                        const weatherNote = teamWeather.displayValue || 'Adverse weather';
+                        if (!flagged.some(f => f.reason?.startsWith('Weather'))) {
+                            flagged.push({ pid: `weather-${team}`, name: `${team} Game`, reason: `Weather: ${weatherNote}` });
+                        }
                     }
                 }
             }

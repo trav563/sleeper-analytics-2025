@@ -1,4 +1,4 @@
-import { ALL_NFL_TEAMS } from '../utils/nflData';
+import { ALL_NFL_TEAMS, INDOOR_STADIUMS } from '../utils/nflData';
 
 /**
  * Fetches the NFL schedule for a specific week from ESPN and determines which teams are on bye.
@@ -99,5 +99,62 @@ export const getGameStatuses = async (weekNumber) => {
     } catch (error) {
         console.error("Error fetching game statuses:", error);
         return {}; // Return empty object on error
+    }
+};
+
+/**
+ * Fetches game weather conditions for outdoor stadiums.
+ * @param {number} weekNumber - The week number to fetch.
+ * @returns {Promise<Object>} - Map of team abbreviation to weather info: { temp, condition, displayValue, isIndoor, isAdverse }
+ */
+export const getGameWeather = async (weekNumber) => {
+    try {
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
+        if (!response.ok) return {};
+
+        const data = await response.json();
+        const events = data.events || [];
+        const weatherMap = {};
+
+        events.forEach(event => {
+            const weather = event.weather;
+            const competition = event.competitions?.[0];
+            if (!competition) return;
+
+            competition.competitors.forEach(competitor => {
+                let abbr = competitor.team.abbreviation;
+                if (abbr === 'WSH') abbr = 'WAS';
+                if (!ALL_NFL_TEAMS.includes(abbr)) return;
+
+                const isIndoor = INDOOR_STADIUMS.has(abbr);
+
+                if (isIndoor || !weather) {
+                    weatherMap[abbr] = { isIndoor, isAdverse: false, displayValue: isIndoor ? 'Dome' : null };
+                    return;
+                }
+
+                const temp = weather.temperature ? parseInt(weather.temperature) : null;
+                const condition = weather.displayValue || '';
+                const condLower = condition.toLowerCase();
+
+                // Flag adverse conditions: cold (<35°F), wind mention, rain, snow
+                const isAdverse = (temp !== null && temp < 35) ||
+                    condLower.includes('rain') || condLower.includes('snow') ||
+                    condLower.includes('storm') || condLower.includes('wind');
+
+                weatherMap[abbr] = {
+                    temp,
+                    condition,
+                    displayValue: weather.displayValue || null,
+                    isIndoor: false,
+                    isAdverse,
+                };
+            });
+        });
+
+        return weatherMap;
+    } catch (error) {
+        console.error("Error fetching game weather:", error);
+        return {};
     }
 };

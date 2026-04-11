@@ -21,6 +21,11 @@ export const BYE_MAP_2025 = {
     14: ["SF", "NYG", "CAR", "NE"],
 };
 
+// Indoor stadiums — skip weather alerts for these teams (domes/retractable roofs)
+export const INDOOR_STADIUMS = new Set([
+    'ARI', 'ATL', 'DAL', 'DET', 'HOU', 'IND', 'LAC', 'LAR', 'LV', 'MIN', 'NO'
+]);
+
 // Position display order for lineup
 export const POSITION_ORDER = {
     QB: 1,

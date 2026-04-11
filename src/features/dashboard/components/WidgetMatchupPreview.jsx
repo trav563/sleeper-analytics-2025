@@ -1,19 +1,24 @@
 import { useMemo, useState, useEffect } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
-import { getGameStatuses } from '../../../services/nflSchedule';
+import { getGameStatuses, getGameWeather } from '../../../services/nflSchedule';
 import { calculateProjectedScore } from '../../../utils/scoreProjections';
-import { Info } from 'lucide-react';
+import { Info, CloudRain } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle } from '../../../components/ui/Card';
 
 const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, selectedUserId, players, seasonMatchups }) => {
     const [gameStatuses, setGameStatuses] = useState({});
+    const [weather, setWeather] = useState({});
 
     useEffect(() => {
-        const fetchStatuses = async () => {
-            const statuses = await getGameStatuses(week);
+        const fetchData = async () => {
+            const [statuses, weatherData] = await Promise.all([
+                getGameStatuses(week),
+                getGameWeather(week).catch(() => ({})),
+            ]);
             setGameStatuses(statuses);
+            setWeather(weatherData || {});
         };
-        fetchStatuses();
+        fetchData();
     }, [week]);
 
     const matchupData = useMemo(() => {
@@ -80,6 +85,21 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
                     <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">
                         Week {week} Matchup
                     </CardTitle>
+                    {/* Weather badge for user's team */}
+                    {(() => {
+                        const userRoster = rosters?.find(r => r.owner_id === selectedUserId);
+                        const userStarters = userRoster?.starters || [];
+                        const starterTeams = userStarters.map(pid => players?.[pid]?.team).filter(Boolean);
+                        const adverseWeather = starterTeams.find(t => weather[t]?.isAdverse && !weather[t]?.isIndoor);
+                        if (!adverseWeather) return null;
+                        const w = weather[adverseWeather];
+                        return (
+                            <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                                <CloudRain className="w-3 h-3" />
+                                {w.displayValue || 'Adverse weather'}
+                            </span>
+                        );
+                    })()}
                 </div>
             </CardHeader>
             <CardContent className="pt-6 text-center">
