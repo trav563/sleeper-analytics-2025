@@ -5,7 +5,7 @@ import { Trophy, AlertTriangle, TrendingUp, TrendingDown, Share2, Download, Copy
 import { Button } from '../../../components/ui/Button';
 import { useWeeklyRecap } from '../hooks/useWeeklyRecap';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
-import { WEEKLY_COPY, getRandomCopy, fillTemplate } from '../data/roastCopy';
+import { WEEKLY_COPY, getSeededCopy, fillTemplate } from '../data/roastCopy';
 import { toPng } from 'html-to-image';
 import QRCode from 'react-qr-code';
 import SeasonSuperlativesView from './SeasonSuperlativesView';
@@ -44,17 +44,18 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
         load();
     }, [league, selectedWeek]);
 
-    const stats = useWeeklyRecap(league, matchups, rosters, users, players, selectedWeek);
+    const stats = useWeeklyRecap(league, matchups, rosters, users, players, selectedWeek, seasonMatchups);
 
-    // Lock in random copy on stats change so it doesn't shuffle on re-renders
+    // Deterministic copy — same league + week always shows the same roast for all users
     const roastCopy = useMemo(() => {
-        if (!stats) return {};
+        if (!stats || !league?.league_id || !selectedWeek) return {};
+        const seed = `${league.league_id}-${selectedWeek}`;
         const picks = {};
         Object.keys(WEEKLY_COPY).forEach(key => {
-            picks[key] = getRandomCopy(WEEKLY_COPY, key);
+            picks[key] = getSeededCopy(WEEKLY_COPY, key, seed);
         });
         return picks;
-    }, [stats]);
+    }, [stats, league?.league_id, selectedWeek]);
 
     // Build available weeks for selector
     const availableWeeks = useMemo(() => {
@@ -151,6 +152,8 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
             case 'closeCall': return { ...s };
             case 'ghost': return { ...s, ghostNames: s.players.map(p => p.last_name).join(', ') };
             case 'boomGame': return { ...s, playerName: `${s.player.first_name} ${s.player.last_name}`, points: s.points };
+            case 'overachiever': return { ...s };
+            case 'underachiever': return { ...s };
             default: return {};
         }
     };
@@ -450,6 +453,44 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
                                             {fillTemplate(roastCopy.cardioKing?.text || '', getCardData('cardioKing'))}
                                         </p>
                                         <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.cardioKing?.sub || '', getCardData('cardioKing'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 12. The Overachiever */}
+                            {stats.overachiever && (
+                                <Card className="border-emerald-900/50 bg-emerald-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                                            <TrendingUp className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Overachiever</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.overachiever.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.overachiever?.text || '', getCardData('overachiever'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.overachiever?.sub || '', getCardData('overachiever'))}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 13. The Underachiever */}
+                            {stats.underachiever && (
+                                <Card className="border-rose-900/50 bg-rose-950/20 backdrop-blur-sm">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2 text-rose-400 mb-2">
+                                            <TrendingDown className="w-5 h-5" />
+                                            <span className="font-bold uppercase tracking-wider text-xs">The Underachiever</span>
+                                        </div>
+                                        <CardTitle className="text-xl md:text-2xl">{stats.underachiever.manager}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-300 text-sm md:text-base">
+                                            {fillTemplate(roastCopy.underachiever?.text || '', getCardData('underachiever'))}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{fillTemplate(roastCopy.underachiever?.sub || '', getCardData('underachiever'))}</p>
                                     </CardContent>
                                 </Card>
                             )}

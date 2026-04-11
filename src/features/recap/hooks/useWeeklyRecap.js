@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
 
-export function useWeeklyRecap(league, matchups, rosters, users, players, currentWeek) {
+export function useWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
     const recapWeek = currentWeek > 1 ? currentWeek - 1 : 1; // Default to week 1 if current is 1, though usually we want prev week
     // Ideally if currentWeek is 1 and season hasn't started, we show nothing. 
     // If season is over, we show last week.
@@ -393,9 +393,59 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             });
         });
 
-        return { robbery, topRookie, worstManager, bagCarrier, coinFlipFail, cardioKing, tankCommander, luckyCharm, closeCall, ghost, boomGame };
+        // 12. "The Overachiever" (Biggest positive deviation from season average)
+        // 13. "The Underachiever" (Biggest negative deviation from season average)
+        let overachiever = null;
+        let underachiever = null;
 
-    }, [league, matchups, rosters, users, players]);
+        if (seasonMatchups && Object.keys(seasonMatchups).length > 1 && currentWeek > 1) {
+            // Calculate each team's season PPG from prior weeks (excluding current)
+            const teamSeasonPPG = {};
+            Object.entries(seasonMatchups).forEach(([w, weekData]) => {
+                if (Number(w) >= currentWeek || !weekData) return; // Only prior completed weeks
+                weekData.forEach(m => {
+                    if (!teamSeasonPPG[m.roster_id]) teamSeasonPPG[m.roster_id] = { total: 0, games: 0 };
+                    if (m.points > 0) {
+                        teamSeasonPPG[m.roster_id].total += m.points;
+                        teamSeasonPPG[m.roster_id].games += 1;
+                    }
+                });
+            });
+
+            let biggestOver = -Infinity;
+            let biggestUnder = Infinity;
+
+            matchups.forEach(m => {
+                const season = teamSeasonPPG[m.roster_id];
+                if (!season || season.games < 1) return;
+                const avgPPG = season.total / season.games;
+                const diff = m.points - avgPPG;
+                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+
+                if (diff > biggestOver) {
+                    biggestOver = diff;
+                    overachiever = {
+                        manager: displayTeamName(user),
+                        score: m.points.toFixed(1),
+                        avgPPG: avgPPG.toFixed(1),
+                        diff: diff.toFixed(1),
+                    };
+                }
+                if (diff < biggestUnder) {
+                    biggestUnder = diff;
+                    underachiever = {
+                        manager: displayTeamName(user),
+                        score: m.points.toFixed(1),
+                        avgPPG: avgPPG.toFixed(1),
+                        diff: Math.abs(diff).toFixed(1),
+                    };
+                }
+            });
+        }
+
+        return { robbery, topRookie, worstManager, bagCarrier, coinFlipFail, cardioKing, tankCommander, luckyCharm, closeCall, ghost, boomGame, overachiever, underachiever };
+
+    }, [league, matchups, rosters, users, players, seasonMatchups, currentWeek]);
 
     return analysis;
 }
