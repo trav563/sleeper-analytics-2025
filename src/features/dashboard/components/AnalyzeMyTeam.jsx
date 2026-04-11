@@ -9,7 +9,6 @@ const ANALYSIS_TYPES = [
     { value: 'full', label: 'Full Analysis', description: 'Complete roster breakdown' },
     { value: 'startsit', label: 'Start/Sit', description: 'Lineup decisions' },
     { value: 'waivers', label: 'Waiver Targets', description: 'Free agent picks' },
-    { value: 'trades', label: 'Trade Ideas', description: 'Buy low / sell high' },
     { value: 'playoff', label: 'Playoff Path', description: 'Season outlook' },
 ];
 
