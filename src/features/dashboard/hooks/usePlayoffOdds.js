@@ -65,6 +65,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         currentTies: r.settings.ties,
                         currentFpts: fpts,
                         ppg: ppg,
+                        maxPF: r.settings.ppts + (r.settings.ppts_decimal || 0) / 100,
                         players: r.players || []
                     };
                 });
@@ -80,9 +81,34 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
 
                 // --- OFFSEASON PROJECTION ---
                 if (isOffseasonState) {
-                    // Need market values to run projection
-                    if (!marketValues || Object.keys(marketValues).length === 0) {
-                        // Graceful fallback: equal odds for all teams
+                    // Normalize helper: scale values 0-1 across all teams
+                    const normalize = (values) => {
+                        const min = Math.min(...values);
+                        const max = Math.max(...values);
+                        if (max === min) return values.map(() => 0);
+                        return values.map(v => (v - min) / (max - min));
+                    };
+
+                    // Gather raw signals
+                    const ppgValues = teams.map(t => t.ppg);
+                    const maxPFValues = teams.map(t => t.maxPF);
+                    const dynastyValues = teams.map(t =>
+                        t.players.reduce((sum, pid) => sum + (marketValues?.[pid] || 0), 0)
+                    );
+
+                    // Normalize each signal
+                    const normPPG = normalize(ppgValues);
+                    const normMaxPF = normalize(maxPFValues);
+                    const normDynasty = normalize(dynastyValues);
+
+                    // Check which signals have meaningful data
+                    const hasPrevSeason = ppgValues.some(v => v > 0) || maxPFValues.some(v => v > 0);
+                    const hasDynastyData = dynastyValues.some(v => v > 0);
+
+                    // Compute blended team strength
+                    const teamStrengths = {};
+                    if (!hasPrevSeason && !hasDynastyData) {
+                        // Brand new league with no data — equal odds
                         const equalPercent = Number(((playoffSpots / teams.length) * 100).toFixed(1));
                         const fallbackOdds = {};
                         teams.forEach(t => {
@@ -94,12 +120,17 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         return;
                     }
 
-                    // Compute team strength from dynasty values
-                    const teamStrengths = {};
-                    teams.forEach(t => {
-                        teamStrengths[t.rosterId] = t.players.reduce((sum, pid) => {
-                            return sum + (marketValues[pid] || 0);
-                        }, 0);
+                    teams.forEach((t, i) => {
+                        if (hasPrevSeason && hasDynastyData) {
+                            // All signals available: 40% PPG, 30% MaxPF, 30% Dynasty
+                            teamStrengths[t.rosterId] = 0.4 * normPPG[i] + 0.3 * normMaxPF[i] + 0.3 * normDynasty[i];
+                        } else if (hasPrevSeason) {
+                            // No dynasty data: 60% PPG, 40% MaxPF
+                            teamStrengths[t.rosterId] = 0.6 * normPPG[i] + 0.4 * normMaxPF[i];
+                        } else {
+                            // Only dynasty data available
+                            teamStrengths[t.rosterId] = normDynasty[i];
+                        }
                     });
 
                     // Generate synthetic round-robin schedule
