@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trophy, TrendingUp, BarChart2, HelpCircle } from 'lucide-react';
 import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
+import { fetchLeagueRosters } from '../../../utils/sleeper';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 
 const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups, state }) => {
@@ -14,10 +15,22 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
             0.5
         ),
         staleTime: 60 * 60 * 1000,
+        enabled: !!league,
     });
 
+    // Fetch previous season rosters for offseason projections
+    const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
+    useEffect(() => {
+        if (!league?.previous_league_id) return;
+        let cancelled = false;
+        fetchLeagueRosters(league.previous_league_id)
+            .then(data => { if (!cancelled && data) setPrevSeasonRosters(data); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [league?.previous_league_id]);
+
     const seasonType = state?.season_type || 'regular';
-    const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType);
+    const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters);
 
     const stats = useMemo(() => {
         if (!selectedUserId || !Array.isArray(rosters)) return null;
@@ -123,7 +136,7 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 bg-popover text-xs text-left text-popover-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none z-20 border border-border">
                     <p className="font-semibold mb-1">{isProjection ? 'Preseason Projection' : 'Monte Carlo Simulation'}</p>
                     <p>{isProjection
-                        ? 'Projects playoff odds based on current roster dynasty values. Updates as you make trades, pickups, and draft picks.'
+                        ? 'Simulates 10,000 seasons using previous season performance and current roster dynasty values. Updates as you make trades, pickups, and draft picks.'
                         : 'Simulates the remaining schedule 10,000 times based on each team\'s Average Points Per Game.'
                     }</p>
                 </div>

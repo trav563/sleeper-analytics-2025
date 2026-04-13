@@ -7,13 +7,12 @@ import { fetchLeagueMatchups } from '../../../utils/sleeper';
  */
 function generateRoundRobin(rosterIds, totalWeeks) {
     const ids = [...rosterIds];
-    if (ids.length % 2 !== 0) ids.push(null); // bye slot for odd teams
+    if (ids.length % 2 !== 0) ids.push(null);
     const n = ids.length;
     const rounds = [];
 
     for (let week = 0; week < totalWeeks; week++) {
         const r = week % (n - 1);
-        // Rotate ids[1..n-1] by r positions, keep ids[0] fixed
         const rest = ids.slice(1);
         const rotated = [...rest.slice(r), ...rest.slice(0, r)];
         const thisRound = [ids[0], ...rotated];
@@ -39,7 +38,18 @@ function offseasonWinProbability(strengthA, strengthB) {
     return adjA / (adjA + adjB);
 }
 
-export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType) {
+/**
+ * Normalize an array of values to 0-1 scale.
+ * Returns all zeros if values are identical (no differentiation).
+ */
+function normalize(values) {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (max === min) return values.map(() => 0);
+    return values.map(v => (v - min) / (max - min));
+}
+
+export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters) {
     const [odds, setOdds] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isProjection, setIsProjection] = useState(false);
@@ -53,7 +63,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                 const playoffStartWeek = league.settings.playoff_week_start;
                 const playoffSpots = league.settings.playoff_teams;
 
-                // 1. Prepare Team Data (PPG, Current Record)
+                // 1. Prepare Team Data
                 const teams = rosters.map(r => {
                     const gamesPlayed = r.settings.wins + r.settings.losses + r.settings.ties;
                     const fpts = r.settings.fpts + (r.settings.fpts_decimal || 0) / 100;
@@ -61,11 +71,11 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
 
                     return {
                         rosterId: r.roster_id,
+                        ownerId: r.owner_id,
                         currentWins: r.settings.wins,
                         currentTies: r.settings.ties,
                         currentFpts: fpts,
                         ppg: ppg,
-                        maxPF: r.settings.ppts + (r.settings.ppts_decimal || 0) / 100,
                         players: r.players || []
                     };
                 });
@@ -81,54 +91,55 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
 
                 // --- OFFSEASON PROJECTION ---
                 if (isOffseasonState) {
-                    // Normalize helper: scale values 0-1 across all teams
-                    const normalize = (values) => {
-                        const min = Math.min(...values);
-                        const max = Math.max(...values);
-                        if (max === min) return values.map(() => 0);
-                        return values.map(v => (v - min) / (max - min));
-                    };
+                    // Build previous season stats by owner_id
+                    const prevStatsByOwner = {};
+                    if (prevSeasonRosters && prevSeasonRosters.length > 0) {
+                        prevSeasonRosters.forEach(r => {
+                            const s = r.settings;
+                            const gp = (s.wins || 0) + (s.losses || 0) + (s.ties || 0);
+                            const fpts = (s.fpts || 0) + ((s.fpts_decimal || 0) / 100);
+                            const ppts = (s.ppts || 0) + ((s.ppts_decimal || 0) / 100);
+                            prevStatsByOwner[r.owner_id] = {
+                                ppg: gp > 0 ? fpts / gp : 0,
+                                ppts: ppts
+                            };
+                        });
+                    }
 
-                    // Gather raw signals
-                    const ppgValues = teams.map(t => t.ppg);
-                    const maxPFValues = teams.map(t => t.maxPF);
+                    // Gather raw signals for each team
+                    const ppgValues = teams.map(t => prevStatsByOwner[t.ownerId]?.ppg || 0);
+                    const maxPFValues = teams.map(t => prevStatsByOwner[t.ownerId]?.ppts || 0);
                     const dynastyValues = teams.map(t =>
                         t.players.reduce((sum, pid) => sum + (marketValues?.[pid] || 0), 0)
                     );
+
+                    // Check which signals have data
+                    const hasPrevSeason = ppgValues.some(v => v > 0);
+                    const hasDynastyData = dynastyValues.some(v => v > 0);
+
+                    // Need at least one signal to produce meaningful odds
+                    if (!hasPrevSeason && !hasDynastyData) {
+                        // No data at all — keep loading state, wait for data to arrive
+                        // (marketValues may still be loading from useQuery)
+                        return;
+                    }
 
                     // Normalize each signal
                     const normPPG = normalize(ppgValues);
                     const normMaxPF = normalize(maxPFValues);
                     const normDynasty = normalize(dynastyValues);
 
-                    // Check which signals have meaningful data
-                    const hasPrevSeason = ppgValues.some(v => v > 0) || maxPFValues.some(v => v > 0);
-                    const hasDynastyData = dynastyValues.some(v => v > 0);
-
                     // Compute blended team strength
                     const teamStrengths = {};
-                    if (!hasPrevSeason && !hasDynastyData) {
-                        // Brand new league with no data — equal odds
-                        const equalPercent = Number(((playoffSpots / teams.length) * 100).toFixed(1));
-                        const fallbackOdds = {};
-                        teams.forEach(t => {
-                            fallbackOdds[t.rosterId] = { percent: equalPercent, status: 'In the Mix' };
-                        });
-                        setOdds(fallbackOdds);
-                        setIsProjection(true);
-                        setLoading(false);
-                        return;
-                    }
-
                     teams.forEach((t, i) => {
                         if (hasPrevSeason && hasDynastyData) {
-                            // All signals available: 40% PPG, 30% MaxPF, 30% Dynasty
+                            // All signals: 40% prev PPG, 30% prev MaxPF, 30% dynasty value
                             teamStrengths[t.rosterId] = 0.4 * normPPG[i] + 0.3 * normMaxPF[i] + 0.3 * normDynasty[i];
                         } else if (hasPrevSeason) {
-                            // No dynasty data: 60% PPG, 40% MaxPF
+                            // No dynasty data yet: 60% prev PPG, 40% prev MaxPF
                             teamStrengths[t.rosterId] = 0.6 * normPPG[i] + 0.4 * normMaxPF[i];
                         } else {
-                            // Only dynasty data available
+                            // Only dynasty data (no previous league history)
                             teamStrengths[t.rosterId] = normDynasty[i];
                         }
                     });
@@ -161,13 +172,11 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                                     simState[r2].wins += 1;
                                 }
 
-                                // Randomized points proxy for tiebreaking
                                 simState[r1].fpts += s1 * (0.8 + Math.random() * 0.4);
                                 simState[r2].fpts += s2 * (0.8 + Math.random() * 0.4);
                             });
                         });
 
-                        // Rank teams
                         const sorted = Object.values(simState).sort((a, b) => {
                             if (a.wins !== b.wins) return b.wins - a.wins;
                             return b.fpts - a.fpts;
@@ -180,7 +189,6 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         }
                     }
 
-                    // Calculate percentages with offseason labels
                     const finalOdds = {};
                     teams.forEach(t => {
                         const percent = Number(((results[t.rosterId] / SIMULATIONS) * 100).toFixed(1));
@@ -224,23 +232,20 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                 // --- IN-SEASON MONTE CARLO (unchanged) ---
                 setIsProjection(false);
 
-                // 4. Fetch Schedule
                 const schedulePromises = weeksToSimulate.map(w => fetchLeagueMatchups(league.league_id, w));
                 const schedule = await Promise.all(schedulePromises);
 
-                // 5. Pre-process schedule
                 const processedSchedule = schedule.map(weekMatchups => {
                     const matchupsById = {};
                     weekMatchups.forEach(m => {
                         if (!matchupsById[m.matchup_id]) matchupsById[m.matchup_id] = [];
                         matchupsById[m.matchup_id].push(m.roster_id);
                     });
-                    return Object.values(matchupsById); // Array of [rosterId1, rosterId2]
+                    return Object.values(matchupsById);
                 });
 
-                // 6. Run Monte Carlo (10,000 runs)
                 const SIMULATIONS = 10000;
-                const results = {}; // rosterId -> timesMadePlayoffs
+                const results = {};
                 teams.forEach(t => results[t.rosterId] = 0);
 
                 for (let i = 0; i < SIMULATIONS; i++) {
@@ -253,10 +258,9 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         };
                     });
 
-                    // Simulate Games
                     processedSchedule.forEach(weekGames => {
                         weekGames.forEach(pair => {
-                            if (pair.length < 2) return; // Bye or empty
+                            if (pair.length < 2) return;
                             const r1 = pair[0];
                             const r2 = pair[1];
 
@@ -265,8 +269,6 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
 
                             if (!team1 || !team2) return;
 
-                            // Weighted Probability
-                            // P(A wins) = PPG_A / (PPG_A + PPG_B)
                             const prob1 = team1.ppg / (team1.ppg + team2.ppg);
 
                             if (Math.random() < prob1) {
@@ -275,19 +277,16 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                                 simState[r2].wins += 1;
                             }
 
-                            // Add PPG to PF
                             simState[r1].fpts += team1.ppg;
                             simState[r2].fpts += team2.ppg;
                         });
                     });
 
-                    // Rank Teams
                     const sorted = Object.values(simState).sort((a, b) => {
                         if (a.wins !== b.wins) return b.wins - a.wins;
                         return b.fpts - a.fpts;
                     });
 
-                    // Top X make playoffs
                     for (let k = 0; k < playoffSpots; k++) {
                         if (sorted[k]) {
                             results[sorted[k].rosterId]++;
@@ -295,7 +294,6 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     }
                 }
 
-                // 7. Calculate Percentages
                 const finalOdds = {};
                 teams.forEach(t => {
                     const made = results[t.rosterId];
@@ -320,7 +318,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
         };
 
         runSimulation();
-    }, [league, rosters, currentWeek, marketValues, seasonType]);
+    }, [league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters]);
 
     return { odds, loading, isProjection };
 }
