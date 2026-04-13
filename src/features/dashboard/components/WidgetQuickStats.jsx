@@ -1,10 +1,22 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Trophy, TrendingUp, BarChart2, HelpCircle } from 'lucide-react';
 import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
+import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 
 const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups }) => {
-    const { odds, loading: oddsLoading } = usePlayoffOdds(league, rosters, currentWeek);
+    const { data: marketValues } = useQuery({
+        queryKey: ['fantasyCalc', league?.league_id],
+        queryFn: () => fetchMarketValues(
+            league?.roster_positions?.includes('SUPER_FLEX'),
+            rosters?.length || 12,
+            0.5
+        ),
+        staleTime: 60 * 60 * 1000,
+    });
+
+    const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(league, rosters, currentWeek, marketValues);
 
     const stats = useMemo(() => {
         if (!selectedUserId || !Array.isArray(rosters)) return null;
@@ -101,15 +113,18 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
                         {oddsLoading ? '...' : stats.playoffOddsDisplay}
                     </div>
                     <div className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1">
-                        Monte Carlo Simulation
+                        {isProjection ? 'Preseason Projection' : 'Monte Carlo Simulation'}
                         <HelpCircle className="w-3 h-3" />
                     </div>
                 </CardContent>
 
                 {/* Tooltip */}
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 bg-popover text-xs text-left text-popover-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none z-20 border border-border">
-                    <p className="font-semibold mb-1">Monte Carlo Simulation</p>
-                    <p>Simulates the remaining schedule 10,000 times based on each team's Average Points Per Game.</p>
+                    <p className="font-semibold mb-1">{isProjection ? 'Preseason Projection' : 'Monte Carlo Simulation'}</p>
+                    <p>{isProjection
+                        ? 'Projects playoff odds based on current roster dynasty values. Updates as you make trades, pickups, and draft picks.'
+                        : 'Simulates the remaining schedule 10,000 times based on each team\'s Average Points Per Game.'
+                    }</p>
                 </div>
             </Card>
 

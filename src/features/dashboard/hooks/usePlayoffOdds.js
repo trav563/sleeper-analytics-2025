@@ -1,9 +1,48 @@
 import { useState, useEffect } from 'react';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 
-export function usePlayoffOdds(league, rosters, currentWeek) {
+/**
+ * Generate a round-robin schedule for N teams over totalWeeks weeks.
+ * Wraps around if totalWeeks > N-1.
+ */
+function generateRoundRobin(rosterIds, totalWeeks) {
+    const ids = [...rosterIds];
+    if (ids.length % 2 !== 0) ids.push(null); // bye slot for odd teams
+    const n = ids.length;
+    const rounds = [];
+
+    for (let week = 0; week < totalWeeks; week++) {
+        const r = week % (n - 1);
+        // Rotate ids[1..n-1] by r positions, keep ids[0] fixed
+        const rest = ids.slice(1);
+        const rotated = [...rest.slice(r), ...rest.slice(0, r)];
+        const thisRound = [ids[0], ...rotated];
+
+        const games = [];
+        for (let i = 0; i < n / 2; i++) {
+            const t1 = thisRound[i];
+            const t2 = thisRound[n - 1 - i];
+            if (t1 !== null && t2 !== null) {
+                games.push([t1, t2]);
+            }
+        }
+        rounds.push(games);
+    }
+    return rounds;
+}
+
+function offseasonWinProbability(strengthA, strengthB) {
+    if (strengthA === 0 && strengthB === 0) return 0.5;
+    const EXPONENT = 0.8;
+    const adjA = Math.pow(strengthA, EXPONENT);
+    const adjB = Math.pow(strengthB, EXPONENT);
+    return adjA / (adjA + adjB);
+}
+
+export function usePlayoffOdds(league, rosters, currentWeek, marketValues) {
     const [odds, setOdds] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [isProjection, setIsProjection] = useState(false);
 
     useEffect(() => {
         if (!league || !rosters || !currentWeek) return;
@@ -25,7 +64,8 @@ export function usePlayoffOdds(league, rosters, currentWeek) {
                         currentWins: r.settings.wins,
                         currentTies: r.settings.ties,
                         currentFpts: fpts,
-                        ppg: ppg
+                        ppg: ppg,
+                        players: r.players || []
                     };
                 });
 
@@ -35,7 +75,100 @@ export function usePlayoffOdds(league, rosters, currentWeek) {
                     weeksToSimulate.push(w);
                 }
 
-                // 3. Handle Regular Season Over
+                // 3. Check for offseason: no weeks left AND no team has played any games
+                const isOffseasonState = weeksToSimulate.length === 0 &&
+                    teams.every(t => t.currentWins === 0 && t.currentFpts === 0);
+
+                // --- OFFSEASON PROJECTION ---
+                if (isOffseasonState) {
+                    // Need market values to run projection
+                    if (!marketValues || Object.keys(marketValues).length === 0) {
+                        // Graceful fallback: equal odds for all teams
+                        const equalPercent = Number(((playoffSpots / teams.length) * 100).toFixed(1));
+                        const fallbackOdds = {};
+                        teams.forEach(t => {
+                            fallbackOdds[t.rosterId] = { percent: equalPercent, status: 'In the Mix' };
+                        });
+                        setOdds(fallbackOdds);
+                        setIsProjection(true);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Compute team strength from dynasty values
+                    const teamStrengths = {};
+                    teams.forEach(t => {
+                        teamStrengths[t.rosterId] = t.players.reduce((sum, pid) => {
+                            return sum + (marketValues[pid] || 0);
+                        }, 0);
+                    });
+
+                    // Generate synthetic round-robin schedule
+                    const totalRegularWeeks = playoffStartWeek - 1;
+                    const rosterIds = teams.map(t => t.rosterId);
+                    const syntheticSchedule = generateRoundRobin(rosterIds, totalRegularWeeks);
+
+                    // Run Monte Carlo
+                    const SIMULATIONS = 10000;
+                    const results = {};
+                    teams.forEach(t => results[t.rosterId] = 0);
+
+                    for (let i = 0; i < SIMULATIONS; i++) {
+                        const simState = {};
+                        teams.forEach(t => {
+                            simState[t.rosterId] = { wins: 0, fpts: 0, rosterId: t.rosterId };
+                        });
+
+                        syntheticSchedule.forEach(weekGames => {
+                            weekGames.forEach(([r1, r2]) => {
+                                const s1 = teamStrengths[r1] || 0;
+                                const s2 = teamStrengths[r2] || 0;
+                                const prob1 = offseasonWinProbability(s1, s2);
+
+                                if (Math.random() < prob1) {
+                                    simState[r1].wins += 1;
+                                } else {
+                                    simState[r2].wins += 1;
+                                }
+
+                                // Randomized points proxy for tiebreaking
+                                simState[r1].fpts += s1 * (0.8 + Math.random() * 0.4);
+                                simState[r2].fpts += s2 * (0.8 + Math.random() * 0.4);
+                            });
+                        });
+
+                        // Rank teams
+                        const sorted = Object.values(simState).sort((a, b) => {
+                            if (a.wins !== b.wins) return b.wins - a.wins;
+                            return b.fpts - a.fpts;
+                        });
+
+                        for (let k = 0; k < playoffSpots; k++) {
+                            if (sorted[k]) {
+                                results[sorted[k].rosterId]++;
+                            }
+                        }
+                    }
+
+                    // Calculate percentages with offseason labels
+                    const finalOdds = {};
+                    teams.forEach(t => {
+                        const percent = Number(((results[t.rosterId] / SIMULATIONS) * 100).toFixed(1));
+                        let status = 'In the Mix';
+                        if (percent >= 75) status = 'Favorite';
+                        else if (percent >= 40) status = 'Contender';
+                        else if (percent < 15) status = 'Long Shot';
+
+                        finalOdds[t.rosterId] = { percent, status };
+                    });
+
+                    setOdds(finalOdds);
+                    setIsProjection(true);
+                    setLoading(false);
+                    return;
+                }
+
+                // --- REGULAR SEASON OVER (real records exist) ---
                 if (weeksToSimulate.length === 0) {
                     const sorted = [...teams].sort((a, b) => {
                         if (a.currentWins !== b.currentWins) return b.currentWins - a.currentWins;
@@ -53,9 +186,13 @@ export function usePlayoffOdds(league, rosters, currentWeek) {
                     });
 
                     setOdds(finalOdds);
+                    setIsProjection(false);
                     setLoading(false);
                     return;
                 }
+
+                // --- IN-SEASON MONTE CARLO (unchanged) ---
+                setIsProjection(false);
 
                 // 4. Fetch Schedule
                 const schedulePromises = weeksToSimulate.map(w => fetchLeagueMatchups(league.league_id, w));
@@ -153,7 +290,7 @@ export function usePlayoffOdds(league, rosters, currentWeek) {
         };
 
         runSimulation();
-    }, [league, rosters, currentWeek]);
+    }, [league, rosters, currentWeek, marketValues]);
 
-    return { odds, loading };
+    return { odds, loading, isProjection };
 }
