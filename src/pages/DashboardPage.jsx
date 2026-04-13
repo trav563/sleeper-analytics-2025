@@ -156,6 +156,7 @@ const DashboardPage = () => {
                         league={league}
                         currentWeek={selectedWeek}
                         seasonMatchups={seasonMatchups}
+                        state={state}
                     />
 
                     {/* Team Roster with Dossier */}

@@ -39,7 +39,7 @@ function offseasonWinProbability(strengthA, strengthB) {
     return adjA / (adjA + adjB);
 }
 
-export function usePlayoffOdds(league, rosters, currentWeek, marketValues) {
+export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType) {
     const [odds, setOdds] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isProjection, setIsProjection] = useState(false);
@@ -75,9 +75,8 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues) {
                     weeksToSimulate.push(w);
                 }
 
-                // 3. Check for offseason: no weeks left AND no team has played any games
-                const isOffseasonState = weeksToSimulate.length === 0 &&
-                    teams.every(t => t.currentWins === 0 && t.currentFpts === 0);
+                // 3. Check for offseason via NFL state season_type
+                const isOffseasonState = seasonType === 'off' || seasonType === 'pre';
 
                 // --- OFFSEASON PROJECTION ---
                 if (isOffseasonState) {
@@ -290,7 +289,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues) {
         };
 
         runSimulation();
-    }, [league, rosters, currentWeek, marketValues]);
+    }, [league, rosters, currentWeek, marketValues, seasonType]);
 
     return { odds, loading, isProjection };
 }

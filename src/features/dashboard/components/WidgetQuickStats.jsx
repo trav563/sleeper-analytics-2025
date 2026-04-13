@@ -5,7 +5,7 @@ import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 
-const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups }) => {
+const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups, state }) => {
     const { data: marketValues } = useQuery({
         queryKey: ['fantasyCalc', league?.league_id],
         queryFn: () => fetchMarketValues(
@@ -16,7 +16,8 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
         staleTime: 60 * 60 * 1000,
     });
 
-    const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(league, rosters, currentWeek, marketValues);
+    const seasonType = state?.season_type || 'regular';
+    const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType);
 
     const stats = useMemo(() => {
         if (!selectedUserId || !Array.isArray(rosters)) return null;
