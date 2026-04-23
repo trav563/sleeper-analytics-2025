@@ -17,6 +17,9 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 // Recap Feature
 const RecapPage = lazy(() => import('./pages/RecapPage').catch(() => ({ default: () => <div>Page Not Found</div> })));
 
+// Design system smoke test (atom library)
+const DesignPreview = lazy(() => import('./pages/DesignPreview'));
+
 // Loading fallback
 const PageLoader = () => (
   <div className="flex h-[50vh] w-full items-center justify-center">
@@ -33,6 +36,9 @@ const App = () => {
           <Routes>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
+
+              {/* Design system preview (atom smoke test) */}
+              <Route path="_design" element={<DesignPreview />} />
 
               {/* League Routes */}
               <Route path="league/:leagueId" element={<LeagueLayout />}>

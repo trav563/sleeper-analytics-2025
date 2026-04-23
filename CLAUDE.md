@@ -2,7 +2,11 @@
 
 ## Stack
 
-Vite · React 19 · JavaScript (`.jsx`) · npm · React Router (`react-router-dom` v7) · Tailwind v3.4. No Next.js, no TypeScript, no pnpm. Build with `npm run build`; dev server with `npm run dev`.
+Vite · React 19 · JavaScript (`.jsx`) · npm · React Router (`react-router-dom` v6.30) · Tailwind v3.4. No Next.js, no TypeScript, no pnpm. Build with `npm run build`; dev server with `npm run dev`.
+
+The codebase is **feature-first organized**: pages live under `src/pages/`, layouts under `src/layouts/`, and feature-specific components + hooks under `src/features/<feature>/components/` and `src/features/<feature>/hooks/` (`dashboard`, `analytics`, `history`, `tools`, `recap`, `user`, `league`, `stats`). Shared shadcn-style UI primitives live under `src/components/ui/`; new Broadcast Scoreboard atoms (Pip, LiveDot, StatCell, Trend, SectionCard, SegmentedTabs, TabBar, TeamRow) live alongside them. The shared layout chrome lives under `src/components/layout/` (currently `Navbar.jsx`).
+
+**Token-naming note:** `handoff/components.md` and `handoff/tokens.css` use `--accent` / `bg-accent` for the gold signal color. In this repo we renamed it to `--signal` / `bg-signal` (and `--accent-2` → `--signal-2`) to avoid colliding with the existing shadcn gray `--accent` token used by the shadcn primitives. When following a handoff recipe, translate `accent` → `signal` and `accent-2` → `signal-2` at point of use.
 
 Geist is loaded via `@fontsource-variable/geist` and `@fontsource-variable/geist-mono` (imported in `src/main.jsx`). The fontsource variable packages register the font under the family names **`'Geist Variable'`** and **`'Geist Mono Variable'`** — the CSS variables in `src/index.css` already point at those names. If you ever swap to non-variable fontsource packages, also drop `Variable` from `--font-sans`/`--font-mono`.
 
@@ -56,11 +60,13 @@ The `handoff/page-briefs/*` files mention hooks like `useMatchup`, `useLeagueSta
 
 Real data surface:
 
-- `useLeagueData(leagueId)` from `src/hooks/useLeagueData.js` — returns `{ state, users, rosters, matchups, players, league, loading, error, refresh }`. This is the only league-data hook; do not call the lower-level fetchers from components.
-- Lower-level Sleeper API helpers in `src/utils/sleeper.js`: `fetchUser`, `fetchUserLeagues`, `fetchLeagueUsers`, `fetchLeagueRosters`, `fetchLeagueMatchups`, `fetchNFLState`, `fetchNFLPlayers`, `fetchLeague`. Reach for these only when extending `useLeagueData` or `SleeperContext`.
+- `useLeagueData(leagueId)` from `src/features/league/hooks/useLeagueData.js` — returns `{ league, rosters, users, players, state, matchups, tradedPicks, loading, error, refresh }`. This is the canonical league-data hook; do not call the lower-level fetchers from components.
+- Other real hooks: `useAnalyzeTeam`, `usePlayerNews`, `usePlayoffOdds` (`src/features/dashboard/hooks/`); `useLineupStatus`, `useLeagueHistory` (`src/features/league/hooks/`); `useSeasonMatchups` (`src/features/analytics/hooks/`); `usePlayerStats`, `useTradeAnalysis` (`src/features/tools/hooks/`); `useWeeklyRecap`, `useSeasonSuperlatives` (`src/features/recap/hooks/`); `useCareerStats` (`src/features/stats/hooks/`).
+- Hooks named in `handoff/page-briefs/*` (`useMatchup`, `useLeagueStandings`, `useAiInsights`, `useRosterNews`, `useMatchupHistory`, `usePowerRankings`, `usePlayer`, `usePlayerGameLog`) are **hypothetical** — they don't exist; the briefs are visual references only.
+- Lower-level Sleeper API helpers in `src/utils/sleeper.js`: `fetchUser`, `fetchUserLeagues`, `fetchLeagueUsers`, `fetchLeagueRosters`, `fetchLeagueMatchups`, `fetchNFLState`, `fetchPlayers`, `fetchLeague`, plus draft/transaction/trending helpers. Reach for these only when extending the existing hooks or `SleeperContext`.
 - `SleeperContext` in `src/context/SleeperContext.jsx` — user/leagues/season state for the home flow.
-- Bye-week lookup: `getTeamsOnBye(week)` from `src/services/nflSchedule.js` (live ESPN call). Static fallback `BYE_MAP_2025` lives in `src/utils/nflData.js`.
-- Status/team helpers: `STATUS_COLORS`, `displayTeamName`, `avatarUrl`, `isDSTStarterId`, `classifyInjury`, `POSITION_ORDER` — all in `src/utils/nflData.js`.
+- AI integration: `src/features/dashboard/components/AnalyzeMyTeam.jsx` calls `POST /api/analyze-team` (Vercel serverless function at `api/analyze-team.js` using **Google Gemini** via `@google/generative-ai`, not Anthropic). Server-only env var: `GEMINI_API_KEY`. Streams via SSE; client-side rate limit + 1hr cache via `useAnalyzeTeam`.
+- Status/team helpers in `src/utils/nflData.js`: `displayTeamName`, `avatarUrl`, plus team/position constants.
 
 ## When you're stuck or uncertain
 
