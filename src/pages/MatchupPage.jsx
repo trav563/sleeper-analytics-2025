@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import MatchupDetail from '../features/league/components/MatchupDetail';
 import { fetchLeagueMatchups } from '../utils/sleeper';
@@ -13,6 +13,19 @@ const MatchupPage = () => {
 
     const [viewMatchups, setViewMatchups] = useState(week === currentNFLWeek ? currentWeekMatchups : []);
     const [loading, setLoading] = useState(week !== currentNFLWeek);
+
+    /* Selected roster for the focused matchup. Defaults to the logged-in
+       user's roster; falls back to the first roster if the user isn't in
+       this league. The picker UI inside MatchupDetail can change it. */
+    const defaultRosterId = useMemo(() => {
+        if (!rosters?.length) return null;
+        const mine = rosters.find((r) => r.owner_id === user?.user_id);
+        return (mine || rosters[0]).roster_id;
+    }, [rosters, user?.user_id]);
+    const [selectedRosterId, setSelectedRosterId] = useState(defaultRosterId);
+
+    // Reset selection when the user/league changes.
+    useEffect(() => { setSelectedRosterId(defaultRosterId); }, [defaultRosterId]);
 
     useEffect(() => {
         if (!league?.league_id) return;
@@ -53,7 +66,8 @@ const MatchupPage = () => {
             week={week}
             viewMatchups={viewMatchups}
             seasonMatchups={seasonMatchups}
-            currentUserId={user?.user_id}
+            selectedRosterId={selectedRosterId}
+            onSelectRoster={setSelectedRosterId}
         />
     );
 };

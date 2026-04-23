@@ -50,7 +50,7 @@ const bucketStarter = (m, idx, players, gameStatuses) => {
 const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'];
 
 /* ---------- main component ---------- */
-const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, seasonMatchups, currentUserId }) => {
+const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
     const navigate = useNavigate();
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
@@ -64,10 +64,32 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
         return map;
     }, [liveDetails]);
 
-    /* Pick the current user's matchup pair (or first matchup if no user). */
+    /* Build the list of distinct matchup pairs this week for the picker. */
+    const matchupPairs = useMemo(() => {
+        if (!Array.isArray(viewMatchups) || !rosters) return [];
+        const byId = new Map();
+        viewMatchups.forEach((m) => {
+            if (m.matchup_id == null) return;
+            if (!byId.has(m.matchup_id)) byId.set(m.matchup_id, []);
+            byId.get(m.matchup_id).push(m);
+        });
+        return Array.from(byId.values())
+            .filter((pair) => pair.length === 2)
+            .map(([a, b]) => {
+                const ar = rosters.find((r) => r.roster_id === a.roster_id);
+                const br = rosters.find((r) => r.roster_id === b.roster_id);
+                const au = users?.find((u) => u.user_id === ar?.owner_id);
+                const bu = users?.find((u) => u.user_id === br?.owner_id);
+                return { a, b, ar, br, au, bu };
+            })
+            .sort((p, q) => (p.ar?.roster_id || 0) - (q.ar?.roster_id || 0));
+    }, [viewMatchups, rosters, users]);
+
+    /* Resolve the focus matchup from the selected roster id. */
     const { myRoster, myMatchup, oppRoster, oppMatchup, myUser, oppUser } = useMemo(() => {
         if (!viewMatchups || !rosters) return {};
-        const myRoster = rosters.find((r) => r.owner_id === currentUserId) || rosters[0];
+        const myRoster =
+            rosters.find((r) => r.roster_id === selectedRosterId) || rosters[0];
         if (!myRoster) return {};
         const myMatchup = viewMatchups.find((m) => m.roster_id === myRoster.roster_id);
         if (!myMatchup) return { myRoster };
@@ -78,7 +100,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
         const myUser = users?.find((u) => u.user_id === myRoster.owner_id);
         const oppUser = oppRoster ? users?.find((u) => u.user_id === oppRoster.owner_id) : null;
         return { myRoster, myMatchup, oppRoster, oppMatchup, myUser, oppUser };
-    }, [viewMatchups, rosters, users, currentUserId]);
+    }, [viewMatchups, rosters, users, selectedRosterId]);
 
     /* Pull h2h history for these two rosters across the season (cheap — just iterate seasonMatchups). */
     const h2hHistory = useMemo(() => {
@@ -238,6 +260,50 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
     return (
         <section className="space-y-5 pb-10">
             <Back onClick={() => navigate(-1)} />
+
+            {/* Matchup picker — horizontal scroll of all pairs this week */}
+            {matchupPairs.length > 1 && (
+                <div className="space-y-2">
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        Week <span className="tnum text-text-dim">{week}</span> · {matchupPairs.length} matchups
+                    </div>
+                    <div
+                        className="flex gap-2 overflow-x-auto pb-1"
+                        style={{ scrollbarWidth: 'none' }}
+                    >
+                        {matchupPairs.map((p) => {
+                            const isActive = p.ar?.roster_id === myRoster?.roster_id || p.br?.roster_id === myRoster?.roster_id;
+                            const aWin = (p.a.points || 0) > (p.b.points || 0);
+                            return (
+                                <button
+                                    key={p.a.matchup_id}
+                                    type="button"
+                                    onClick={() => onSelectRoster?.(p.ar?.roster_id)}
+                                    className={`shrink-0 min-w-[200px] rounded-md border p-2.5 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
+                                        isActive
+                                            ? 'bg-bg-2 border-signal'
+                                            : 'bg-bg-1 border-line hover:border-line-strong hover:bg-bg-2/60'
+                                    }`}
+                                    aria-pressed={isActive}
+                                >
+                                    <PairRow
+                                        roster={p.ar}
+                                        user={p.au}
+                                        score={p.a.points || 0}
+                                        winning={aWin}
+                                    />
+                                    <PairRow
+                                        roster={p.br}
+                                        user={p.bu}
+                                        score={p.b.points || 0}
+                                        winning={!aWin}
+                                    />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Hero ribbon */}
             <header
@@ -482,6 +548,22 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
 };
 
 /* -- presentational helpers -- */
+const PairRow = ({ roster, user, score, winning }) => (
+    <div className="grid grid-cols-[20px_1fr_auto] gap-2 items-center py-0.5">
+        {user?.avatar ? (
+            <img src={avatarUrl(user.avatar)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
+        ) : (
+            <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={20} />
+        )}
+        <span className={`text-xs truncate ${winning ? 'text-text font-semibold' : 'text-text-dim'}`}>
+            {displayTeamName(user)}
+        </span>
+        <span className={`tnum text-sm font-bold tracking-tight ${winning ? 'text-signal' : 'text-text'}`}>
+            {score.toFixed(1)}
+        </span>
+    </div>
+);
+
 const Back = ({ onClick }) => (
     <button
         type="button"
