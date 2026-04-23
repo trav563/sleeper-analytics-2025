@@ -103,6 +103,58 @@ export const getGameStatuses = async (weekNumber) => {
 };
 
 /**
+ * Fetches per-team live game details (period, clock, score, status name).
+ * Map keyed by NFL team abbreviation. Used for live broadcast eyebrows
+ * ("Q3 9:42") and per-row live indicators on rosters / matchups.
+ *
+ * @param {number} weekNumber
+ * @returns {Promise<Object>} { [abbr]: { period, displayClock, score, statusName, opponent, isHome } }
+ */
+export const getGameLiveDetails = async (weekNumber) => {
+    try {
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
+        if (!response.ok) return {};
+
+        const data = await response.json();
+        const events = data.events || [];
+        const detailsMap = {};
+
+        events.forEach((event) => {
+            const competition = event.competitions?.[0];
+            if (!competition) return;
+            const status = competition.status?.type?.name || 'STATUS_UNKNOWN';
+            const period = competition.status?.period ?? 0;
+            const displayClock = competition.status?.displayClock || '';
+
+            const competitors = competition.competitors || [];
+            competitors.forEach((c) => {
+                let abbr = c.team?.abbreviation;
+                if (abbr === 'WSH') abbr = 'WAS';
+                if (!abbr || !ALL_NFL_TEAMS.includes(abbr)) return;
+
+                const opp = competitors.find((o) => o !== c);
+                let oppAbbr = opp?.team?.abbreviation;
+                if (oppAbbr === 'WSH') oppAbbr = 'WAS';
+
+                detailsMap[abbr] = {
+                    period,
+                    displayClock,
+                    score: Number(c.score) || 0,
+                    statusName: status,
+                    opponent: oppAbbr || null,
+                    isHome: c.homeAway === 'home',
+                };
+            });
+        });
+
+        return detailsMap;
+    } catch (error) {
+        console.error('Error fetching game live details:', error);
+        return {};
+    }
+};
+
+/**
  * Fetches game weather conditions for outdoor stadiums.
  * @param {number} weekNumber - The week number to fetch.
  * @returns {Promise<Object>} - Map of team abbreviation to weather info: { temp, condition, displayValue, isIndoor, isAdverse }

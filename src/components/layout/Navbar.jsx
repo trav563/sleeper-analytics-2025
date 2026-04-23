@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
-import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame } from 'lucide-react';
+import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 
@@ -42,7 +42,9 @@ const Navbar = () => {
 
     const navItems = [
         { href: `/league/${leagueId}`, label: 'Dashboard', icon: LayoutDashboard, exact: true },
+        { href: `/league/${leagueId}/matchup`, label: 'Matchup', icon: Swords },
         { href: `/league/${leagueId}/lineup`, label: 'Lineup', icon: Users },
+        { href: `/league/${leagueId}/standings`, label: 'Standings', icon: Crown },
         { href: `/league/${leagueId}/analytics`, label: 'Analytics', icon: BarChart2 },
         { href: `/league/${leagueId}/recap`, label: 'The Roast', icon: Flame },
         { href: `/league/${leagueId}/history`, label: 'History', icon: History },

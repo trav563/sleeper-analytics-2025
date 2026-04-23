@@ -218,6 +218,17 @@
     background: oklch(62% 0.18 var(--h) / 0.18);
 }
 
+/* Striped placeholder for player headshots / images we don't have. */
+.striped-placeholder {
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.04) 6px,
+        rgba(255, 255, 255, 0.08) 6px,
+        rgba(255, 255, 255, 0.08) 12px
+    );
+}
+
 @media (prefers-reduced-motion: reduce) {
     .live-dot { animation: none; }
 }

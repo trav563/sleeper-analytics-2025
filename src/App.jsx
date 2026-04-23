@@ -17,6 +17,12 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 // Recap Feature
 const RecapPage = lazy(() => import('./pages/RecapPage').catch(() => ({ default: () => <div>Page Not Found</div> })));
 
+// Direction A pages
+const MatchupPage = lazy(() => import('./pages/MatchupPage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
+const StandingsPage = lazy(() => import('./pages/StandingsPage'));
+const PlayerPage = lazy(() => import('./pages/PlayerPage'));
+
 // Design system smoke test (atom library)
 const DesignPreview = lazy(() => import('./pages/DesignPreview'));
 
@@ -44,6 +50,11 @@ const App = () => {
               <Route path="league/:leagueId" element={<LeagueLayout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="lineup" element={<LineupPage />} />
+                <Route path="matchup" element={<MatchupPage />} />
+                <Route path="matchup/:week" element={<MatchupPage />} />
+                <Route path="standings" element={<StandingsPage />} />
+                <Route path="team/:rosterId" element={<TeamPage />} />
+                <Route path="player/:playerId" element={<PlayerPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="tools" element={<ToolsPage />} />
