@@ -69,6 +69,10 @@
         --signal:    #F5B301;
         --signal-2:  #FF5A36;
 
+        /* Always-dark ink for use on gold/light surfaces (CTA button text, AI badges).
+           Stays #0B0C10 in light mode too — it's "ink", not a theme color. */
+        --ink:       #0B0C10;
+
         /* Semantic */
         --good:      #4ADE80;
         --bad:       #F87171;

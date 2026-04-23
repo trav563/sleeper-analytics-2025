@@ -140,7 +140,7 @@ export default function DesignPreview() {
         <SectionCard title="Misc" eyebrow="Inline marks">
           <div className="flex items-center gap-3 flex-wrap">
             <span
-              className="text-2xs font-extrabold tracking-wider px-1.5 py-0.5 rounded-sm text-[#0B0C10] uppercase"
+              className="text-2xs font-extrabold tracking-wider px-1.5 py-0.5 rounded-sm text-ink uppercase"
               style={{ background: "linear-gradient(90deg, var(--signal), var(--signal-2))" }}
             >
               AI

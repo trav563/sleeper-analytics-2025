@@ -56,6 +56,7 @@ export default {
         // Renamed from "accent" / "accent-2" to avoid shadcn collision
         signal:    "var(--signal)",
         "signal-2":"var(--signal-2)",
+        ink:       "var(--ink)",
         good:      "var(--good)",
         bad:       "var(--bad)",
         warn:      "var(--warn)",

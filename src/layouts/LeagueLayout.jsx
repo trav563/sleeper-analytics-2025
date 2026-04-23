@@ -104,7 +104,7 @@ const LeagueLayout = () => {
                             const el = document.querySelector("input[placeholder='Enter League ID']");
                             if (el?.value) navigate(`/league/${el.value.trim()}`);
                         }}
-                        className="bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90"
+                        className="bg-signal text-ink font-semibold hover:bg-signal/90"
                     >
                         Load
                     </Button>

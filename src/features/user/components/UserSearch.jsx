@@ -80,7 +80,7 @@ const UserSearch = () => {
                                 <Button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full min-h-[44px] bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90 focus-visible:ring-signal disabled:opacity-60"
+                                    className="w-full min-h-[44px] bg-signal text-ink font-semibold hover:bg-signal/90 focus-visible:ring-signal disabled:opacity-60"
                                 >
                                     {loading ? (
                                         <>

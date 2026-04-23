@@ -6,6 +6,7 @@ import { toPng } from 'html-to-image';
 import QRCode from 'react-qr-code';
 import { Pip } from '../../../components/ui/Pip';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { theme } from '../../../lib/theme';
 
 const TankTracker = ({ rosters, users, tradedPicks, league }) => {
     const [selectedRound, setSelectedRound] = useState(1);
@@ -64,7 +65,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 const dataUrl = await toPng(captureRef.current, {
                     cacheBust: true,
-                    backgroundColor: '#07080A',
+                    backgroundColor: theme.color.bg,
                     pixelRatio: 2,
                 });
                 const link = document.createElement('a');
@@ -108,7 +109,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                     <Button
                         onClick={downloadImage}
                         disabled={generating}
-                        className="gap-2 bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90 min-h-[40px]"
+                        className="gap-2 bg-signal text-ink font-semibold hover:bg-signal/90 min-h-[40px]"
                     >
                         {generating ? 'Capturing…' : <><Camera className="w-4 h-4" /> Share Order</>}
                     </Button>

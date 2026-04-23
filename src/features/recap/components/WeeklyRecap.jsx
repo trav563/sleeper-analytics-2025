@@ -8,6 +8,7 @@ import { toPng } from 'html-to-image';
 import QRCode from 'react-qr-code';
 import SeasonSuperlativesView from './SeasonSuperlativesView';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { theme } from '../../../lib/theme';
 
 const TONE = {
     bad:      { border: 'border-bad/40',      bg: 'bg-bad/10',      text: 'text-bad' },
@@ -147,7 +148,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
     const downloadImage = async () => {
         if (captureRef.current) {
             try {
-                const dataUrl = await toPng(captureRef.current, { cacheBust: true, backgroundColor: '#07080A' });
+                const dataUrl = await toPng(captureRef.current, { cacheBust: true, backgroundColor: theme.color.bg });
                 const link = document.createElement('a');
                 link.download = `week-${selectedWeek}-roast.png`;
                 link.href = dataUrl;
@@ -227,7 +228,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
                                     <Button onClick={copyToClipboard} variant="outline" className="gap-2 border-line text-text hover:bg-bg-2">
                                         <Copy className="w-4 h-4" /> Copy Text
                                     </Button>
-                                    <Button onClick={downloadImage} className="gap-2 bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90">
+                                    <Button onClick={downloadImage} className="gap-2 bg-signal text-ink font-semibold hover:bg-signal/90">
                                         <Download className="w-4 h-4" /> Save Image
                                     </Button>
                                 </div>

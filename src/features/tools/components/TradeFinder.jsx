@@ -296,7 +296,7 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                                             </span>
                                                             <span className="text-sm text-text">
                                                                 {player.full_name || `${player.first_name} ${player.last_name}`}
-                                                                {player.isOTB && <span className="ml-1 font-mono text-2xs bg-signal text-[#0B0C10] px-1 rounded-sm font-bold">OTB</span>}
+                                                                {player.isOTB && <span className="ml-1 font-mono text-2xs bg-signal text-ink px-1 rounded-sm font-bold">OTB</span>}
                                                                 {player.isDynastyStash && <span className="ml-1 font-mono text-2xs bg-signal-2/15 text-signal-2 border border-signal-2/30 px-1 rounded-sm font-bold">STASH</span>}
                                                             </span>
                                                             <span className="text-xs text-good ml-auto font-mono tnum">

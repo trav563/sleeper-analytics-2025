@@ -253,7 +253,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
       <Button
         onClick={onGenerate}
         disabled={!validation.valid}
-        className="w-full min-h-[44px] bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90 focus-visible:ring-signal disabled:opacity-50"
+        className="w-full min-h-[44px] bg-signal text-ink font-semibold hover:bg-signal/90 focus-visible:ring-signal disabled:opacity-50"
         size="lg"
       >
         Generate Schedule

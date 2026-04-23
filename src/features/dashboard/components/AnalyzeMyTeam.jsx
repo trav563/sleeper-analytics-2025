@@ -213,7 +213,7 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                             <h3 className="font-display text-lg font-semibold text-text flex items-center gap-2">
                                 Analyze My Team
                                 <span
-                                    className="font-mono text-2xs font-extrabold tracking-wider px-1.5 py-0.5 rounded-sm text-[#0B0C10] uppercase"
+                                    className="font-mono text-2xs font-extrabold tracking-wider px-1.5 py-0.5 rounded-sm text-ink uppercase"
                                     style={{ background: 'linear-gradient(90deg, var(--signal), var(--signal-2))' }}
                                 >
                                     AI
@@ -286,7 +286,7 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                             Refresh
                         </Button>
                     ) : (
-                        <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 min-h-[40px] bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90">
+                        <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 min-h-[40px] bg-signal text-ink font-semibold hover:bg-signal/90">
                             <Sparkles className="w-4 h-4 mr-1" />
                             {hasResult ? 'Re-analyze' : 'Analyze'}
                         </Button>
