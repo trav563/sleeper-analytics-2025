@@ -1,37 +1,45 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
 import { fetchDraftPicks } from '../../../utils/sleeper';
 import { useLeagueHistory } from '../../league/hooks/useLeagueHistory';
 import { useCareerStats } from '../../stats/hooks/useCareerStats';
 import { useSleeper } from '../../../context/SleeperContext';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { TrendingUp } from 'lucide-react';
+import { Pip } from '../../../components/ui/Pip';
+import { theme } from '../../../lib/theme';
 
-const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
+// Recharts colors mapped to broadcast tokens (kept stable across positions)
+const POSITION_FILL = {
+    QB: theme.color.bad,
+    RB: theme.color.good,
+    WR: theme.color.signal,
+    TE: theme.color.signal2,
+    K:  theme.color.warn,
+    DEF: theme.color.textDim,
+};
+
+const GMPerformance = ({ league, players, users, rosters }) => {
     const { user } = useSleeper();
     const [selectedSeason, setSelectedSeason] = useState(null);
     const [picks, setPicks] = useState([]);
     const [loadingDraft, setLoadingDraft] = useState(false);
     const [selectedRosterId, setSelectedRosterId] = useState(null);
 
-    // 1. League History Traversal
     const { history, loading: loadingHistory } = useLeagueHistory(league?.league_id);
 
-    // Initialize selected season to current
     useEffect(() => {
         if (league?.season && !selectedSeason) {
             setSelectedSeason(league.season);
         }
     }, [league, selectedSeason]);
 
-    // Get active league ID/Draft ID for selected season
     const activeLeagueData = useMemo(() => {
         if (!history || !selectedSeason) return null;
         return history.find(h => h.season === selectedSeason) ||
             (league?.season === selectedSeason ? { league_id: league.league_id, draft_id: league.draft_id } : null);
     }, [history, selectedSeason, league]);
 
-    // 2. Fetch Draft Data for Selected Season
     useEffect(() => {
         async function loadDraft() {
             if (!activeLeagueData?.draft_id) return;
@@ -48,15 +56,11 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
         loadDraft();
     }, [activeLeagueData]);
 
-    // 3. Fetch Career Stats (From Selected Season to Current)
-    // Assuming current season is 2025 (or whatever league.season is)
     const currentSeason = league?.season || '2025';
     const { careerStats, loading: loadingStats } = useCareerStats(selectedSeason, currentSeason);
 
-    // Initialize selected roster
     useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {
-            // Default to logged-in user if found
             if (user) {
                 const userRoster = rosters.find(r => r.owner_id === user.user_id);
                 if (userRoster) {
@@ -64,14 +68,12 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                     return;
                 }
             }
-            // Fallback to first roster
             setSelectedRosterId(rosters[0].roster_id);
         }
     }, [rosters, user, selectedRosterId]);
 
     const [hoveredPoint, setHoveredPoint] = useState(null);
 
-    // Calculate Max Points in the Draft Class for Expected Value Model
     const maxDraftPoints = useMemo(() => {
         if (!picks || !careerStats) return 0;
         let max = 0;
@@ -82,7 +84,6 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
         return max;
     }, [picks, careerStats]);
 
-    // Process Data for Selected Team
     const { chartData, curveData, summary } = useMemo(() => {
         if (!picks || !careerStats || !players || !selectedRosterId || maxDraftPoints === 0) {
             return { chartData: [], curveData: [], summary: { wins: 0, solid: 0, busts: 0 } };
@@ -98,20 +99,15 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
 
             if (!stat || !player) return null;
 
-            // Expected Value Model: Max * (1 / (ln(Pick) + 1)) * 1.5 (Starter Multiplier)
-            // Using actual max points from this class to set the curve height
             const expected = maxDraftPoints * (1 / (Math.log(pick.pick_no) + 1)) * 1.5;
-
             const diff = stat.totalPoints - expected;
             const roi = expected > 0 ? diff / expected : 0;
 
-            // Dynamic Tiers based on Class Trendline
             let tier = 'Solid';
             if (roi > 0.2) { tier = 'Winner'; wins++; }
             else if (roi < -0.2) { tier = 'Bust'; busts++; }
             else { solid++; }
 
-            // Check if still on team (using current rosters)
             const currentRoster = rosters.find(r => r.roster_id === selectedRosterId);
             const isOnTeam = currentRoster?.players?.includes(pid);
 
@@ -129,7 +125,6 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
             };
         }).filter(Boolean);
 
-        // Generate Curve Data for Background
         const curve = [];
         const maxPick = Math.max(...picks.map(p => p.pick_no), 50);
         for (let i = 1; i <= maxPick; i++) {
@@ -137,21 +132,25 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
             curve.push({
                 pickNo: i,
                 expected: exp,
-                upper: exp * 1.2, // Top of Solid Zone (+20%)
-                lower: exp * 0.8  // Bottom of Solid Zone (-20%)
+                upper: exp * 1.2,
+                lower: exp * 0.8
             });
         }
 
         return { chartData: processedPicks, curveData: curve, summary: { wins, solid, busts } };
-
     }, [picks, careerStats, players, selectedRosterId, maxDraftPoints, rosters]);
 
     const getOwner = (rosterId) => users.find(u => u.user_id === rosters.find(r => r.roster_id === rosterId)?.owner_id);
     const selectedOwner = getOwner(selectedRosterId);
 
-    if (loadingDraft || loadingStats || loadingHistory) return <div className="p-8 text-center text-gray-400">Loading GM Performance...</div>;
+    if (loadingDraft || loadingStats || loadingHistory) {
+        return (
+            <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Loading GM Performance…
+            </div>
+        );
+    }
 
-    // Custom Shape for Scatter
     const CustomShape = (props) => {
         const { cx, cy, fill, payload, onMouseEnter, onMouseLeave } = props;
         const handleMouseEnter = (e) => onMouseEnter && onMouseEnter({ ...props, cx, cy }, e);
@@ -159,26 +158,26 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
 
         if (payload.isOnTeam) {
             return <circle cx={cx} cy={cy} r={6} fill={fill} stroke="none" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
-        } else {
-            return <circle cx={cx} cy={cy} r={5} fill="transparent" stroke={fill} strokeWidth={2} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
         }
+        return <circle cx={cx} cy={cy} r={5} fill="transparent" stroke={fill} strokeWidth={2} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ cursor: 'pointer' }} />;
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-5">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <TrendingUp className="w-6 h-6 text-green-400" />
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1.5">
+                        <TrendingUp className="w-3 h-3 text-good" aria-hidden="true" />
                         GM Performance
+                    </div>
+                    <h2 className="mt-1 font-display text-2xl font-bold tracking-snug text-text">
+                        Draft ROI vs Expectation
                     </h2>
-                    <p className="text-sm text-slate-400">Draft ROI analysis vs League Expectation.</p>
                 </div>
 
-                <div className="flex gap-3 w-full md:w-auto">
-                    {/* Year Selector */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     <select
-                        className="bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="bg-bg-2 border border-line text-text rounded-md px-3 min-h-[40px] text-sm focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
                         value={selectedSeason || ''}
                         onChange={(e) => setSelectedSeason(e.target.value)}
                         disabled={loadingHistory}
@@ -186,15 +185,13 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                         {history.map(h => (
                             <option key={h.season} value={h.season}>{h.season} Class</option>
                         ))}
-                        {/* Fallback if history empty but current league exists */}
                         {!history.find(h => h.season === league?.season) && league?.season && (
                             <option value={league.season}>{league.season} Class</option>
                         )}
                     </select>
 
-                    {/* Team Selector */}
                     <select
-                        className="bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none md:w-64"
+                        className="bg-bg-2 border border-line text-text rounded-md px-3 min-h-[40px] text-sm focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast md:w-64"
                         value={selectedRosterId || ''}
                         onChange={(e) => setSelectedRosterId(Number(e.target.value))}
                     >
@@ -207,21 +204,25 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                 </div>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 relative">
-                <div className="flex items-center gap-4 mb-6">
-                    <img
-                        src={avatarUrl(selectedOwner?.avatar)}
-                        alt=""
-                        className="w-12 h-12 rounded-full border-2 border-slate-600"
-                    />
-                    <div>
-                        <h3 className="text-lg font-bold text-white">{displayTeamName(selectedOwner)}</h3>
-                        <div className="flex gap-3 text-xs mt-1">
-                            <span className="text-green-400 font-medium">{summary.wins} Steals</span>
-                            <span className="text-slate-400">•</span>
-                            <span className="text-slate-300 font-medium">{summary.solid} Solid</span>
-                            <span className="text-slate-400">•</span>
-                            <span className="text-red-400 font-medium">{summary.busts} Busts</span>
+            <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card relative">
+                <div className="flex items-center gap-3 mb-5">
+                    {selectedOwner?.avatar ? (
+                        <img
+                            src={avatarUrl(selectedOwner.avatar)}
+                            alt=""
+                            className="w-12 h-12 rounded-full ring-1 ring-line"
+                        />
+                    ) : (
+                        <Pip seed={selectedRosterId ?? 'team'} name={displayTeamName(selectedOwner)} size={48} />
+                    )}
+                    <div className="min-w-0">
+                        <h3 className="font-display text-lg font-bold text-text truncate">{displayTeamName(selectedOwner)}</h3>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-2xs uppercase tracking-wider mt-1">
+                            <span className="text-good"><span className="tnum">{summary.wins}</span> Steals</span>
+                            <span className="text-text-mute" aria-hidden="true">·</span>
+                            <span className="text-text-dim"><span className="tnum">{summary.solid}</span> Solid</span>
+                            <span className="text-text-mute" aria-hidden="true">·</span>
+                            <span className="text-bad"><span className="tnum">{summary.busts}</span> Busts</span>
                         </div>
                     </div>
                 </div>
@@ -229,31 +230,30 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                 <div className="h-96 w-full relative">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme.color.lineStrong} vertical={false} />
                             <XAxis
                                 type="number"
                                 dataKey="pickNo"
                                 name="Pick"
-                                stroke="#94a3b8"
+                                stroke={theme.color.textDim}
                                 domain={[1, 'auto']}
-                                label={{ value: 'Overall Pick Number', position: 'insideBottom', offset: -10, fill: '#64748b', fontSize: 12 }}
+                                label={{ value: 'Overall Pick Number', position: 'insideBottom', offset: -10, fill: theme.color.textMute, fontSize: 11 }}
                             />
                             <YAxis
                                 type="number"
                                 dataKey="points"
                                 name="Points"
-                                stroke="#94a3b8"
-                                label={{ value: 'Career Points (PPR)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
+                                stroke={theme.color.textDim}
+                                label={{ value: 'Career Points (PPR)', angle: -90, position: 'insideLeft', fill: theme.color.textMute, fontSize: 11 }}
                             />
 
-                            {/* Zones */}
                             <Area
                                 type="monotone"
                                 data={curveData}
                                 dataKey="upper"
                                 stroke="none"
-                                fill="#22c55e"
-                                fillOpacity={0.05}
+                                fill={theme.color.good}
+                                fillOpacity={0.06}
                                 isAnimationActive={false}
                                 style={{ pointerEvents: 'none' }}
                             />
@@ -262,18 +262,17 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                                 data={curveData}
                                 dataKey="lower"
                                 stroke="none"
-                                fill="#ef4444"
-                                fillOpacity={0.05}
+                                fill={theme.color.bad}
+                                fillOpacity={0.06}
                                 isAnimationActive={false}
                                 style={{ pointerEvents: 'none' }}
                             />
 
-                            {/* Par Line */}
                             <Line
                                 type="monotone"
                                 data={curveData}
                                 dataKey="expected"
-                                stroke="#64748b"
+                                stroke={theme.color.textMute}
                                 strokeWidth={2}
                                 strokeDasharray="5 5"
                                 dot={false}
@@ -282,7 +281,6 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                                 style={{ pointerEvents: 'none' }}
                             />
 
-                            {/* Players */}
                             <Scatter
                                 name="Players"
                                 data={chartData}
@@ -293,22 +291,16 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                                 {chartData.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
-                                        fill={
-                                            entry.position === 'QB' ? '#ef4444' :
-                                                entry.position === 'RB' ? '#22c55e' :
-                                                    entry.position === 'WR' ? '#3b82f6' :
-                                                        '#f97316' // TE
-                                        }
+                                        fill={POSITION_FILL[entry.position] || theme.color.textDim}
                                     />
                                 ))}
                             </Scatter>
                         </ComposedChart>
                     </ResponsiveContainer>
 
-                    {/* Manual Tooltip */}
                     {hoveredPoint && (
                         <div
-                            className="absolute bg-slate-800 border border-slate-700 p-3 rounded shadow-lg text-xs z-50 pointer-events-none w-48"
+                            className="absolute bg-bg-1 border border-line p-3 rounded-md shadow-pop text-xs z-50 pointer-events-none w-52"
                             style={{
                                 left: hoveredPoint.cx,
                                 top: hoveredPoint.cy,
@@ -316,51 +308,62 @@ const GMPerformance = ({ league, currentWeek, players, users, rosters }) => {
                             }}
                         >
                             <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-2 h-2 rounded-full ${hoveredPoint.payload.tier === 'Winner' ? 'bg-green-400' : hoveredPoint.payload.tier === 'Bust' ? 'bg-red-400' : 'bg-slate-400'}`} />
-                                <span className="font-bold text-white text-sm truncate">{hoveredPoint.payload.name}</span>
-                                <span className="text-slate-400">({hoveredPoint.payload.position})</span>
+                                <div className={`w-2 h-2 rounded-full ${
+                                    hoveredPoint.payload.tier === 'Winner' ? 'bg-good'
+                                    : hoveredPoint.payload.tier === 'Bust' ? 'bg-bad'
+                                    : 'bg-text-mute'
+                                }`} />
+                                <span className="font-semibold text-text text-sm truncate">{hoveredPoint.payload.name}</span>
+                                <span className="font-mono text-2xs text-text-mute">({hoveredPoint.payload.position})</span>
                             </div>
 
                             <div className="space-y-1 mb-2">
-                                <p className="text-slate-300">
-                                    <span className="text-slate-500">Draft:</span> R{hoveredPoint.payload.round} • Pick {hoveredPoint.payload.draftSlot} (Ov {hoveredPoint.payload.pickNo})
+                                <p className="text-text-dim">
+                                    <span className="text-text-mute font-mono text-2xs uppercase tracking-wider">Draft</span>{' '}
+                                    <span className="tnum">R{hoveredPoint.payload.round} · Pick {hoveredPoint.payload.draftSlot} · Ov {hoveredPoint.payload.pickNo}</span>
                                 </p>
-                                <p className="text-slate-300">
-                                    <span className="text-slate-500">Career Pts:</span> {hoveredPoint.payload.points.toFixed(1)} <span className="text-slate-600">/ Target: {hoveredPoint.payload.expected.toFixed(1)}</span>
+                                <p className="text-text-dim">
+                                    <span className="text-text-mute font-mono text-2xs uppercase tracking-wider">Career</span>{' '}
+                                    <span className="tnum">{hoveredPoint.payload.points.toFixed(1)}</span>
+                                    <span className="text-text-mute"> / target </span>
+                                    <span className="tnum">{hoveredPoint.payload.expected.toFixed(1)}</span>
                                 </p>
                             </div>
 
-                            <div className={`font-bold text-center py-1 rounded ${hoveredPoint.payload.tier === 'Winner' ? 'bg-green-500/20 text-green-400' :
-                                hoveredPoint.payload.tier === 'Bust' ? 'bg-red-500/20 text-red-400' :
-                                    'bg-slate-500/20 text-slate-300'
-                                }`}>
-                                {hoveredPoint.payload.tier === 'Winner' ? `✅ STEAL (+${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
-                                    hoveredPoint.payload.tier === 'Bust' ? `❌ BUST (${(hoveredPoint.payload.roi * 100).toFixed(0)}% ROI)` :
-                                        `⚖️ SOLID (Fair Value)`}
+                            <div className={`font-semibold font-mono text-2xs uppercase tracking-wider text-center py-1 rounded-sm ${
+                                hoveredPoint.payload.tier === 'Winner' ? 'bg-good/15 text-good'
+                                : hoveredPoint.payload.tier === 'Bust' ? 'bg-bad/15 text-bad'
+                                : 'bg-bg-3 text-text-dim'
+                            }`}>
+                                {hoveredPoint.payload.tier === 'Winner'
+                                    ? <>Steal · +<span className="tnum">{(hoveredPoint.payload.roi * 100).toFixed(0)}</span>% ROI</>
+                                    : hoveredPoint.payload.tier === 'Bust'
+                                    ? <>Bust · <span className="tnum">{(hoveredPoint.payload.roi * 100).toFixed(0)}</span>% ROI</>
+                                    : 'Solid · fair value'}
                             </div>
 
                             {!hoveredPoint.payload.isOnTeam && (
-                                <p className="text-[10px] text-slate-500 mt-1 italic text-center">No longer on roster</p>
+                                <p className="text-2xs text-text-mute mt-1 italic text-center">No longer on roster</p>
                             )}
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-center gap-6 mt-4 text-xs text-slate-400">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-slate-500" /> On Roster
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-text-dim" /> On Roster
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full border-2 border-text-dim" /> Traded / Dropped
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full border-2 border-slate-500" /> Traded/Dropped
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-red-400 font-bold">QB</span>
-                        <span className="text-green-400 font-bold">RB</span>
-                        <span className="text-blue-400 font-bold">WR</span>
-                        <span className="text-orange-400 font-bold">TE</span>
+                        <span style={{ color: POSITION_FILL.QB }} className="font-bold">QB</span>
+                        <span style={{ color: POSITION_FILL.RB }} className="font-bold">RB</span>
+                        <span style={{ color: POSITION_FILL.WR }} className="font-bold">WR</span>
+                        <span style={{ color: POSITION_FILL.TE }} className="font-bold">TE</span>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     );
 };

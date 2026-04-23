@@ -1,44 +1,48 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { Trophy, ArrowDown, TrendingUp, Minimize2, Loader2 } from 'lucide-react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { Pip } from '../../../components/ui/Pip';
 
-const RecordCard = ({ title, icon: Icon, record, color }) => (
-    <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader className="pb-2 border-b border-slate-700/50">
-            <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-                    {title}
-                </CardTitle>
-                <Icon className={`w-5 h-5 ${color}`} />
-            </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-            {record ? (
-                <div>
-                    <div className="flex items-center gap-3 mb-4">
+const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
+    <section className="rounded-xl bg-bg-1 border border-line p-4 shadow-card">
+        <header className="flex justify-between items-center mb-3">
+            <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                {title}
+            </h3>
+            <Icon className={`w-4 h-4 ${tone}`} aria-hidden="true" />
+        </header>
+        {record ? (
+            <div>
+                <div className="flex items-center gap-3 mb-3">
+                    {record.avatar ? (
                         <img
                             src={avatarUrl(record.avatar)}
-                            alt={record.teamName}
-                            className="w-10 h-10 rounded-full border border-slate-600"
+                            alt=""
+                            className="w-10 h-10 rounded-full ring-1 ring-line shrink-0"
                         />
-                        <div>
-                            <div className="font-bold text-white text-lg leading-tight">{record.value}</div>
-                            <div className="text-xs text-slate-400 line-clamp-2 leading-tight" title={record.teamName}>{record.teamName}</div>
+                    ) : (
+                        <Pip seed={record.teamName} name={record.teamName} size={40} />
+                    )}
+                    <div className="min-w-0">
+                        <div className="tnum font-display text-xl font-bold text-text leading-none">{record.value}</div>
+                        <div className="text-xs text-text-dim line-clamp-2 leading-tight mt-1" title={record.teamName}>
+                            {record.teamName}
                         </div>
                     </div>
-                    <div className="text-xs text-slate-500 flex justify-between">
-                        <span>{record.detail}</span>
-                        <span>{record.year} W{record.week}</span>
-                    </div>
                 </div>
-            ) : (
-                <div className="text-center text-slate-500 py-4 text-sm">No Data Available</div>
-            )}
-        </CardContent>
-    </Card>
+                <div className="font-mono text-2xs uppercase tracking-wider text-text-mute flex justify-between">
+                    <span>{record.detail}</span>
+                    <span className="tnum">
+                        {record.year} <span className="text-text-mute">·</span> W{record.week}
+                    </span>
+                </div>
+            </div>
+        ) : (
+            <div className="text-center text-text-mute py-4 text-sm">No data available</div>
+        )}
+    </section>
 );
 
 const LeagueRecordBook = ({ users }) => {
@@ -58,9 +62,6 @@ const LeagueRecordBook = ({ users }) => {
 
             try {
                 const promises = leagueHistory.map(async (league) => {
-                    // Fetch weeks A (regular season only? usually 1-14 or 15. Let's do 1-16 to be safe or 1-15)
-                    // The user prompt didn't specify regular season only, but usually records imply that.
-                    // Let's fetch 1-16 to cover most fantasy seasons.
                     const weeks = Array.from({ length: 16 }, (_, i) => i + 1);
                     const weekPromises = weeks.map(w => fetchLeagueMatchups(league.league_id, w));
                     const weeksData = await Promise.all(weekPromises);
@@ -86,13 +87,9 @@ const LeagueRecordBook = ({ users }) => {
         let lowestScore = { value: Infinity, teamName: '', avatar: null, year: '', week: '', detail: 'Points' };
         let closestMatch = { value: Infinity, teamName: '', avatar: null, year: '', week: '', detail: 'Diff' };
 
-        // Streaks: We need to track current run for each owner across seasons potentially
-        // But owner IDs might change if they are different accounts? Assuming Sleeper owner_id is consistent.
-        // We will track by roster.owner_id
         let streakTracker = {}; // ownerId -> currentWinStreak
         let longestStreak = { value: 0, teamName: '', avatar: null, year: '', week: '', detail: 'Wins' };
 
-        // Process chronologically (Oldest to Newest)
         const sortedHistory = [...leagueHistory].sort((a, b) => a.season - b.season);
 
         sortedHistory.forEach(league => {
@@ -100,13 +97,10 @@ const LeagueRecordBook = ({ users }) => {
             if (!leagueMatchups) return;
             const rosters = league.rosters || {};
 
-            // Flatten weeks
             leagueMatchups.forEach((weekMs, weekIdx) => {
                 if (!weekMs || weekMs.length === 0) return;
                 const weekNum = weekIdx + 1;
 
-                // Process each matchup pair
-                // Sleeper returns array of team-matchup objects. Group by matchup_id
                 const matchupsById = {};
                 weekMs.forEach(m => {
                     if (!matchupsById[m.matchup_id]) matchupsById[m.matchup_id] = [];
@@ -114,15 +108,12 @@ const LeagueRecordBook = ({ users }) => {
                 });
 
                 Object.values(matchupsById).forEach(pair => {
-                    if (pair.length !== 2) return; // Ignore incomplete matchups
+                    if (pair.length !== 2) return;
                     const [m1, m2] = pair;
 
-                    // Skip unplayed games (both zero)
                     if (m1.points === 0 && m2.points === 0) return;
 
-                    // 1. High/Low Scores
                     [m1, m2].forEach(m => {
-                        // Ignore zero scores (likely unset/bye) for lowest score record
                         if (m.points > highestScore.value) {
                             const r = Object.values(rosters).find(r => r.roster_id === m.roster_id);
                             const u = users?.find(user => user.user_id === r?.owner_id);
@@ -149,10 +140,8 @@ const LeagueRecordBook = ({ users }) => {
                         }
                     });
 
-                    // 2. Closest Matchup
                     const diff = Math.abs(m1.points - m2.points);
                     if (diff < closestMatch.value) {
-                        // Display the winner or the first team
                         const r1 = Object.values(rosters).find(r => r.roster_id === m1.roster_id);
                         const r2 = Object.values(rosters).find(r => r.roster_id === m2.roster_id);
                         const u1 = users?.find(user => user.user_id === r1?.owner_id);
@@ -164,14 +153,10 @@ const LeagueRecordBook = ({ users }) => {
                             avatar: u1?.avatar,
                             year: league.season,
                             week: weekNum,
-                            detail: `Diff (${m1.points.toFixed(1)} - {m2.points.toFixed(1)})` // Fixed syntax below
+                            detail: `Diff (${Math.max(m1.points, m2.points).toFixed(1)} - ${Math.min(m1.points, m2.points).toFixed(1)})`
                         };
-                        // Fix detail string interpolation
-                        closestMatch.detail = `Diff (${Math.max(m1.points, m2.points).toFixed(1)} - ${Math.min(m1.points, m2.points).toFixed(1)})`;
                     }
 
-                    // 3. Win Streaks
-                    // Update tracker
                     const updateStreak = (winnerMatch, loserMatch) => {
                         const wRoster = Object.values(rosters).find(r => r.roster_id === winnerMatch.roster_id);
                         const lRoster = Object.values(rosters).find(r => r.roster_id === loserMatch.roster_id);
@@ -183,7 +168,7 @@ const LeagueRecordBook = ({ users }) => {
                                     value: streakTracker[wRoster.owner_id],
                                     teamName: displayTeamName(u),
                                     avatar: u?.avatar,
-                                    year: league.season, // Year streak reached this height
+                                    year: league.season,
                                     week: weekNum,
                                     detail: 'Consecutive Wins'
                                 };
@@ -196,61 +181,60 @@ const LeagueRecordBook = ({ users }) => {
 
                     if (m1.points > m2.points) updateStreak(m1, m2);
                     else if (m2.points > m1.points) updateStreak(m2, m1);
-                    // Ties usually count as streak breakers or ignored? Let's say break.
                     else {
                         const r1 = Object.values(rosters).find(r => r.roster_id === m1.roster_id);
                         const r2 = Object.values(rosters).find(r => r.roster_id === m2.roster_id);
                         if (r1?.owner_id) streakTracker[r1.owner_id] = 0;
                         if (r2?.owner_id) streakTracker[r2.owner_id] = 0;
                     }
-
                 });
             });
         });
 
-        // Format outputs
         return { highestScore, lowestScore, closestMatch, longestStreak };
     }, [leagueHistory, historicalMatchups, users]);
 
     if (!leagueHistory) return null;
     if (loading) return (
-        <div className="flex items-center justify-center p-8 bg-slate-800/50 rounded-xl border border-slate-700">
-            <Loader2 className="w-6 h-6 text-blue-400 animate-spin mr-2" />
-            <span className="text-slate-400">Compiling League Record Book...</span>
+        <div className="flex items-center justify-center p-6 bg-bg-1 rounded-xl border border-line">
+            <Loader2 className="w-5 h-5 text-signal animate-spin mr-2" />
+            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Compiling League Record Book…
+            </span>
         </div>
     );
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-                <Trophy className="w-6 h-6 text-yellow-500" />
-                <h2 className="text-2xl font-bold text-white">League Record Book</h2>
+            <div className="flex items-center gap-2.5">
+                <Trophy className="w-5 h-5 text-signal" aria-hidden="true" />
+                <h2 className="font-display text-2xl font-bold tracking-snug text-text">League Record Book</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <RecordCard
                     title="All-Time High Score"
                     icon={TrendingUp}
                     record={records?.highestScore}
-                    color="text-green-400"
+                    tone="text-good"
                 />
                 <RecordCard
                     title="All-Time Low Score"
                     icon={ArrowDown}
                     record={records?.lowestScore}
-                    color="text-red-400"
+                    tone="text-bad"
                 />
                 <RecordCard
                     title="Longest Win Streak"
                     icon={Trophy}
                     record={records?.longestStreak}
-                    color="text-yellow-400"
+                    tone="text-signal"
                 />
                 <RecordCard
                     title="Closest Matchup"
                     icon={Minimize2}
                     record={records?.closestMatch}
-                    color="text-blue-400"
+                    tone="text-text-dim"
                 />
             </div>
         </div>
