@@ -6,19 +6,21 @@ export const usePlayerNews = (roster, players) => {
     const { data: newsItems } = useQuery({
         queryKey: ['nflNews'],
         queryFn: async () => {
-            // In development (npm run dev), /api/news won't exist unless using 'vercel dev'.
-            if (import.meta.env.DEV && !window.location.host.includes('vercel.app')) {
-                // Fallback or mock could go here. For now we try relative.
-            }
-
+            // /api/news is a Vercel serverless function. In `npm run dev` (Vite alone),
+            // the route falls through to the SPA index.html instead of erroring, so we
+            // detect non-JSON responses and treat them as "no news available" rather
+            // than throwing. Use `vercel dev` locally for a live API.
             const res = await fetch('/api/news');
             if (!res.ok) {
                 if (res.status === 404) return [];
                 throw new Error('Failed to fetch news');
             }
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) return [];
             return res.json();
         },
         staleTime: 10 * 60 * 1000,
+        retry: false,
     });
 
     // 2. Fetch Trending Data (Drops)
