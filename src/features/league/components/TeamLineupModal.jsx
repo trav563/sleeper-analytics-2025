@@ -1,25 +1,23 @@
-
+import { X } from 'lucide-react';
 import { classifyInjury, isDSTStarterId } from '../../../utils/nflData';
+import { Pip } from '../../../components/ui/Pip';
 
-const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, rosterById, userById, league }) => {
+const STATUS_TONE = {
+    OK: 'text-good',
+    INCOMPLETE: 'text-bad',
+    POTENTIAL: 'text-warn',
+    PUP: 'text-warn',
+    OUT: 'text-bad',
+    QUESTIONABLE: 'text-warn',
+    DOUBTFUL: 'text-bad',
+};
+
+const POSITION_ORDER = {
+    QB: 1, RB: 2, WR: 3, TE: 4, FLEX: 5, DEF: 6, K: 7,
+};
+
+const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, league }) => {
     if (!team || !matchup) return null;
-
-    const STATUS_COLORS = {
-        TEXT: {
-            INCOMPLETE: "text-red-500",
-            OK: "text-green-500",
-            PUP: "text-orange-500",
-            OUT: "text-red-500",
-            QUESTIONABLE: "text-yellow-500",
-            DOUBTFUL: "text-red-400"
-        }
-    };
-
-    const POSITION_ORDER = {
-        QB: 1, RB: 2, WR: 3, TE: 4, FLEX: 5, DEF: 6, K: 7
-    };
-
-    const { TEXT } = STATUS_COLORS;
 
     // Use league's roster_positions if available, otherwise fall back to standard positions
     const rosterPositions = league?.roster_positions || ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "DEF", "K"];
@@ -30,49 +28,42 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, ro
         if (!pid || pid === "" || pid === null || pid === undefined || pid === "0") {
             const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
             return {
-                pid: `empty - ${index} `,
+                pid: `empty-${index}`,
                 name: "EMPTY",
-                position: position,
+                position,
                 status: "INCOMPLETE",
                 reason: "Empty Slot",
-                isEmpty: true
+                isEmpty: true,
             };
         }
 
         // Handle D/ST separately
         if (isDSTStarterId(pid)) {
-            const isDST = true;
             const onBye = byeTeamsThisWeek.has(pid);
             return {
                 pid,
-                name: `${pid} D / ST`,
+                name: `${pid} D/ST`,
                 position: "DEF",
                 status: onBye ? "INCOMPLETE" : "OK",
                 reason: onBye ? "BYE" : "Active",
-                isDST,
-                isDefense: true
+                isDST: true,
+                isDefense: true,
             };
         }
 
         const player = players[pid];
         if (!player) {
             const position = index < rosterPositions.length ? rosterPositions[index] : "FLEX";
-            return { pid, name: "EMPTY", position: position, status: "INCOMPLETE", reason: "Empty Slot", isEmpty: true };
+            return { pid, name: "EMPTY", position, status: "INCOMPLETE", reason: "Empty Slot", isEmpty: true };
         }
 
-        const fullName = `${player.first_name || ""} ${player.last_name || ""} `.trim();
+        const fullName = `${player.first_name || ""} ${player.last_name || ""}`.trim();
         const position = player.position || (index < rosterPositions.length ? rosterPositions[index] : "FLEX");
 
         // Check for bye week
         const onBye = player.team && byeTeamsThisWeek.has(player.team);
         if (onBye) {
-            return {
-                pid,
-                name: fullName,
-                position,
-                status: "INCOMPLETE",
-                reason: "BYE"
-            };
+            return { pid, name: fullName, position, status: "INCOMPLETE", reason: "BYE" };
         }
 
         // Check injury status
@@ -88,7 +79,7 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, ro
             name: fullName,
             position,
             status: isPUP ? "INCOMPLETE" : status,
-            reason: isPUP ? "PUP" : reason
+            reason: isPUP ? "PUP" : reason,
         };
     });
 
@@ -100,51 +91,79 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, ro
     });
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-slate-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-700" onClick={e => e.stopPropagation()}>
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
+        <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={onClose}
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                className="bg-bg-1 rounded-xl shadow-pop max-w-lg w-full max-h-[90vh] overflow-y-auto border border-line"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-5">
+                    <header className="flex justify-between items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3 min-w-0">
                             {team.avatar ? (
-                                <img src={team.avatar} alt="avatar" className="h-12 w-12 rounded-full border border-slate-600 shadow-sm" />
+                                <img
+                                    src={team.avatar}
+                                    alt=""
+                                    className="h-12 w-12 rounded-full ring-1 ring-line flex-shrink-0"
+                                />
                             ) : (
-                                <div className="h-12 w-12 rounded-full bg-slate-700" />
+                                <Pip seed={team.roster_id ?? team.name} name={team.name} size={48} />
                             )}
-                            <h2 className="text-xl font-bold text-white">{team.name}</h2>
+                            <div className="min-w-0">
+                                <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                    Starting Lineup
+                                </div>
+                                <h2 className="font-display text-lg font-bold text-text truncate">{team.name}</h2>
+                            </div>
                         </div>
                         <button
+                            type="button"
                             onClick={onClose}
-                            className="text-slate-400 hover:text-slate-200 focus:outline-none"
+                            aria-label="Close"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-bg-2 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <X className="w-5 h-5" />
                         </button>
-                    </div>
+                    </header>
 
-                    <h3 className="font-semibold text-slate-300 mb-4">Starting Lineup</h3>
-
-                    <ul className="space-y-2">
-                        {sortedStarters.map((player) => (
-                            <li key={player.pid} className="flex items-center p-2 rounded-lg border border-slate-700 hover:bg-slate-700/50">
-                                <div className="w-10 text-xs font-medium text-slate-400">{player.position}</div>
-                                <div className="flex-1">
-                                    <div className="font-medium text-white">{player.name}</div>
-                                    <div className="text-[10px] text-slate-500 font-mono">ID: {player.pid}</div>
-                                </div>
-                                <div className={`text-sm font-medium ${player.reason === "PUP" || player.reason === "Empty Slot" ? TEXT.INCOMPLETE : TEXT[player.status]}`}>
-                                    {player.reason === "Active" ? "Active" :
-                                        player.reason ||
-                                        (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : "")}
-                                </div>
-                            </li>
-                        ))}
+                    <ul className="space-y-1.5">
+                        {sortedStarters.map((player) => {
+                            const tone = player.reason === "PUP" || player.reason === "Empty Slot"
+                                ? STATUS_TONE.INCOMPLETE
+                                : STATUS_TONE[player.status] || 'text-text-dim';
+                            const reasonLabel = player.reason === "Active"
+                                ? "Active"
+                                : (player.reason || (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : ""));
+                            return (
+                                <li
+                                    key={player.pid}
+                                    className="grid items-center gap-3 p-2.5 rounded-md border border-line bg-bg-2/40 hover:bg-bg-2 transition-colors duration-fast"
+                                    style={{ gridTemplateColumns: '40px 1fr auto' }}
+                                >
+                                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
+                                        {player.position}
+                                    </span>
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-semibold text-text truncate">{player.name}</div>
+                                        <div className="font-mono text-2xs text-text-mute truncate">ID: {player.pid}</div>
+                                    </div>
+                                    <span className={`text-xs font-semibold ${tone} text-right`}>
+                                        {reasonLabel}
+                                    </span>
+                                </li>
+                            );
+                        })}
                     </ul>
 
-                    <div className="mt-6 pt-4 border-t border-slate-700">
+                    <div className="mt-5 pt-4 border-t border-line">
                         <button
+                            type="button"
                             onClick={onClose}
-                            className="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium"
+                            className="w-full min-h-[44px] py-2 px-4 rounded-md bg-bg-2 hover:bg-bg-3 text-text font-semibold text-sm border border-line transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
                         >
                             Close
                         </button>

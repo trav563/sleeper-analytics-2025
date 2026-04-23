@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useLeagueData } from '../hooks/useLeagueData';
 import { useLineupStatus } from '../hooks/useLineupStatus';
 import StatusSection from './StatusSection';
@@ -33,54 +34,42 @@ const LineupChecker = ({ leagueId }) => {
     }, []);
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white">Lineup Completeness</h2>
-                    <p className="text-sm text-gray-400 mt-1">
-                        {isPreseason ? "Preseason " : ""}Week {week ?? "-"}
-                    </p>
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        {isPreseason ? "Preseason" : "Regular Season"} · Week <span className="tnum text-text-dim">{week ?? "—"}</span>
+                    </div>
+                    <h2 className="mt-1 font-display text-2xl font-bold tracking-snug text-text">
+                        Lineup Completeness
+                    </h2>
                 </div>
                 <button
+                    type="button"
                     onClick={refresh}
                     disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-md bg-bg-2 hover:bg-bg-3 text-text border border-line text-sm font-semibold transition-colors duration-fast disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={`lucide lucide-refresh-cw ${loading ? 'animate-spin' : ''}`}
-                    >
-                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                        <path d="M21 3v5h-5" />
-                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                        <path d="M8 16H3v5" />
-                    </svg>
-                    {loading ? 'Refreshing...' : 'Refresh Data'}
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    {loading ? 'Refreshing…' : 'Refresh'}
                 </button>
             </div>
 
             {loading && (
                 <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    <div className="h-10 w-10 rounded-full border-2 border-line border-t-signal animate-spin" />
                 </div>
             )}
 
             {error && (
-                <div className="p-4 rounded-md bg-red-900/50 border border-red-800 text-red-200">
-                    {error}
+                <div className="p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-sm flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                    <span>{error}</span>
                 </div>
             )}
 
             {!loading && !error && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatusSection title="Complete" items={grouped.OK} tone="OK" onTeamClick={handleTeamClick} />
                     <StatusSection title="Potential Issues" items={grouped.POTENTIAL} tone="POTENTIAL" onTeamClick={handleTeamClick} />
                     <StatusSection title="Incomplete" items={grouped.INCOMPLETE} tone="INCOMPLETE" onTeamClick={handleTeamClick} />
@@ -100,10 +89,8 @@ const LineupChecker = ({ leagueId }) => {
                 />
             )}
 
-            <div className="text-xs text-gray-500 pt-4 border-t border-gray-800">
-                <p>
-                    Injury data and rosters via Sleeper public API. Team BYEs are fetched dynamically from ESPN.
-                </p>
+            <div className="text-2xs font-mono uppercase tracking-wider text-text-mute pt-4 border-t border-line">
+                Injury data and rosters via Sleeper public API. Team byes fetched from ESPN.
             </div>
         </div>
     );

@@ -38,28 +38,31 @@ export const POSITION_ORDER = {
 };
 
 /**
- * Color tokens for status
+ * Color tokens for lineup status. Semantic broadcast tokens:
+ *   OK         → good   (green)
+ *   POTENTIAL  → warn   (amber)
+ *   INCOMPLETE → bad    (red)
  */
 export const STATUS_COLORS = {
     BG: {
-        OK: "bg-emerald-600",
-        POTENTIAL: "bg-amber-500",
-        INCOMPLETE: "bg-rose-600",
+        OK: "bg-good",
+        POTENTIAL: "bg-warn",
+        INCOMPLETE: "bg-bad",
     },
     LIGHT: {
-        OK: "bg-emerald-500/10 border border-emerald-500/30",
-        POTENTIAL: "bg-amber-500/10 border border-amber-500/30",
-        INCOMPLETE: "bg-rose-500/10 border border-rose-500/30",
+        OK: "bg-good/10 border border-good/30",
+        POTENTIAL: "bg-warn/10 border border-warn/30",
+        INCOMPLETE: "bg-bad/10 border border-bad/30",
     },
     DOT: {
-        OK: "bg-emerald-600",
-        POTENTIAL: "bg-amber-500",
-        INCOMPLETE: "bg-rose-600",
+        OK: "bg-good",
+        POTENTIAL: "bg-warn",
+        INCOMPLETE: "bg-bad",
     },
     TEXT: {
-        OK: "text-emerald-600",
-        POTENTIAL: "text-amber-500",
-        INCOMPLETE: "text-rose-600",
+        OK: "text-good",
+        POTENTIAL: "text-warn",
+        INCOMPLETE: "text-bad",
     }
 };
 

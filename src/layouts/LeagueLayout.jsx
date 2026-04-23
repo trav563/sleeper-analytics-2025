@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
 import LeagueCard from '../features/league/components/LeagueCard';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { fetchLeagueTransactions } from '../utils/sleeper';
 import { Button } from '../components/ui/Button';
 import PageTransition from '../components/PageTransition';
@@ -47,16 +47,22 @@ const LeagueLayout = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-[calc(100vh-4rem)] text-muted-foreground animate-pulse">
-                Loading league data...
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] gap-3">
+                <div className="h-10 w-10 rounded-full border-2 border-line border-t-signal animate-spin" />
+                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    Loading league data…
+                </span>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex justify-center items-center h-[calc(100vh-4rem)] text-destructive">
-                Error loading league data: {error.message}
+            <div className="flex justify-center items-center h-[calc(100vh-4rem)] px-4">
+                <div className="max-w-md w-full p-4 rounded-md bg-bad/10 border border-bad/30 text-bad text-sm flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                    <span>Error loading league data: {error.message}</span>
+                </div>
             </div>
         );
     }
@@ -66,32 +72,29 @@ const LeagueLayout = () => {
             <Helmet>
                 <title>{league ? `${league.name} Analysis | League Analysis` : 'League Analysis'}</title>
                 <meta name="description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
-
-                {/* Check if we have a trophy icon in public dir (assuming favicon.png for now based on file check) */}
-                {/* Standard OGP */}
                 <meta property="og:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
                 <meta property="og:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
                 <meta property="og:image" content="/favicon.png" />
                 <meta property="og:type" content="website" />
                 <meta property="og:url" content={window.location.href} />
-
-                {/* Twitter Card */}
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
                 <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
                 <meta name="twitter:image" content="/favicon.png" />
             </Helmet>
 
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 bg-card/50 p-6 rounded-xl border border-border backdrop-blur-sm">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6 bg-bg-1 p-5 rounded-xl border border-line shadow-card">
                 <div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">League Analysis</h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        League ID: <span className="font-mono text-primary">{leagueId}</span>
-                    </p>
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        League ID · <span className="tnum text-text-dim">{leagueId}</span>
+                    </div>
+                    <h1 className="mt-1 font-display text-2xl md:text-3xl font-bold tracking-snug text-text">
+                        League Analysis
+                    </h1>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-stretch gap-2">
                     <input
-                        className="px-3 sm:px-4 py-2 rounded-md border border-input bg-background/50 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring text-xs sm:text-sm w-full sm:w-64 placeholder:text-muted-foreground"
+                        className="px-3 py-2 min-h-[40px] rounded-md border border-line bg-bg-2 text-text text-sm placeholder:text-text-mute focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal w-full sm:w-64 transition-colors duration-fast"
                         placeholder="Enter League ID"
                         defaultValue={leagueId}
                         onKeyDown={handleLeagueChange}
@@ -101,17 +104,18 @@ const LeagueLayout = () => {
                             const el = document.querySelector("input[placeholder='Enter League ID']");
                             if (el?.value) navigate(`/league/${el.value.trim()}`);
                         }}
+                        className="bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90"
                     >
                         Load
                     </Button>
                 </div>
             </header>
 
-            <div className="mb-8">
+            <div>
                 <Button
                     variant="ghost"
                     onClick={() => navigate('/')}
-                    className="gap-2 mb-4 pl-0 hover:bg-transparent hover:text-primary transition-colors"
+                    className="gap-2 mb-4 pl-0 text-text-dim hover:bg-transparent hover:text-signal transition-colors duration-fast"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Dashboard
