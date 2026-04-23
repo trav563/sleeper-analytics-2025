@@ -1,22 +1,21 @@
 import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Switch } from '../../../components/ui/Switch';
 import { fetchLeagueRosters } from '../../../utils/sleeper';
+import { Globe } from 'lucide-react';
+import { theme } from '../../../lib/theme';
 
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [useMaxPf, setUseMaxPf] = useState(false);
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
     const [usingPrevSeason, setUsingPrevSeason] = useState(false);
 
-    // Check if current season has any points data
     const hasCurrentSeasonData = useMemo(() => {
         if (!rosters) return false;
         return rosters.some(r => (r.settings?.fpts || 0) > 0);
     }, [rosters]);
 
-    // Fetch previous season rosters if current season has no data
     useEffect(() => {
         if (hasCurrentSeasonData || !league?.previous_league_id) {
             setUsingPrevSeason(false);
@@ -32,7 +31,6 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return () => { cancelled = true; };
     }, [hasCurrentSeasonData, league?.previous_league_id]);
 
-    // Use previous season rosters for PPG when current season has no data
     const effectiveRosters = usingPrevSeason && prevSeasonRosters ? prevSeasonRosters : rosters;
 
     const data = useMemo(() => {
@@ -79,18 +77,16 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return teams.filter(t => t.age > 0);
     }, [rosters, users, players, league, state, useMaxPf, usingPrevSeason, effectiveRosters]);
 
-    // Calculate Averages for Quadrants
     const averages = useMemo(() => {
         if (data.length === 0) return { age: 0, production: 0 };
         const totalAge = data.reduce((sum, t) => sum + t.age, 0);
         const totalProd = data.reduce((sum, t) => sum + t.production, 0);
         return {
             age: parseFloat((totalAge / data.length).toFixed(1)),
-            production: parseFloat((totalProd / data.length).toFixed(1))
+            production: parseFloat((totalProd / data.length).toFixed(1)),
         };
     }, [data]);
 
-    // Calculate dynasty score for best/worst highlighting
     const { bestId, worstId } = useMemo(() => {
         if (data.length === 0) return { bestId: null, worstId: null };
 
@@ -107,8 +103,8 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         let bestScore = -Infinity, worstScore = Infinity;
 
         data.forEach(team => {
-            const normProd = (team.production - minProd) / prodRange; // 0-1, higher is better
-            const normAge = (team.age - minAge) / ageRange; // 0-1, lower is better
+            const normProd = (team.production - minProd) / prodRange;
+            const normAge = (team.age - minAge) / ageRange;
             const score = (normProd * 0.6) + ((1 - normAge) * 0.4);
 
             if (score > bestScore) { bestScore = score; best = team.rosterId; }
@@ -118,7 +114,6 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return { bestId: best, worstId: worst };
     }, [data]);
 
-    // Enrich data with best/worst flags
     const enrichedData = useMemo(() => {
         return data.map(d => ({
             ...d,
@@ -127,7 +122,6 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         }));
     }, [data, bestId, worstId]);
 
-    // Custom Scatter Point (Avatar) with highlight for best/worst
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
         const size = payload.isBest || payload.isWorst ? 48 : 40;
@@ -135,11 +129,11 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
         let borderStyle = {};
         if (payload.isBest) {
-            borderStyle = { border: '3px solid #facc15', boxShadow: '0 0 14px rgba(250, 204, 21, 0.6)' };
+            borderStyle = { border: `3px solid ${theme.color.signal}`, boxShadow: `0 0 14px ${theme.color.signal}99` };
         } else if (payload.isWorst) {
-            borderStyle = { border: '3px solid #f87171', boxShadow: '0 0 14px rgba(248, 113, 113, 0.6)' };
+            borderStyle = { border: `3px solid ${theme.color.bad}`, boxShadow: `0 0 14px ${theme.color.bad}99` };
         } else {
-            borderStyle = { border: '2px solid rgba(255,255,255,0.2)' };
+            borderStyle = { border: `2px solid ${theme.color.lineStrong}` };
         }
 
         return (
@@ -147,47 +141,46 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 <img
                     src={payload.avatar}
                     alt={payload.name}
-                    style={{ width: size, height: size, borderRadius: '50%', ...borderStyle, cursor: 'pointer', background: '#1e293b' }}
+                    style={{ width: size, height: size, borderRadius: '50%', ...borderStyle, cursor: 'pointer', background: theme.color.bg2 }}
                     title={payload.name}
                 />
             </foreignObject>
         );
     };
 
-    // Custom Tooltip with updated labels
     const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
             const d = payload[0].payload;
 
             let classification = '';
-            if (d.production >= averages.production && d.age <= averages.age) classification = '🏆 Dynasty Elite';
-            else if (d.production >= averages.production && d.age > averages.age) classification = '⏳ Win-Now';
-            else if (d.production < averages.production && d.age <= averages.age) classification = '🛠️ Rebuilder';
-            else classification = '⚠️ Danger Zone';
+            if (d.production >= averages.production && d.age <= averages.age) classification = 'Dynasty Elite';
+            else if (d.production >= averages.production && d.age > averages.age) classification = 'Win-Now';
+            else if (d.production < averages.production && d.age <= averages.age) classification = 'Rebuilder';
+            else classification = 'Danger Zone';
 
             let highlight = '';
-            if (d.isBest) highlight = '👑 Dynasty King';
-            else if (d.isWorst) highlight = '💀 Cellar Dweller';
+            if (d.isBest) highlight = 'Dynasty King';
+            else if (d.isWorst) highlight = 'Cellar Dweller';
 
             return (
-                <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl z-50">
-                    <p className="font-bold text-white mb-1">{d.name}</p>
-                    <div className="space-y-1 text-xs text-slate-300">
+                <div className="bg-bg-1 border border-line p-3 rounded-md shadow-pop z-50">
+                    <p className="font-semibold text-text mb-1">{d.name}</p>
+                    <div className="space-y-1 text-xs text-text-dim">
                         <div className="flex justify-between gap-4">
-                            <span>Avg Age:</span>
-                            <span className="font-mono text-white">{d.age} yrs</span>
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg Age</span>
+                            <span className="font-mono tnum text-text">{d.age} yrs</span>
                         </div>
                         <div className="flex justify-between gap-4">
-                            <span>{d.productionLabel}:</span>
-                            <span className={`font-mono font-bold ${d.production >= averages.production ? 'text-green-400' : 'text-red-400'}`}>
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{d.productionLabel}</span>
+                            <span className={`font-mono font-bold tnum ${d.production >= averages.production ? 'text-good' : 'text-bad'}`}>
                                 {d.production}
                             </span>
                         </div>
-                        <div className="pt-2 mt-1 border-t border-slate-800 text-center font-bold text-white">
+                        <div className="pt-2 mt-1 border-t border-line text-center font-mono text-2xs uppercase tracking-wider font-bold text-text">
                             {classification}
                         </div>
                         {highlight && (
-                            <div className={`text-center font-bold text-sm ${d.isBest ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <div className={`text-center font-bold font-mono text-2xs uppercase tracking-wider ${d.isBest ? 'text-signal' : 'text-bad'}`}>
                                 {highlight}
                             </div>
                         )}
@@ -200,51 +193,54 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
     if (!enrichedData || enrichedData.length === 0) return null;
 
-    // Axis Domains padding
     const minAge = Math.floor(Math.min(...enrichedData.map(d => d.age)) - 0.5);
     const maxAge = Math.ceil(Math.max(...enrichedData.map(d => d.age)) + 0.5);
     const minProd = Math.floor(Math.min(...enrichedData.map(d => d.production)) * 0.95);
     const maxProd = Math.ceil(Math.max(...enrichedData.map(d => d.production)) * 1.05);
 
     return (
-        <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
+            <header className="flex flex-row items-center justify-between gap-3 p-4 border-b border-line">
                 <div>
-                    <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                        <span className="text-xl">🌍</span> <span className="hidden sm:inline">Dynasty Landscape</span><span className="sm:hidden">Landscape</span>
-                    </CardTitle>
-                    <p className="text-[10px] sm:text-xs text-slate-400">
-                        Competitive Window (Age vs Prod)
-                        {usingPrevSeason && <span className="text-amber-400 ml-1">— Using {parseInt(state?.season || '2026') - 1} season data</span>}
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1.5">
+                        <Globe className="w-3 h-3 text-signal" aria-hidden="true" />
+                        Tool · Dynasty Landscape
+                    </div>
+                    <h3 className="mt-1 font-display text-lg font-semibold text-text">
+                        Competitive Window
+                    </h3>
+                    <p className="text-xs text-text-dim mt-0.5">
+                        Age vs Production
+                        {usingPrevSeason && <span className="text-warn ml-1">— using <span className="tnum">{parseInt(state?.season || '2026') - 1}</span> season data</span>}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] sm:text-xs font-medium text-slate-400">{useMaxPf ? 'Max PF' : 'PPG'}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
                     <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} className="scale-75 sm:scale-100" />
                 </div>
-            </CardHeader>
-            <CardContent className="p-0 sm:p-6 sm:pt-0">
-                <div className="h-[500px] w-full text-xs">
+            </header>
+
+            <div className="p-2 sm:p-5 sm:pt-3">
+                <div className="h-[480px] w-full text-xs">
                     <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme.color.lineStrong} opacity={0.4} />
 
-                            {/* Color Quadrants */}
-                            <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill="#4ade80" fillOpacity={0.05} />
-                            <ReferenceArea x1={averages.age} x2={maxAge} y1={averages.production} y2={maxProd} fill="#facc15" fillOpacity={0.05} />
-                            <ReferenceArea x1={minAge} x2={averages.age} y1={minProd} y2={averages.production} fill="#60a5fa" fillOpacity={0.05} />
-                            <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill="#f87171" fillOpacity={0.05} />
+                            <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill={theme.color.good} fillOpacity={0.05} />
+                            <ReferenceArea x1={averages.age} x2={maxAge} y1={averages.production} y2={maxProd} fill={theme.color.signal} fillOpacity={0.05} />
+                            <ReferenceArea x1={minAge} x2={averages.age} y1={minProd} y2={averages.production} fill={theme.color.signal2} fillOpacity={0.05} />
+                            <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill={theme.color.bad} fillOpacity={0.05} />
 
                             <XAxis
                                 type="number"
                                 dataKey="age"
                                 name="Average Age"
                                 domain={[minAge, maxAge]}
-                                stroke="#94a3b8"
-                                tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                stroke={theme.color.textDim}
+                                tick={{ fill: theme.color.textDim, fontSize: 11, fontFamily: 'var(--font-mono)' }}
                                 tickCount={5}
                             >
-                                <Label value="Average Age" offset={-10} position="insideBottom" fill="#64748b" style={{ fontSize: '10px' }} />
+                                <Label value="Average Age" offset={-10} position="insideBottom" fill={theme.color.textMute} style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }} />
                             </XAxis>
 
                             <YAxis
@@ -252,50 +248,44 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                                 dataKey="production"
                                 name="Production"
                                 domain={[minProd, maxProd]}
-                                stroke="#94a3b8"
-                                tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                width={30}
+                                stroke={theme.color.textDim}
+                                tick={{ fill: theme.color.textDim, fontSize: 11, fontFamily: 'var(--font-mono)' }}
+                                width={32}
                             />
 
-                            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: theme.color.lineStrong, strokeDasharray: '3 3' }} />
 
-                            <ReferenceLine x={averages.age} stroke="#94a3b8" strokeDasharray="3 3" />
-                            <ReferenceLine y={averages.production} stroke="#94a3b8" strokeDasharray="3 3" />
+                            <ReferenceLine x={averages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
+                            <ReferenceLine y={averages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
 
                             <Scatter name="Teams" data={enrichedData} shape={<CustomNode />} />
                         </ScatterChart>
                     </ResponsiveContainer>
                 </div>
 
-                {/* Legend */}
-                <div className="grid grid-cols-2 gap-2 mt-4 px-4 pb-4 sm:px-0 sm:pb-0">
+                <div className="grid grid-cols-2 gap-2 mt-4 px-2 pb-2 sm:px-0 sm:pb-0">
+                    {[
+                        { label: 'Dynasty Elite', color: theme.color.good },
+                        { label: 'Win-Now', color: theme.color.signal },
+                        { label: 'Rebuilder', color: theme.color.signal2 },
+                        { label: 'Danger Zone', color: theme.color.bad },
+                    ].map(({ label, color }) => (
+                        <div key={label} className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ background: `${color}33`, border: `1px solid ${color}` }} />
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-dim">{label}</span>
+                        </div>
+                    ))}
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-400/20 border border-green-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Dynasty Elite</span>
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: `${theme.color.signal}66`, border: `2px solid ${theme.color.signal}`, boxShadow: `0 0 6px ${theme.color.signal}80` }} />
+                        <span className="font-mono text-2xs uppercase tracking-wider text-signal">Dynasty King</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-400/20 border border-yellow-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Win-Now</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-400/20 border border-blue-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Rebuilder</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400/20 border border-red-400"></div>
-                        <span className="text-[10px] sm:text-xs text-slate-400">Danger Zone</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-400/40 border-2 border-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.5)]"></div>
-                        <span className="text-[10px] sm:text-xs text-yellow-400 font-medium">Dynasty King</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400/40 border-2 border-red-400 shadow-[0_0_6px_rgba(248,113,113,0.5)]"></div>
-                        <span className="text-[10px] sm:text-xs text-red-400 font-medium">Cellar Dweller</span>
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: `${theme.color.bad}66`, border: `2px solid ${theme.color.bad}`, boxShadow: `0 0 6px ${theme.color.bad}80` }} />
+                        <span className="font-mono text-2xs uppercase tracking-wider text-bad">Cellar Dweller</span>
                     </div>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     );
 };
 

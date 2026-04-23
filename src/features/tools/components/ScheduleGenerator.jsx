@@ -1,7 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
 import { ChevronDown, ChevronUp, CalendarDays, RotateCcw } from 'lucide-react';
 import { displayTeamName } from '../../../utils/nflData';
 import ScheduleConfigForm from './ScheduleConfigForm';
@@ -16,7 +14,6 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
   const [generatedResult, setGeneratedResult] = useState(null);
   const [showRestore, setShowRestore] = useState(false);
 
-  // Build team list from rosters + users (filter orphaned rosters)
   const teams = useMemo(() => {
     if (!rosters || !users) return [];
     return rosters
@@ -33,7 +30,6 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
       .sort((a, b) => parseInt(a.id) - parseInt(b.id));
   }, [rosters, users]);
 
-  // Default config from league settings
   const defaultConfig = useMemo(() => {
     const playoffStart = league?.settings?.playoff_week_start || 15;
     const startWeek = league?.settings?.start_week || 1;
@@ -46,41 +42,26 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
       maxRepeat,
       noBackToBack: true,
       divisionsEnabled: false,
-      divisions: {
-        enabled: false,
-        groups: [],
-        intraGames: 2,
-        interGames: 1,
-      },
+      divisions: { enabled: false, groups: [], intraGames: 2, interGames: 1 },
       rivalryWeekEnabled: false,
-      rivalryWeek: {
-        enabled: false,
-        week: 1,
-        matchups: [],
-      },
+      rivalryWeek: { enabled: false, week: 1, matchups: [] },
       lockedWeeks: [],
     };
   }, [league, teams]);
 
   const [config, setConfig] = useState(defaultConfig);
 
-  // Reset config when league changes
   useEffect(() => {
     setConfig(defaultConfig);
     setGeneratedResult(null);
   }, [defaultConfig]);
 
-  // Check for saved state on mount
   useEffect(() => {
     if (!league?.league_id) return;
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + league.league_id);
-      if (saved) {
-        setShowRestore(true);
-      }
-    } catch {
-      // localStorage unavailable
-    }
+      if (saved) setShowRestore(true);
+    } catch {}
   }, [league?.league_id]);
 
   const handleRestore = useCallback(() => {
@@ -106,12 +87,8 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
       weeks: config.weeks,
       maxRepeat: config.maxRepeat,
       noBackToBack: config.noBackToBack,
-      divisions: config.divisionsEnabled
-        ? { ...config.divisions, enabled: true }
-        : null,
-      rivalryWeek: config.rivalryWeekEnabled
-        ? { ...config.rivalryWeek, enabled: true }
-        : null,
+      divisions: config.divisionsEnabled ? { ...config.divisions, enabled: true } : null,
+      rivalryWeek: config.rivalryWeekEnabled ? { ...config.rivalryWeek, enabled: true } : null,
       lockedWeeks: config.lockedWeeks || [],
     };
 
@@ -121,70 +98,71 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
     const fullResult = { ...result, fairness };
     setGeneratedResult(fullResult);
 
-    // Save to localStorage
     try {
       localStorage.setItem(
         STORAGE_KEY_PREFIX + league.league_id,
         JSON.stringify({ config, result: fullResult, savedAt: new Date().toISOString() })
       );
-    } catch {
-      // localStorage full or unavailable
-    }
+    } catch {}
   }, [teams, config, rosters, league?.league_id]);
 
   if (teams.length < 2) return null;
 
   return (
-    <Card className="border border-slate-700">
-      {/* Collapsible Header */}
-      <CardHeader
-        className="cursor-pointer select-none"
+    <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
+      <button
+        type="button"
+        className="w-full text-left p-4 hover:bg-bg-2/40 transition-colors duration-fast"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CalendarDays className="w-5 h-5 text-primary" />
-            <div>
-              <CardTitle className="text-lg">Schedule Generator</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <CalendarDays className="w-5 h-5 text-signal shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Tool · Schedule
+              </div>
+              <h3 className="font-display text-lg font-semibold text-text">Schedule Generator</h3>
+              <p className="text-xs text-text-dim mt-0.5">
                 Create balanced fantasy football schedules with custom constraints
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {generatedResult && (
-              <Badge className="bg-emerald-500/20 text-emerald-300 text-xs">Generated</Badge>
+              <span className="font-mono text-2xs uppercase tracking-wider text-good bg-good/10 border border-good/30 px-1.5 py-0.5 rounded-sm">
+                Generated
+              </span>
             )}
             {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+              <ChevronUp className="w-5 h-5 text-text-dim" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+              <ChevronDown className="w-5 h-5 text-text-dim" />
             )}
           </div>
         </div>
-      </CardHeader>
+      </button>
 
       {isExpanded && (
-        <CardContent className="space-y-6">
-          {/* Restore prompt */}
+        <div className="px-4 pb-4 space-y-5 border-t border-line pt-4">
           {showRestore && (
-            <div className="flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-              <div className="flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-blue-400" />
-                <span className="text-sm text-blue-300">You have a saved schedule. Restore it?</span>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-signal/30 bg-signal/10 p-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <RotateCcw className="w-4 h-4 text-signal shrink-0" aria-hidden="true" />
+                <span className="text-sm text-text">You have a saved schedule. Restore it?</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleRestore} className="text-xs">
+              <div className="flex gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={handleRestore} className="text-xs border-line text-text hover:bg-bg-2">
                   Restore
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleDismissRestore} className="text-xs">
+                <Button variant="ghost" size="sm" onClick={handleDismissRestore} className="text-xs text-text-dim hover:text-text">
                   Dismiss
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Config Form */}
           <ScheduleConfigForm
             teams={teams}
             config={config}
@@ -192,9 +170,8 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
             onGenerate={handleGenerate}
           />
 
-          {/* Generated Output */}
           {generatedResult && (
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-line">
               <ScheduleOutput
                 schedule={generatedResult.schedule}
                 constraintReport={generatedResult.constraintReport}
@@ -206,9 +183,9 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
               />
             </div>
           )}
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </section>
   );
 };
 

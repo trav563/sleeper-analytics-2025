@@ -13,11 +13,15 @@ const ToolsPage = () => {
     // Comprehensive Loading Guard
     // Ensure all critical data (including Arrays) is present before rendering tools
     if (!league || !league.roster_positions || !rosters || !users || !players) {
-        return <div className="p-12 text-center text-slate-500">Loading League Tools...</div>;
+        return (
+            <div className="p-12 text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Loading league tools…
+            </div>
+        );
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             <ScheduleGenerator
                 league={league}
                 rosters={rosters}

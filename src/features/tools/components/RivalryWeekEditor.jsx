@@ -5,7 +5,6 @@ import { Shuffle, Trash2 } from 'lucide-react';
 const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) => {
   const expectedPairs = Math.floor(teams.length / 2);
 
-  // Ensure we always have the right number of rows (moved above handlers)
   const rows = useMemo(() => {
     const result = [...matchups];
     while (result.length < expectedPairs) {
@@ -14,12 +13,10 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
     return result.slice(0, expectedPairs);
   }, [matchups, expectedPairs]);
 
-  // Derive available teams per row from current selections
   const getAvailableTeams = (rowIndex, slot) => {
     const usedIds = new Set();
     rows.forEach((m, i) => {
       if (i === rowIndex) {
-        // For this row, only exclude the OTHER slot's selection
         if (slot === 'A' && m.teamB) usedIds.add(m.teamB);
         if (slot === 'B' && m.teamA) usedIds.add(m.teamA);
       } else {
@@ -55,14 +52,12 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
     const used = new Set();
     const updated = [...rows];
 
-    // Collect already-assigned teams
     updated.forEach(m => {
       if (m.teamA) used.add(m.teamA);
       if (m.teamB) used.add(m.teamB);
     });
 
     const remaining = teams.filter(t => !used.has(t.id));
-    // Shuffle remaining for randomness
     const shuffled = [...remaining].sort(() => Math.random() - 0.5);
 
     let shuffleIdx = 0;
@@ -75,7 +70,6 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
       }
     }
 
-    // If we still have unmatched teams and need more rows
     while (shuffleIdx < shuffled.length - 1 && updated.length < expectedPairs) {
       updated.push({ teamA: shuffled[shuffleIdx++].id, teamB: shuffled[shuffleIdx++].id });
     }
@@ -86,13 +80,13 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">{weekLabel} Matchups</span>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={handleAutoFill} className="gap-1 text-xs">
+        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{weekLabel} Matchups</span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={handleAutoFill} className="gap-1 text-xs text-text-dim hover:text-signal hover:bg-bg-2">
             <Shuffle className="w-3 h-3" />
             Auto-fill
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleClear} className="gap-1 text-xs text-red-400 hover:text-red-300">
+          <Button variant="ghost" size="sm" onClick={handleClear} className="gap-1 text-xs text-bad hover:text-bad/80 hover:bg-bad/10">
             <Trash2 className="w-3 h-3" />
             Clear
           </Button>
@@ -102,17 +96,16 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
       <div className="space-y-2">
         {rows.map((matchup, idx) => (
           <div key={idx} className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-6 text-right shrink-0">{idx + 1}.</span>
+            <span className="font-mono text-2xs text-text-mute w-6 text-right shrink-0 tnum">{idx + 1}.</span>
             <select
               value={matchup.teamA || ''}
               onChange={(e) => handleTeamChange(idx, 'A', e.target.value)}
-              className="flex-1 px-2 py-1.5 rounded-md border border-input bg-background/50 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 px-2 py-1.5 rounded-md border border-line bg-bg-2 text-text text-sm focus:outline-none focus:ring-1 focus:ring-signal"
             >
-              <option value="">Select team...</option>
+              <option value="">Select team…</option>
               {getAvailableTeams(idx, 'A').map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
-              {/* Keep currently selected value visible even if "used" */}
               {matchup.teamA && !getAvailableTeams(idx, 'A').find(t => t.id === matchup.teamA) && (
                 <option value={matchup.teamA}>
                   {teams.find(t => t.id === matchup.teamA)?.name || matchup.teamA}
@@ -120,14 +113,14 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
               )}
             </select>
 
-            <span className="text-xs text-muted-foreground font-medium">vs</span>
+            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">vs</span>
 
             <select
               value={matchup.teamB || ''}
               onChange={(e) => handleTeamChange(idx, 'B', e.target.value)}
-              className="flex-1 px-2 py-1.5 rounded-md border border-input bg-background/50 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 px-2 py-1.5 rounded-md border border-line bg-bg-2 text-text text-sm focus:outline-none focus:ring-1 focus:ring-signal"
             >
-              <option value="">Select team...</option>
+              <option value="">Select team…</option>
               {getAvailableTeams(idx, 'B').map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -142,7 +135,7 @@ const RivalryWeekEditor = ({ teams, matchups, onChange, weekLabel = 'Week' }) =>
       </div>
 
       {unassignedTeams.length > 0 && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warn">
           {unassignedTeams.length} team(s) unassigned: {unassignedTeams.map(t => t.name).join(', ')}
         </p>
       )}
