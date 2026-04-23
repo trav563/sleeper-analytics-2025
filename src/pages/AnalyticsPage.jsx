@@ -5,23 +5,19 @@ import TrueStandings from '../features/analytics/components/TrueStandings';
 import TeamRadar from '../features/analytics/components/TeamRadar';
 import RivalryMatrix from '../features/analytics/components/RivalryMatrix';
 import { displayTeamName } from '../utils/nflData';
+import { SegmentedTabs } from '../components/ui/SegmentedTabs';
 
 const AnalyticsPage = () => {
     const { leagueId } = useParams();
     const { league, rosters, users, players, user, currentWeek } = useOutletContext();
 
-    // Default to current user's roster ID, or the first roster if user not found
     const [selectedRosterId, setSelectedRosterId] = useState(null);
     const [comparisonMode, setComparisonMode] = useState('league'); // 'league' | 'h2h'
     const [opponentRosterId, setOpponentRosterId] = useState(null);
 
     useEffect(() => {
         if (!rosters || rosters.length === 0) return;
-
-        // If we already have a selection that is valid, don't change it
         if (selectedRosterId && rosters.find(r => r.roster_id === selectedRosterId)) return;
-
-        // Try to match current user
         if (user) {
             const userRoster = rosters.find(r => r.owner_id === user.user_id);
             if (userRoster) {
@@ -29,51 +25,44 @@ const AnalyticsPage = () => {
                 return;
             }
         }
-
-        // Fallback to first roster
         setSelectedRosterId(rosters[0].roster_id);
     }, [rosters, user, selectedRosterId]);
 
-    const handleTeamChange = (e) => {
-        setSelectedRosterId(Number(e.target.value));
-    };
-
-    const handleOpponentChange = (e) => {
-        setOpponentRosterId(Number(e.target.value));
-    };
+    const handleTeamChange = (e) => setSelectedRosterId(Number(e.target.value));
+    const handleOpponentChange = (e) => setOpponentRosterId(Number(e.target.value));
 
     const selectedUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === selectedRosterId)?.owner_id);
     const opponentUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === opponentRosterId)?.owner_id);
 
     return (
-        <div className="space-y-8">
-            {/* Team Selector Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+        <div className="space-y-6">
+            <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-bg-1 p-4 rounded-xl border border-line shadow-card">
                 <div>
-                    <h2 className="text-lg font-semibold text-white">Team Analysis</h2>
-                    <p className="text-sm text-slate-400">Select a team to view their positional strength</p>
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        Team Analysis
+                    </div>
+                    <h2 className="mt-1 font-display text-lg font-semibold text-text">
+                        Positional Strength
+                    </h2>
+                    <p className="text-xs text-text-dim mt-1">
+                        Select a team to view its positional strength
+                    </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    {/* Comparison Mode Toggle */}
-                    <div className="flex bg-slate-700 rounded-lg p-1 self-start sm:self-center">
-                        <button
-                            onClick={() => setComparisonMode('league')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${comparisonMode === 'league' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            vs League
-                        </button>
-                        <button
-                            onClick={() => setComparisonMode('h2h')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${comparisonMode === 'h2h' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            Head-to-Head
-                        </button>
-                    </div>
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+                    <SegmentedTabs
+                        tabs={[
+                            { value: 'league', label: 'vs League' },
+                            { value: 'h2h', label: 'Head-to-Head' },
+                        ]}
+                        value={comparisonMode}
+                        onChange={setComparisonMode}
+                        className="self-start sm:self-end"
+                    />
 
-                    <div className="flex gap-2 items-center w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
                         <select
-                            className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-48 p-2.5"
+                            className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full sm:w-48 transition-colors duration-fast"
                             value={selectedRosterId || ''}
                             onChange={handleTeamChange}
                         >
@@ -89,13 +78,13 @@ const AnalyticsPage = () => {
 
                         {comparisonMode === 'h2h' && (
                             <>
-                                <span className="text-slate-400 font-bold">VS</span>
+                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute self-center px-1">VS</span>
                                 <select
-                                    className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-48 p-2.5"
+                                    className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full sm:w-48 transition-colors duration-fast"
                                     value={opponentRosterId || ''}
                                     onChange={handleOpponentChange}
                                 >
-                                    <option value="" disabled>Select Opponent</option>
+                                    <option value="" disabled>Select opponent</option>
                                     {rosters?.filter(r => r.roster_id !== selectedRosterId).map(roster => {
                                         const rosterUser = users?.find(u => u.user_id === roster.owner_id);
                                         return (
@@ -109,7 +98,7 @@ const AnalyticsPage = () => {
                         )}
                     </div>
                 </div>
-            </div>
+            </section>
 
             <PowerRankings
                 leagueId={leagueId}
@@ -118,7 +107,7 @@ const AnalyticsPage = () => {
                 users={users}
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <TrueStandings
                     leagueId={leagueId}
                     currentWeek={currentWeek}

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName } from '../../../utils/nflData';
+import { theme } from '../../../lib/theme';
 
 const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users, opponentRosterId, opponentTeamName }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
@@ -39,29 +40,6 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                     if (!player) return;
 
                     let pos = player.position;
-                    // Map K/DEF if needed, or ignore. Prompt asked for QB, RB, WR, TE, FLEX.
-                    // Sleeper positions: QB, RB, WR, TE, K, DEF.
-                    // FLEX usually implies RB/WR/TE.
-                    // We need to know the *slot* to determine if it was a FLEX play, OR just average all RB/WR/TEs.
-                    // "League Average points for QB, RB..." usually means "Average points scored by a starting QB".
-                    // If a WR is in a FLEX slot, do we count them as WR or FLEX?
-                    // Prompt says "QB, RB, WR, TE, FLEX". This implies specific slots.
-                    // But Sleeper API `starters` array matches `roster_positions` order.
-                    // We don't have `roster_positions` passed in here easily (it's on `league` object).
-                    // Let's assume standard positions based on player primary position for QB/RB/WR/TE.
-                    // For FLEX, it's ambiguous.
-                    // Simplification: Average points per *Player Position*.
-                    // But "FLEX" is a category in the prompt.
-                    // Let's try to map based on player position.
-                    // QB -> QB, RB -> RB, WR -> WR, TE -> TE.
-                    // What about FLEX? Maybe it means "Average points of all non-QB starters"?
-                    // Or maybe we calculate "Average Team Score from QBs", "Average Team Score from RBs", etc.
-                    // Let's go with: Average Points Per Game per Position.
-                    // And for FLEX, maybe we skip it or aggregate RB/WR/TE overflow?
-                    // Let's stick to strict positions for now: QB, RB, WR, TE.
-                    // If the prompt explicitly asks for FLEX, I should try to support it.
-                    // But without slot info, it's hard.
-                    // Let's just do QB, RB, WR, TE and maybe "FLEX" as (RB+WR+TE avg).
 
                     if (['QB', 'RB', 'WR', 'TE'].includes(pos)) {
                         leagueSums[pos] += points;
@@ -79,12 +57,11 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
             });
         });
 
-        // Calculate Averages
         return positions.filter(p => p !== 'FLEX').map(pos => {
             const item = {
                 subject: pos,
                 [selectedTeamName]: userCounts[pos] ? Number((userSums[pos] / userCounts[pos]).toFixed(2)) : 0,
-                fullMark: 30 // Arbitrary scale max
+                fullMark: 30
             };
 
             if (opponentRosterId) {
@@ -95,25 +72,61 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
 
             return item;
         });
-
     }, [seasonMatchups, players, userRosterId, opponentRosterId, loading, selectedTeamName, opponentTeamName]);
 
-    if (loading) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Radar...</div>;
-    if (!players) return <div className="h-64 flex items-center justify-center text-gray-400">Loading Player Database...</div>;
-    if (!seasonMatchups || Object.keys(seasonMatchups).length === 0) return <div className="h-64 flex items-center justify-center text-gray-400">No Matchup Data Available</div>;
+    const Frame = ({ children }) => (
+        <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card">
+            <header className="mb-3">
+                <h3 className="font-display text-lg font-semibold text-text">Positional Strength</h3>
+                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-0.5">
+                    Avg starter points by position
+                </p>
+            </header>
+            {children}
+        </section>
+    );
+
+    if (loading) return (
+        <Frame>
+            <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Loading radar…
+            </div>
+        </Frame>
+    );
+    if (!players) return (
+        <Frame>
+            <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Loading player database…
+            </div>
+        </Frame>
+    );
+    if (!seasonMatchups || Object.keys(seasonMatchups).length === 0) return (
+        <Frame>
+            <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                No matchup data available
+            </div>
+        </Frame>
+    );
 
     return (
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Positional Strength</h3>
+        <Frame>
             <div className="h-96 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data} margin={{ top: 0, right: 0, bottom: 30, left: 0 }}>
-                        <PolarGrid stroke="#475569" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                    <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data} margin={{ top: 0, right: 0, bottom: 30, left: 0 }}>
+                        <PolarGrid stroke={theme.color.lineStrong} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: theme.color.textDim, fontSize: 11, fontFamily: 'var(--font-mono)' }} />
                         <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
                         <Tooltip
-                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                            itemStyle={{ color: '#f8fafc' }}
+                            contentStyle={{
+                                backgroundColor: theme.color.bg1,
+                                border: `1px solid ${theme.color.lineStrong}`,
+                                borderRadius: theme.radius.md,
+                                color: theme.color.text,
+                                fontFamily: 'var(--font-sans)',
+                                fontSize: 12,
+                            }}
+                            itemStyle={{ color: theme.color.text }}
+                            cursor={{ stroke: theme.color.lineStrong }}
                         />
 
                         {opponentRosterId ? (
@@ -121,18 +134,18 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                                 <Radar
                                     name={selectedTeamName}
                                     dataKey={selectedTeamName}
-                                    stroke="#22c55e"
+                                    stroke={theme.color.signal}
                                     strokeWidth={2}
-                                    fill="#22c55e"
-                                    fillOpacity={0.5}
+                                    fill={theme.color.signal}
+                                    fillOpacity={0.4}
                                 />
                                 <Radar
                                     name={opponentTeamName}
                                     dataKey={opponentTeamName}
-                                    stroke="#ef4444"
+                                    stroke={theme.color.bad}
                                     strokeWidth={2}
-                                    fill="#ef4444"
-                                    fillOpacity={0.5}
+                                    fill={theme.color.bad}
+                                    fillOpacity={0.35}
                                 />
                             </>
                         ) : (
@@ -140,26 +153,34 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                                 <Radar
                                     name="League Avg"
                                     dataKey="LeagueAvg"
-                                    stroke="#94a3b8"
-                                    strokeWidth={2}
-                                    fill="#94a3b8"
-                                    fillOpacity={0.3}
+                                    stroke={theme.color.textDim}
+                                    strokeWidth={1.5}
+                                    fill={theme.color.textDim}
+                                    fillOpacity={0.18}
                                 />
                                 <Radar
                                     name={selectedTeamName}
                                     dataKey={selectedTeamName}
-                                    stroke="#22c55e"
+                                    stroke={theme.color.signal}
                                     strokeWidth={2}
-                                    fill="#22c55e"
-                                    fillOpacity={0.5}
+                                    fill={theme.color.signal}
+                                    fillOpacity={0.4}
                                 />
                             </>
                         )}
-                        <Legend wrapperStyle={{ color: '#94a3b8' }} />
+                        <Legend
+                            wrapperStyle={{
+                                color: theme.color.textDim,
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 11,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.08em',
+                            }}
+                        />
                     </RadarChart>
                 </ResponsiveContainer>
             </div>
-        </div>
+        </Frame>
     );
 };
 
