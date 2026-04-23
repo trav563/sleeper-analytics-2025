@@ -55,10 +55,10 @@ const Navbar = () => {
         <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-5 lg:gap-7 min-w-0">
                         <Link
                             to={leagueId ? `/league/${leagueId}` : "/"}
-                            className="flex items-center gap-2 group min-w-[180px] shrink-0"
+                            className="flex items-center gap-2 group shrink-0"
                         >
                             <Trophy className="h-6 w-6 text-signal group-hover:text-signal/80 transition-colors duration-fast flex-shrink-0" />
                             <span className="font-display text-xl font-bold tracking-snug whitespace-nowrap text-text">
@@ -67,7 +67,7 @@ const Navbar = () => {
                         </Link>
 
                         {leagueId && (
-                            <div className="hidden md:flex items-center gap-1">
+                            <div className="hidden md:flex items-center gap-0.5">
                                 {navItems.map((item) => {
                                     const active = isActive(item.exact ? '' : item.href.split('/').pop());
                                     return (
@@ -76,14 +76,13 @@ const Navbar = () => {
                                             to={item.href}
                                             className={cn(
                                                 "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold ring-offset-bg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
-                                                "h-9 px-3 gap-2",
+                                                "h-9 px-2.5",
                                                 active
                                                     ? "bg-bg-3 text-signal"
                                                     : "text-text-dim hover:bg-bg-2 hover:text-text"
                                             )}
                                             aria-current={active ? "page" : undefined}
                                         >
-                                            <item.icon className="w-4 h-4" />
                                             {item.label}
                                         </Link>
                                     );
