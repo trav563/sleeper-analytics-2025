@@ -1,11 +1,19 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
+import PlayerDetail from '../features/dashboard/components/PlayerDetail';
 
 const PlayerPage = () => {
     const { playerId } = useParams();
+    const { players, rosters, users, league, state } = useOutletContext();
+    const player = players?.[playerId] ? { ...players[playerId], player_id: playerId } : null;
+
     return (
-        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute p-12 text-center">
-            Player page coming · id <span className="tnum">{playerId}</span>
-        </div>
+        <PlayerDetail
+            player={player}
+            league={league}
+            rosters={rosters}
+            users={users}
+            state={state}
+        />
     );
 };
 

@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Users, Flame, ChevronRight } from 'lucide-react';
 import { playerHeadshotUrl } from '../../../utils/nflData';
 import { fetchTrendingPlayers } from '../../../utils/sleeper';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
-import PlayerDossier from './PlayerDossier';
 
 // Position chips repointed to broadcast tokens
 const POS_TONE = {
@@ -17,8 +16,8 @@ const POS_TONE = {
 };
 const defaultPosTone = 'bg-bg-3 text-text-dim border-line';
 
-const TeamRoster = ({ roster, players, users, transactions, seasonMatchups, league, rosters }) => {
-    const [selectedPlayer, setSelectedPlayer] = useState(null);
+const TeamRoster = ({ roster, players, league, rosters }) => {
+    const navigate = useNavigate();
 
     const { data: trendingAdds } = useQuery({
         queryKey: ['trendingAdds'],
@@ -87,7 +86,7 @@ const TeamRoster = ({ roster, players, users, transactions, seasonMatchups, leag
     const PlayerRow = ({ player }) => (
         <button
             type="button"
-            onClick={() => setSelectedPlayer(player)}
+            onClick={() => navigate(`/league/${league.league_id}/player/${player.player_id}`)}
             className="group w-full flex items-center justify-between gap-3 p-2 hover:bg-bg-2 rounded-md transition-colors duration-fast border-b border-line/30 last:border-0 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
         >
             <div className="flex items-center gap-3 min-w-0">
@@ -129,40 +128,27 @@ const TeamRoster = ({ roster, players, users, transactions, seasonMatchups, leag
     );
 
     return (
-        <>
-            <section className="bg-bg-1 rounded-xl border border-line shadow-card">
-                <header className="px-4 pt-3 pb-2 border-b border-line flex items-center gap-2">
-                    <Users className="w-4 h-4 text-signal" aria-hidden="true" />
-                    <h3 className="font-display text-md font-semibold text-text">Team Roster</h3>
-                </header>
-                <div className="px-4 py-4 space-y-5">
-                    {['Starters', 'Bench', 'Taxi', 'IR'].map(group => {
-                        if (playerGroups[group].length === 0) return null;
-                        return (
-                            <div key={group}>
-                                <h4 className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2 border-b border-line pb-1">
-                                    {group}
-                                </h4>
-                                <div className="space-y-0.5">
-                                    {playerGroups[group].map(p => <PlayerRow key={p.player_id} player={p} />)}
-                                </div>
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+            <header className="px-4 pt-3 pb-2 border-b border-line flex items-center gap-2">
+                <Users className="w-4 h-4 text-signal" aria-hidden="true" />
+                <h3 className="font-display text-md font-semibold text-text">Team Roster</h3>
+            </header>
+            <div className="px-4 py-4 space-y-5">
+                {['Starters', 'Bench', 'Taxi', 'IR'].map(group => {
+                    if (playerGroups[group].length === 0) return null;
+                    return (
+                        <div key={group}>
+                            <h4 className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2 border-b border-line pb-1">
+                                {group}
+                            </h4>
+                            <div className="space-y-0.5">
+                                {playerGroups[group].map(p => <PlayerRow key={p.player_id} player={p} />)}
                             </div>
-                        );
-                    })}
-                </div>
-            </section>
-
-            <PlayerDossier
-                player={selectedPlayer}
-                isOpen={!!selectedPlayer}
-                onClose={() => setSelectedPlayer(null)}
-                transactions={transactions}
-                seasonMatchups={seasonMatchups}
-                users={users}
-                rosters={rosters}
-                league={league}
-            />
-        </>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
     );
 };
 
