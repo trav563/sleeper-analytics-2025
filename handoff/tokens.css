@@ -1,0 +1,134 @@
+/* ============================================================
+   League Analysis — Design Tokens v0.1
+   Drop into app/globals.css (or import at the top of it).
+   All app colors, type, spacing, radii, shadows flow from here.
+   ============================================================ */
+
+:root {
+  /* ---------- Surfaces (dark mode default) ---------- */
+  --bg:        #07080A;  /* page canvas */
+  --bg-1:      #0F1115;  /* cards */
+  --bg-2:      #161920;  /* hover / nested card */
+  --bg-3:      #1E222B;  /* input wells, tag chips */
+
+  /* ---------- Foreground ---------- */
+  --text:      #F5F6F8;  /* primary */
+  --text-dim:  #9097A3;  /* secondary, labels */
+  --text-mute: #5A6170;  /* tertiary, metadata */
+
+  /* ---------- Lines ---------- */
+  --line:        rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  /* ---------- Brand / Signal ---------- */
+  --accent:    #F5B301;  /* gold — primary signal, active, leading */
+  --accent-2:  #FF5A36;  /* coral — LIVE state only */
+
+  /* ---------- Semantic ---------- */
+  --good:      #4ADE80;  /* win, positive delta, strong */
+  --bad:       #F87171;  /* loss, negative delta, weak */
+  --warn:      #FBBF24;  /* caution, injury designation */
+  --live:      #22E07A;  /* in-play status dot */
+
+  /* ---------- Type scale (px base 16) ---------- */
+  --font-sans:    "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-2xs: 10px;   /* table column headers, caps labels */
+  --text-xs:  11px;   /* metadata lines */
+  --text-sm:  12px;   /* body secondary */
+  --text-base:13px;   /* body */
+  --text-md:  14px;   /* card titles */
+  --text-lg:  16px;
+  --text-xl:  20px;
+  --text-2xl: 26px;   /* page titles */
+  --text-3xl: 34px;
+  --text-4xl: 44px;   /* hero numbers, mobile */
+  --text-5xl: 76px;   /* hero numbers, desktop */
+
+  /* Letter spacing */
+  --tracking-tight: -0.03em;   /* display numbers */
+  --tracking-snug:  -0.02em;   /* display headings */
+  --tracking-wide:  0.08em;    /* caps labels */
+  --tracking-wider: 0.14em;    /* eyebrow labels */
+
+  /* ---------- Spacing (4px base) ---------- */
+  --space-0:  0px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ---------- Radii ---------- */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ---------- Shadows / Glows ---------- */
+  --shadow-card:  0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-pop:   0 12px 40px rgba(0,0,0,0.5);
+  --glow-accent:  0 0 24px rgba(245,179,1,0.35);
+  --glow-live:    0 0 10px rgba(255,90,54,0.6);
+
+  /* ---------- Motion ---------- */
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast:   120ms;
+  --dur-base:   200ms;
+  --dur-slow:   400ms;
+
+  /* ---------- Breakpoints (reference only — used via Tailwind) ---------- */
+  /* sm: 640px  md: 768px  lg: 1024px  xl: 1280px  2xl: 1536px */
+}
+
+/* ---------- Light mode (secondary) ---------- */
+[data-theme="light"] {
+  --bg:        #FAFAF7;
+  --bg-1:      #FFFFFF;
+  --bg-2:      #F3F3EE;
+  --bg-3:      #E9E9E2;
+  --text:      #0B0C10;
+  --text-dim:  #4B5260;
+  --text-mute: #8A91A0;
+  --line:        rgba(0,0,0,0.06);
+  --line-strong: rgba(0,0,0,0.12);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.05);
+}
+
+/* ---------- Base ---------- */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utilities used across the system */
+.tnum     { font-variant-numeric: tabular-nums; }
+.font-mono { font-family: var(--font-mono); }
+.live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-2); box-shadow: var(--glow-live);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Team color helper — call with CSS custom property --h (hue) */
+.team-tint {
+  background: oklch(62% 0.18 var(--h));
+}
+.team-tint-soft {
+  background: oklch(62% 0.18 var(--h) / 0.18);
+}
