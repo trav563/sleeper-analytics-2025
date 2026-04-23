@@ -50,35 +50,42 @@ const Navbar = () => {
     ];
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     <div className="flex items-center gap-8">
-                        <Link to={leagueId ? `/league/${leagueId}` : "/"} className="flex items-center space-x-2 group min-w-[180px] shrink-0">
-                            <Trophy className="h-6 w-6 text-primary group-hover:text-primary/80 transition-colors flex-shrink-0" />
-                            <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent whitespace-nowrap">
+                        <Link
+                            to={leagueId ? `/league/${leagueId}` : "/"}
+                            className="flex items-center gap-2 group min-w-[180px] shrink-0"
+                        >
+                            <Trophy className="h-6 w-6 text-signal group-hover:text-signal/80 transition-colors duration-fast flex-shrink-0" />
+                            <span className="font-display text-xl font-bold tracking-snug whitespace-nowrap text-text">
                                 League Analysis
                             </span>
                         </Link>
 
                         {leagueId && (
                             <div className="hidden md:flex items-center gap-1">
-                                {navItems.map((item) => (
-                                    <Link
-                                        key={item.href}
-                                        to={item.href}
-                                        className={cn(
-                                            "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            "h-9 rounded-md px-3",
-                                            "hover:bg-accent hover:text-accent-foreground",
-                                            "gap-2 text-muted-foreground hover:text-primary",
-                                            isActive(item.exact ? '' : item.href.split('/').pop()) && "bg-accent text-accent-foreground"
-                                        )}
-                                    >
-                                        <item.icon className="w-4 h-4" />
-                                        {item.label}
-                                    </Link>
-                                ))}
+                                {navItems.map((item) => {
+                                    const active = isActive(item.exact ? '' : item.href.split('/').pop());
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            to={item.href}
+                                            className={cn(
+                                                "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold ring-offset-bg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
+                                                "h-9 px-3 gap-2",
+                                                active
+                                                    ? "bg-bg-3 text-signal"
+                                                    : "text-text-dim hover:bg-bg-2 hover:text-text"
+                                            )}
+                                            aria-current={active ? "page" : undefined}
+                                        >
+                                            <item.icon className="w-4 h-4" />
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -92,7 +99,7 @@ const Navbar = () => {
                                         <select
                                             value={leagueId || ''}
                                             onChange={handleLeagueSwitch}
-                                            className="bg-muted text-sm rounded-lg border-input focus:ring-ring focus:border-ring block w-full p-2.5"
+                                            className="bg-bg-2 text-text text-sm rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal block w-full px-3 py-2 transition-colors duration-fast"
                                         >
                                             <option value="" disabled>Switch League</option>
                                             {leagues.map((league) => (
@@ -104,20 +111,20 @@ const Navbar = () => {
                                     </div>
                                 )}
 
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center gap-3">
                                     <div className="hidden sm:block text-right">
-                                        <p className="text-sm font-medium leading-none">{user.display_name}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">@{user.username}</p>
+                                        <p className="text-sm font-semibold leading-none text-text">{user.display_name}</p>
+                                        <p className="font-mono text-2xs text-text-mute mt-1">@{user.username}</p>
                                     </div>
                                     {user.avatar ? (
                                         <img
                                             src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
                                             alt={user.username}
-                                            className="h-9 w-9 rounded-full border border-border shadow-sm"
+                                            className="h-9 w-9 rounded-full ring-1 ring-line"
                                         />
                                     ) : (
-                                        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border">
-                                            <User className="h-5 w-5 text-muted-foreground" />
+                                        <div className="h-9 w-9 rounded-full bg-bg-2 flex items-center justify-center ring-1 ring-line">
+                                            <User className="h-5 w-5 text-text-dim" />
                                         </div>
                                     )}
                                 </div>
@@ -129,7 +136,9 @@ const Navbar = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="md:hidden"
+                            className="md:hidden min-w-[44px] min-h-[44px] text-text-dim hover:text-text hover:bg-bg-2"
+                            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                            aria-expanded={isMobileMenuOpen}
                         >
                             {isMobileMenuOpen ? (
                                 <X className="h-6 w-6" />
@@ -143,53 +152,57 @@ const Navbar = () => {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-border bg-background/95 backdrop-blur px-2 pt-2 pb-3 space-y-1 animate-accordion-down">
-                    {leagueId && navItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            to={item.href}
-                            className={cn(
-                                "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                "h-10 px-4 py-2",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                "w-full justify-start gap-2",
-                                isActive(item.exact ? '' : item.href.split('/').pop()) && "bg-accent text-accent-foreground"
-                            )}
-                        >
-                            <item.icon className="w-5 h-5" />
-                            {item.label}
-                        </Link>
-                    ))}
+                <div className="md:hidden border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1 animate-accordion-down">
+                    {leagueId && navItems.map((item) => {
+                        const active = isActive(item.exact ? '' : item.href.split('/').pop());
+                        return (
+                            <Link
+                                key={item.href}
+                                to={item.href}
+                                className={cn(
+                                    "inline-flex items-center whitespace-nowrap rounded-md text-sm font-semibold ring-offset-bg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
+                                    "min-h-[44px] w-full justify-start gap-2 px-4 py-2",
+                                    active
+                                        ? "bg-bg-3 text-signal"
+                                        : "text-text-dim hover:bg-bg-2 hover:text-text"
+                                )}
+                                aria-current={active ? "page" : undefined}
+                            >
+                                <item.icon className="w-5 h-5" />
+                                {item.label}
+                            </Link>
+                        );
+                    })}
 
                     {user && (
-                        <div className="pt-4 pb-3 border-t border-border mt-2">
+                        <div className="pt-4 pb-3 border-t border-line mt-2">
                             <div className="flex items-center px-3 mb-3">
                                 <div className="flex-shrink-0">
                                     {user.avatar ? (
                                         <img
                                             src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
                                             alt={user.username}
-                                            className="h-10 w-10 rounded-full border border-border"
+                                            className="h-10 w-10 rounded-full ring-1 ring-line"
                                         />
                                     ) : (
-                                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border">
-                                            <User className="h-6 w-6 text-muted-foreground" />
+                                        <div className="h-10 w-10 rounded-full bg-bg-2 flex items-center justify-center ring-1 ring-line">
+                                            <User className="h-6 w-6 text-text-dim" />
                                         </div>
                                     )}
                                 </div>
                                 <div className="ml-3">
-                                    <div className="text-base font-medium leading-none">{user.display_name}</div>
-                                    <div className="text-sm font-medium leading-none text-muted-foreground mt-1">@{user.username}</div>
+                                    <div className="text-base font-semibold leading-none text-text">{user.display_name}</div>
+                                    <div className="font-mono text-2xs text-text-mute mt-1">@{user.username}</div>
                                 </div>
                             </div>
 
                             {leagues.length > 0 && (
                                 <div className="px-3">
-                                    <label className="block text-xs text-muted-foreground uppercase tracking-wider mb-1">Switch League</label>
+                                    <label className="block font-mono text-2xs text-text-mute uppercase tracking-wider mb-1">Switch League</label>
                                     <select
                                         value={leagueId || ''}
                                         onChange={handleLeagueSwitch}
-                                        className="bg-muted text-sm rounded-lg border-input focus:ring-ring focus:border-ring block w-full p-2.5"
+                                        className="bg-bg-2 text-text text-sm rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal block w-full px-3 py-2.5 transition-colors duration-fast"
                                     >
                                         <option value="" disabled>Select League</option>
                                         {leagues.map((league) => (
