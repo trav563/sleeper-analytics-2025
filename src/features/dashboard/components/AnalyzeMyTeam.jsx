@@ -1,15 +1,13 @@
 import { useState, useRef } from 'react';
 import { Brain, Sparkles, ChevronDown, ChevronUp, Loader2, AlertCircle, X, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
 import { useAnalyzeTeam } from '../hooks/useAnalyzeTeam';
 
 const ANALYSIS_TYPES = [
-    { value: 'full', label: 'Full Analysis', description: 'Complete roster breakdown' },
-    { value: 'startsit', label: 'Start/Sit', description: 'Lineup decisions' },
-    { value: 'waivers', label: 'Waiver Targets', description: 'Free agent picks' },
-    { value: 'playoff', label: 'Playoff Path', description: 'Season outlook' },
+    { value: 'full',     label: 'Full Analysis',  description: 'Complete roster breakdown' },
+    { value: 'startsit', label: 'Start/Sit',      description: 'Lineup decisions' },
+    { value: 'waivers',  label: 'Waiver Targets', description: 'Free agent picks' },
+    { value: 'playoff',  label: 'Playoff Path',   description: 'Season outlook' },
 ];
 
 function parseMarkdownSections(text) {
@@ -48,17 +46,23 @@ function renderMarkdownTable(lines) {
         <div className="my-2 overflow-x-auto">
             <table className="w-full text-xs">
                 <thead>
-                    <tr className="border-b border-slate-700">
+                    <tr className="border-b border-line">
                         {headerCells.map((cell, i) => (
-                            <th key={i} className="px-2 py-1.5 text-left text-slate-400 font-medium whitespace-nowrap">{cell}</th>
+                            <th key={i} className="px-2 py-1.5 text-left font-mono text-2xs uppercase tracking-wider text-text-mute font-bold whitespace-nowrap">
+                                {cell}
+                            </th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
                     {bodyRows.map((cells, ri) => (
-                        <tr key={ri} className="border-b border-slate-700/30 hover:bg-slate-700/20">
+                        <tr key={ri} className="border-b border-line/60 hover:bg-bg-2/40">
                             {cells.map((cell, ci) => (
-                                <td key={ci} className={`px-2 py-1.5 text-slate-300 ${ci < 2 ? 'whitespace-nowrap' : ''}`} dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                                <td
+                                    key={ci}
+                                    className={`px-2 py-1.5 text-text-dim ${ci < 2 ? 'whitespace-nowrap' : ''}`}
+                                    dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong class="text-text">$1</strong>') }}
+                                />
                             ))}
                         </tr>
                     ))}
@@ -90,14 +94,14 @@ function renderMarkdown(text) {
 
         if (!line.trim()) { elements.push(<br key={i} />); i++; continue; }
 
-        let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-text">$1</strong>');
         processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
         if (processed.match(/^[-*] /)) {
             const content = processed.replace(/^[-*] /, '');
             elements.push(
                 <div key={i} className="flex gap-2 py-0.5">
-                    <span className="text-primary mt-1 shrink-0">&#8226;</span>
+                    <span className="text-signal mt-1 shrink-0">&#8226;</span>
                     <span dangerouslySetInnerHTML={{ __html: content }} />
                 </div>
             );
@@ -108,7 +112,7 @@ function renderMarkdown(text) {
         if (numMatch) {
             elements.push(
                 <div key={i} className="flex gap-2 py-0.5">
-                    <span className="text-primary font-medium shrink-0">{numMatch[1]}.</span>
+                    <span className="text-signal font-mono font-semibold tnum shrink-0">{numMatch[1]}.</span>
                     <span dangerouslySetInnerHTML={{ __html: numMatch[2] }} />
                 </div>
             );
@@ -116,7 +120,7 @@ function renderMarkdown(text) {
         }
 
         if (processed.startsWith('### ')) {
-            elements.push(<h4 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1">{processed.replace('### ', '')}</h4>);
+            elements.push(<h4 key={i} className="font-display text-sm font-semibold text-text mt-3 mb-1">{processed.replace('### ', '')}</h4>);
             i++; continue;
         }
 
@@ -128,26 +132,26 @@ function renderMarkdown(text) {
 }
 
 const SECTION_ICONS = {
-    'Roster Grade': '📊',
-    'Start/Sit': '🏈',
-    'Optimal Lineup': '🏈',
-    'Waiver Wire': '🎯',
-    'Outlook': '🔮',
-    'Playoff': '🏆',
-    'Season Preview': '🏆',
-    'Key Decisions': '🤔',
-    'Key Matchups': '📅',
-    'Strategy': '🎯',
-    'Summary': '📋',
-    'Roster Readiness': '📋',
-    'Offseason': '📋',
+    'Roster Grade': '◉',
+    'Start/Sit':    '◆',
+    'Optimal Lineup': '◆',
+    'Waiver Wire':  '◇',
+    'Outlook':      '◯',
+    'Playoff':      '★',
+    'Season Preview': '★',
+    'Key Decisions': '◐',
+    'Key Matchups': '▣',
+    'Strategy':     '◇',
+    'Summary':      '▤',
+    'Roster Readiness': '▤',
+    'Offseason':    '▤',
 };
 
 function getSectionIcon(title) {
     for (const [key, icon] of Object.entries(SECTION_ICONS)) {
         if (title.toLowerCase().includes(key.toLowerCase())) return icon;
     }
-    return '📋';
+    return '▤';
 }
 
 function formatTimeAgo(timestamp) {
@@ -166,8 +170,8 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
 
     const {
         analysis, loading, error, remaining,
-        cachedAt, isOnCooldown, cooldownMinutes,
-        analyze, cancel, clear
+        cachedAt, isOnCooldown,
+        analyze, cancel, clear,
     } = useAnalyzeTeam({ leagueId, userId, week, analysisType });
 
     const [expandedSections, setExpandedSections] = useState(new Set());
@@ -195,65 +199,76 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
     const isSectionCollapsed = (idx) => expandedSections.has(idx);
 
     return (
-        <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-4 border-b border-slate-700">
-                <div className="flex items-center justify-between">
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+            <header className="px-4 pt-4 pb-3 border-b border-line">
+                <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-purple-500/20 rounded-lg">
-                            <Brain className="w-5 h-5 text-purple-400" />
+                        <div className="p-1.5 bg-bg-3 rounded-md border border-line">
+                            <Brain className="w-4 h-4 text-signal" aria-hidden="true" />
                         </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                            Analyze My Team
-                        </CardTitle>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-500/15 text-purple-400 border-purple-500/30">
-                            AI
-                        </Badge>
+                        <div>
+                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                Tool · AI Analysis
+                            </div>
+                            <h3 className="font-display text-lg font-semibold text-text flex items-center gap-2">
+                                Analyze My Team
+                                <span
+                                    className="font-mono text-2xs font-extrabold tracking-wider px-1.5 py-0.5 rounded-sm text-[#0B0C10] uppercase"
+                                    style={{ background: 'linear-gradient(90deg, var(--signal), var(--signal-2))' }}
+                                >
+                                    AI
+                                </span>
+                            </h3>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end gap-0.5 shrink-0">
                         {cachedAt && !loading && (
-                            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {formatTimeAgo(cachedAt)}
                             </span>
                         )}
                         {remaining !== null && (
-                            <span className="text-xs text-slate-500">
-                                {remaining} left today
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                <span className="tnum text-text-dim">{remaining}</span> left today
                             </span>
                         )}
                     </div>
                 </div>
-            </CardHeader>
+            </header>
 
-            <CardContent className="pt-4">
-                {/* Controls */}
+            <div className="px-4 pt-4 pb-4">
                 <div className="flex items-center gap-2 mb-4">
                     <div className="relative flex-1">
                         <button
+                            type="button"
                             onClick={() => setShowTypeMenu(!showTypeMenu)}
-                            className="w-full flex items-center justify-between px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-sm text-foreground hover:border-slate-500 transition-colors"
+                            className="w-full min-h-[40px] flex items-center justify-between px-3 py-2 bg-bg-2 border border-line rounded-md text-sm text-text hover:bg-bg-3 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal disabled:opacity-50"
                             disabled={loading}
                         >
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                                <span>{selectedType?.label}</span>
-                                <span className="text-xs text-slate-500 hidden sm:inline">— {selectedType?.description}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Sparkles className="w-3.5 h-3.5 text-signal shrink-0" aria-hidden="true" />
+                                <span className="truncate">{selectedType?.label}</span>
+                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute hidden sm:inline truncate">
+                                    · {selectedType?.description}
+                                </span>
                             </div>
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                            <ChevronDown className="w-4 h-4 text-text-dim shrink-0" />
                         </button>
 
                         {showTypeMenu && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-10 overflow-hidden">
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-bg-1 border border-line rounded-md shadow-pop z-10 overflow-hidden">
                                 {ANALYSIS_TYPES.map(type => (
                                     <button
                                         key={type.value}
+                                        type="button"
                                         onClick={() => { setAnalysisType(type.value); setShowTypeMenu(false); }}
-                                        className={`w-full text-left px-3 py-2.5 text-sm hover:bg-slate-700 transition-colors ${
-                                            analysisType === type.value ? 'bg-slate-700/50 text-purple-400' : 'text-foreground'
+                                        className={`w-full text-left px-3 py-2.5 text-sm hover:bg-bg-2 transition-colors duration-fast border-b border-line/60 last:border-0 ${
+                                            analysisType === type.value ? 'bg-bg-2 text-signal' : 'text-text'
                                         }`}
                                     >
-                                        <div className="font-medium">{type.label}</div>
-                                        <div className="text-xs text-slate-500">{type.description}</div>
+                                        <div className="font-semibold">{type.label}</div>
+                                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">{type.description}</div>
                                     </button>
                                 ))}
                             </div>
@@ -261,17 +276,17 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                     </div>
 
                     {loading ? (
-                        <Button onClick={cancel} variant="destructive" size="sm" className="shrink-0">
+                        <Button onClick={cancel} size="sm" className="shrink-0 min-h-[40px] bg-bad text-text hover:bg-bad/80">
                             <X className="w-4 h-4 mr-1" />
                             Stop
                         </Button>
                     ) : isOnCooldown ? (
-                        <Button onClick={() => handleAnalyze(true)} size="sm" className="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-300">
+                        <Button onClick={() => handleAnalyze(true)} size="sm" className="shrink-0 min-h-[40px] bg-bg-2 hover:bg-bg-3 text-text border border-line">
                             <Sparkles className="w-4 h-4 mr-1" />
                             Refresh
                         </Button>
                     ) : (
-                        <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white">
+                        <Button onClick={() => handleAnalyze(false)} size="sm" className="shrink-0 min-h-[40px] bg-signal text-[#0B0C10] font-semibold hover:bg-signal/90">
                             <Sparkles className="w-4 h-4 mr-1" />
                             {hasResult ? 'Re-analyze' : 'Analyze'}
                         </Button>
@@ -279,10 +294,10 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                 </div>
 
                 {error && (
-                    <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-sm text-rose-400 mb-4">
+                    <div className="flex items-center gap-2 p-3 bg-bad/10 border border-bad/30 rounded-md text-sm text-bad mb-4">
                         <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{error}</span>
-                        <button onClick={clear} className="ml-auto text-rose-400/60 hover:text-rose-400">
+                        <span className="flex-1">{error}</span>
+                        <button type="button" onClick={clear} className="text-bad/60 hover:text-bad" aria-label="Dismiss error">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -291,10 +306,12 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
                 {loading && !hasResult && (
                     <div className="flex flex-col items-center justify-center py-8 gap-3">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl animate-pulse" />
-                            <Loader2 className="w-8 h-8 text-purple-400 animate-spin relative" />
+                            <div className="absolute inset-0 bg-signal/20 rounded-full blur-xl animate-pulse" />
+                            <Loader2 className="w-7 h-7 text-signal animate-spin relative" />
                         </div>
-                        <p className="text-sm text-slate-400 animate-pulse">Analyzing your roster...</p>
+                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute animate-pulse">
+                            Analyzing your roster…
+                        </p>
                     </div>
                 )}
 
@@ -306,30 +323,29 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
 
                             if (!section.title) {
                                 return (
-                                    <div key={idx} className="text-sm text-slate-300 leading-relaxed">
+                                    <div key={idx} className="text-sm text-text-dim leading-relaxed">
                                         {renderMarkdown(section.content)}
                                     </div>
                                 );
                             }
 
                             return (
-                                <div key={idx} className="bg-slate-900/40 rounded-lg border border-slate-700/50">
+                                <div key={idx} className="bg-bg-2 rounded-md border border-line">
                                     <button
+                                        type="button"
                                         onClick={() => toggleSection(idx)}
-                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-700/30 transition-colors"
+                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-bg-3 transition-colors duration-fast"
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className="text-base">{icon}</span>
-                                            <span className="text-sm font-semibold text-foreground">{section.title}</span>
+                                            <span className="text-signal font-mono">{icon}</span>
+                                            <span className="text-sm font-semibold text-text">{section.title}</span>
                                         </div>
-                                        {collapsed ? (
-                                            <ChevronDown className="w-4 h-4 text-slate-400" />
-                                        ) : (
-                                            <ChevronUp className="w-4 h-4 text-slate-400" />
-                                        )}
+                                        {collapsed
+                                            ? <ChevronDown className="w-4 h-4 text-text-dim" />
+                                            : <ChevronUp className="w-4 h-4 text-text-dim" />}
                                     </button>
                                     {!collapsed && (
-                                        <div className="px-4 pb-3 text-sm text-slate-300 leading-relaxed border-t border-slate-700/30">
+                                        <div className="px-4 pb-3 text-sm text-text-dim leading-relaxed border-t border-line">
                                             <div className="pt-3">
                                                 {renderMarkdown(section.content)}
                                             </div>
@@ -341,23 +357,23 @@ const AnalyzeMyTeam = ({ leagueId, userId, week }) => {
 
                         {loading && (
                             <div className="flex items-center gap-2 px-2 py-1">
-                                <Loader2 className="w-3 h-3 text-purple-400 animate-spin" />
-                                <span className="text-xs text-slate-500">Generating analysis...</span>
+                                <Loader2 className="w-3 h-3 text-signal animate-spin" />
+                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Generating analysis…</span>
                             </div>
                         )}
                     </div>
                 )}
 
                 {!loading && !hasResult && !error && (
-                    <div className="text-center py-6">
-                        <Brain className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-                        <p className="text-sm text-slate-500">
+                    <div className="text-center py-6 space-y-2">
+                        <Brain className="w-9 h-9 text-text-mute mx-auto" aria-hidden="true" />
+                        <p className="text-sm text-text-dim max-w-md mx-auto">
                             Get AI-powered insights on your roster, lineup decisions, and waiver targets.
                         </p>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     );
 };
 

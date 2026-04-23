@@ -1,115 +1,95 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/Dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
-import { Card } from '../../../components/ui/Card';
 import { ScrollArea } from '../../../components/ui/ScrollArea';
 import { playerHeadshotUrl, displayTeamName } from '../../../utils/nflData';
 import { fetchFullTransactionHistory } from '../../../utils/sleeper';
-import { ArrowLeftRight, Activity, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowLeftRight, Activity, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { theme } from '../../../lib/theme';
 
 const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters, league }) => {
     const [history, setHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [tab, setTab] = useState('pulse');
 
-    // Fetch Deep History when opened
     useEffect(() => {
         if (isOpen && player && league?.league_id) {
             setLoadingHistory(true);
-            fetchFullTransactionHistory(league.league_id, 3) // 3 years back
+            fetchFullTransactionHistory(league.league_id, 3)
                 .then(trades => {
-                    // Filter for this player
                     const relevant = trades.filter(t =>
                         t.adds?.[player.player_id] || t.drops?.[player.player_id]
                     ).sort((a, b) => b.created - a.created);
                     setHistory(relevant);
                 })
-                .catch(err => console.error("Failed to fetch history", err))
+                .catch(err => console.error('Failed to fetch history', err))
                 .finally(() => setLoadingHistory(false));
         }
     }, [isOpen, player, league?.league_id]);
 
     if (!player) return null;
 
-    // --- Tab 1: The Ledger (Trade History) ---
-    // Use the fetched 'history' state instead of props
     const tradeHistory = history;
 
-    // --- Tab 2: The Pulse (Performance) ---
-    // Extract weekly points for this player from seasonMatchups
-    // seasonMatchups is [ { matchup_id, roster_id, points, players: [id, id], starters: [id]... }] for each week
-    // Actually seasonMatchups structure from hook is complex. It's usually keyed by week or flat list?
-    // Looking at useSeasonMatchups usage elsewhere: it returns { match ups } or array...
-    // Let's assume we need to process it. The hook usually returns { 1: [matchups], 2: [matchups] } or similar?
-    // Wait, useSeasonMatchups returns { seasonMatchups: { '1': [...], '2': [...] } } usually.
-    // I'll need to double check the structure of seasonMatchups passed down.
-    // Assuming it's an object keyed by Week Number.
-
-    // Helper to get formatted data
     const performanceData = [];
     if (seasonMatchups) {
         Object.entries(seasonMatchups).forEach(([week, matchups]) => {
             if (!matchups) return;
-            // Find the matchup containing this player
-            // Player might be in 'players' array of a roster
-            // We need to find the specific player object if available (Sleeper usually returns points in a separate object or we calculate?)
-            // Actually, `matchups` from Sleeper endpoint /league/<id>/matchups/<week> returns:
-            // { points, roster_id, starters: [], players: [], players_points: { id: score } }
-
             matchups.forEach(m => {
                 if (m.players_points && m.players_points[player.player_id] !== undefined) {
                     const pts = m.players_points[player.player_id];
                     performanceData.push({
                         week: `W${week}`,
-                        points: pts === 0 ? null : pts, // Use null for 0 to create gaps
-                        projected: m.starters_points?.[player.player_id] || 0
+                        points: pts === 0 ? null : pts,
+                        projected: m.starters_points?.[player.player_id] || 0,
                     });
                 }
             });
         });
     }
 
-    // Calculate Consistency (CV Method) - Active Games Only
     const activeScores = performanceData
         .map(d => d.points)
-        .filter(p => p !== null && p > 0); // Exclude 0/Null
+        .filter(p => p !== null && p > 0);
 
     const avg = activeScores.length ? activeScores.reduce((a, b) => a + b, 0) / activeScores.length : 0;
     const stdDev = activeScores.length ? Math.sqrt(activeScores.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / activeScores.length) : 0;
     const cv = avg > 0 ? stdDev / avg : 0;
 
-    // Curved Grading Scale (Fantasy Specific)
-    let consistencyGrade = 'F (Lottery Ticket)';
-    let consistencyColor = 'text-red-500';
-    let subText = `Typically scores +/- ${stdDev.toFixed(1)}pts of average`;
+    let consistencyGrade = 'F · Lottery Ticket';
+    let consistencyColor = 'text-bad';
+    let subText = `Typically scores ±${stdDev.toFixed(1)}pts of average`;
 
     if (activeScores.length < 3) {
         consistencyGrade = 'N/A';
-        consistencyColor = 'text-slate-500';
+        consistencyColor = 'text-text-mute';
         subText = 'Not enough active games to grade';
-    } else if (cv < 0.20) { consistencyGrade = 'A+ (Robot)'; consistencyColor = 'text-purple-400'; }
-    else if (cv < 0.35) { consistencyGrade = 'A (Elite)'; consistencyColor = 'text-blue-400'; }
-    else if (cv < 0.50) { consistencyGrade = 'B (Reliable)'; consistencyColor = 'text-green-400'; }
-    else if (cv < 0.75) { consistencyGrade = 'C (Volatile)'; consistencyColor = 'text-yellow-400'; }
-    else if (cv <= 1.0) { consistencyGrade = 'D (Boom/Bust)'; consistencyColor = 'text-orange-400'; }
+    } else if (cv < 0.20) { consistencyGrade = 'A+ · Robot';     consistencyColor = 'text-signal-2'; }
+    else if (cv < 0.35)  { consistencyGrade = 'A · Elite';      consistencyColor = 'text-signal'; }
+    else if (cv < 0.50)  { consistencyGrade = 'B · Reliable';   consistencyColor = 'text-good'; }
+    else if (cv < 0.75)  { consistencyGrade = 'C · Volatile';   consistencyColor = 'text-warn'; }
+    else if (cv <= 1.0)  { consistencyGrade = 'D · Boom/Bust';  consistencyColor = 'text-signal-2'; }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] bg-slate-900 border-slate-700 text-white">
+            <DialogContent className="sm:max-w-[600px] bg-bg-1 border border-line shadow-pop text-text">
                 <DialogHeader>
                     <div className="flex items-center gap-4">
                         <img
                             src={playerHeadshotUrl(player.player_id)}
                             alt={player.last_name}
-                            className="w-16 h-16 rounded-full border-2 border-slate-600 object-cover"
+                            className="w-16 h-16 rounded-full ring-1 ring-line object-cover"
                             onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
                         />
-                        <div>
-                            <DialogTitle className="text-2xl font-bold">{player.first_name} {player.last_name}</DialogTitle>
-                            <DialogDescription className="text-slate-400 flex items-center gap-2">
-                                {player.team || 'FA'} • {player.position}
+                        <div className="min-w-0">
+                            <DialogTitle className="font-display text-2xl font-bold text-text truncate">
+                                {player.first_name} {player.last_name}
+                            </DialogTitle>
+                            <DialogDescription className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-2 mt-1">
+                                <span>{player.team || 'FA'} · {player.position}</span>
                                 {player.injury_status && (
-                                    <span className="text-red-400 font-bold uppercase text-xs border border-red-500/30 px-1.5 rounded">
+                                    <span className="text-bad font-bold border border-bad/30 bg-bad/10 px-1.5 py-0.5 rounded-sm">
                                         {player.injury_status}
                                     </span>
                                 )}
@@ -118,105 +98,110 @@ const PlayerDossier = ({ player, isOpen, onClose, seasonMatchups, users, rosters
                     </div>
                 </DialogHeader>
 
-                <Tabs defaultValue="pulse" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-                        <TabsTrigger value="pulse">The Pulse 📈</TabsTrigger>
-                        <TabsTrigger value="ledger">The Ledger 📜</TabsTrigger>
-                    </TabsList>
+                <SegmentedTabs
+                    tabs={[
+                        { value: 'pulse', label: 'The Pulse' },
+                        { value: 'ledger', label: 'The Ledger' },
+                    ]}
+                    value={tab}
+                    onChange={setTab}
+                />
 
-                    <TabsContent value="pulse" className="space-y-4 mt-4">
+                {tab === 'pulse' ? (
+                    <div className="space-y-4 mt-2">
                         {performanceData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-slate-500 space-y-2">
-                                <Activity className="w-8 h-8" />
-                                <p className="text-sm font-medium">No scoring data available</p>
+                            <div className="flex flex-col items-center justify-center py-10 text-text-mute space-y-2">
+                                <Activity className="w-7 h-7" />
+                                <p className="text-sm font-semibold text-text">No scoring data available</p>
                                 <p className="text-xs text-center max-w-xs">Season hasn't started yet. Performance stats will appear once games are played.</p>
                             </div>
                         ) : (
                             <>
-                                <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                                <div className="flex justify-between items-center bg-bg-2 p-3 rounded-md border border-line">
                                     <div>
-                                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Consistency Grade</p>
-                                        <p className={`text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
-                                        <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {subText}
-                                        </p>
+                                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-1">Consistency Grade</p>
+                                        <p className={`font-display text-xl font-bold ${consistencyColor}`}>{consistencyGrade}</p>
+                                        <p className="font-mono text-2xs text-text-mute mt-0.5">{subText}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-slate-400 uppercase tracking-wider">Avg PPG</p>
-                                        <p className="text-xl font-bold text-blue-400">{avg.toFixed(1)}</p>
+                                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg PPG</p>
+                                        <p className="font-display text-xl font-bold text-signal tnum">{avg.toFixed(1)}</p>
                                     </div>
                                 </div>
 
-                                <div className="h-[250px] w-full bg-slate-800/20 rounded-lg p-2 border border-slate-800">
+                                <div className="h-[250px] w-full bg-bg-2 rounded-md p-2 border border-line">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={performanceData}>
-                                            <XAxis dataKey="week" stroke="#64748b" fontSize={10} tickLine={false} />
-                                            <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                                            <XAxis dataKey="week" stroke={theme.color.textMute} fontSize={10} tickLine={false} tick={{ fontFamily: 'var(--font-mono)' }} />
+                                            <YAxis stroke={theme.color.textMute} fontSize={10} tickLine={false} tick={{ fontFamily: 'var(--font-mono)' }} />
                                             <Tooltip
-                                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                                                itemStyle={{ color: '#60a5fa' }}
+                                                contentStyle={{
+                                                    backgroundColor: theme.color.bg1,
+                                                    border: `1px solid ${theme.color.lineStrong}`,
+                                                    borderRadius: theme.radius.md,
+                                                    color: theme.color.text,
+                                                    fontFamily: 'var(--font-sans)',
+                                                    fontSize: 12,
+                                                }}
+                                                itemStyle={{ color: theme.color.signal }}
                                             />
-                                            <ReferenceLine y={avg} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: 'AVG', fill: '#94a3b8', fontSize: 10 }} />
-                                            <Line type="monotone" dataKey="points" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#1d4ed8' }} activeDot={{ r: 6 }} connectNulls={false} />
+                                            <ReferenceLine
+                                                y={avg}
+                                                stroke={theme.color.textDim}
+                                                strokeDasharray="3 3"
+                                                label={{ value: 'AVG', fill: theme.color.textDim, fontSize: 10, fontFamily: 'var(--font-mono)' }}
+                                            />
+                                            <Line type="monotone" dataKey="points" stroke={theme.color.signal} strokeWidth={2.5} dot={{ r: 4, fill: theme.color.signal }} activeDot={{ r: 6 }} connectNulls={false} />
                                         </LineChart>
                                     </ResponsiveContainer>
                                 </div>
                             </>
                         )}
-                    </TabsContent>
+                    </div>
+                ) : (
+                    <ScrollArea className="h-[300px] w-full rounded-md border border-line bg-bg p-4 mt-2">
+                        {loadingHistory ? (
+                            <div className="flex flex-col items-center justify-center h-full text-text-mute space-y-2">
+                                <Loader2 className="w-7 h-7 animate-spin text-signal" />
+                                <p className="text-sm">Digging through the archives…</p>
+                            </div>
+                        ) : tradeHistory.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-text-mute space-y-2">
+                                <ArrowLeftRight className="w-7 h-7 opacity-60" />
+                                <p className="text-sm">No recorded trades for this player.</p>
+                                <p className="font-mono text-2xs uppercase tracking-wider">Likely an original draft pick or waiver add.</p>
+                            </div>
+                        ) : (
+                            <div className="relative border-l border-line ml-3 space-y-5">
+                                {tradeHistory.map((t) => {
+                                    const destRosterId = t.adds?.[player.player_id];
+                                    const sourceRosterId = t.drops?.[player.player_id];
 
-                    <TabsContent value="ledger" className="mt-4">
-                        <ScrollArea className="h-[300px] w-full rounded-md border border-slate-700 bg-slate-900/50 p-4">
-                            {loadingHistory ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-2">
-                                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                    <p className="text-sm"> digging through the archives...</p>
-                                </div>
-                            ) : tradeHistory.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 opacity-70">
-                                    <ArrowLeftRight className="w-8 h-8" />
-                                    <p className="text-sm">No recorded trades for this player.</p>
-                                    <p className="text-xs">Likely an original draft pick or waiver add.</p>
-                                </div>
-                            ) : (
-                                <div className="relative border-l border-slate-700 ml-3 space-y-6">
-                                    {tradeHistory.map((t, idx) => {
-                                        const destRosterId = t.adds?.[player.player_id];
-                                        const sourceRosterId = t.drops?.[player.player_id];
+                                    const destUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === destRosterId)?.owner_id);
+                                    const sourceUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === sourceRosterId)?.owner_id);
 
-                                        // Note: Roster IDs from previous seasons won't match current rosters.
-                                        // Ideally we fetch historical rosters, but for now we fallback gracefully.
-                                        // We attempt to find a roster with same ID in current league (unlikely correct but safe fallback or just show ID)
-                                        // Actually, roster_ids are usually 1-12.
-                                        // If User A was Roster 1 in 2023 and Roster 1 in 2024, it matches.
-                                        // Sleeper roster IDs are stable index-based usually (1-12) unless commish changes it? No, usually stable.
-                                        // So using current rosters array (which is keyed by roster_id potentially) might actually work for Team Names!
-
-                                        const destUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === destRosterId)?.owner_id);
-                                        const sourceUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === sourceRosterId)?.owner_id);
-
-                                        return (
-                                            <div key={t.transaction_id} className="ml-6 relative">
-                                                <span className="absolute -left-[31px] top-0 flex h-4 w-4 items-center justify-center rounded-full bg-slate-800 ring-4 ring-slate-900">
-                                                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                    return (
+                                        <div key={t.transaction_id} className="ml-6 relative">
+                                            <span className="absolute -left-[31px] top-0 flex h-4 w-4 items-center justify-center rounded-full bg-bg-2 ring-4 ring-bg">
+                                                <div className="h-2 w-2 rounded-full bg-signal" />
+                                            </span>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-2">
+                                                    {t.season && <span className="bg-bg-3 border border-line px-1.5 py-0.5 rounded-sm tnum text-text-dim">{t.season}</span>}
+                                                    Week <span className="tnum">{t.leg}</span> · <span className="tnum">{new Date(t.created).toLocaleDateString()}</span>
                                                 </span>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-xs text-slate-500 font-mono flex items-center gap-2">
-                                                        {t.season && <span className="bg-slate-700 px-1 rounded text-white">{t.season}</span>}
-                                                        Week {t.leg} • {new Date(t.created).toLocaleDateString()}
-                                                    </span>
-                                                    <p className="text-sm text-white">
-                                                        Traded from <span className="font-bold text-red-300">{displayTeamName(sourceUser) || `Roster ${sourceRosterId}`}</span> to <span className="font-bold text-green-300">{displayTeamName(destUser) || `Roster ${destRosterId}`}</span>
-                                                    </p>
-                                                </div>
+                                                <p className="text-sm text-text-dim">
+                                                    Traded from <span className="font-semibold text-signal-2">{displayTeamName(sourceUser) || `Roster ${sourceRosterId}`}</span>{' '}
+                                                    to <span className="font-semibold text-good">{displayTeamName(destUser) || `Roster ${destRosterId}`}</span>
+                                                </p>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </TabsContent>
-                </Tabs>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </ScrollArea>
+                )}
             </DialogContent>
         </Dialog>
     );

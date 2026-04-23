@@ -8,8 +8,6 @@ import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTic
 import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
-import { Card, CardContent } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 import TeamRoster from '../features/dashboard/components/TeamRoster';
 import AnalyzeMyTeam from '../features/dashboard/components/AnalyzeMyTeam';
 
@@ -17,27 +15,22 @@ const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, transactions, loading, error, user, league } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
 
-    // Global State: Current NFL Week
     const currentNFLWeek = state?.display_week || state?.week || 1;
 
-    // Local State: Selected Week for Time Travel
     const [selectedWeek, setSelectedWeek] = useState(currentNFLWeek);
     const [viewMatchups, setViewMatchups] = useState([]);
     const [loadingMatchups, setLoadingMatchups] = useState(false);
 
-    // Sync selectedWeek with currentNFLWeek on initial load
     useEffect(() => {
         if (state?.display_week) {
             setSelectedWeek(state.display_week);
         }
     }, [state?.display_week]);
 
-    // Fetch Matchups when Selected Week Changes
     useEffect(() => {
         const loadMatchups = async () => {
             if (!league?.league_id || !selectedWeek) return;
 
-            // Optimization: If selected week is current week, use context data
             if (selectedWeek === currentNFLWeek && currentWeekMatchups.length > 0) {
                 setViewMatchups(currentWeekMatchups);
                 return;
@@ -48,7 +41,7 @@ const DashboardPage = () => {
                 const data = await fetchLeagueMatchups(league.league_id, selectedWeek);
                 setViewMatchups(data);
             } catch (err) {
-                console.error("Failed to fetch matchups for week", selectedWeek, err);
+                console.error('Failed to fetch matchups for week', selectedWeek, err);
             } finally {
                 setLoadingMatchups(false);
             }
@@ -57,10 +50,8 @@ const DashboardPage = () => {
         loadMatchups();
     }, [selectedWeek, league?.league_id, currentNFLWeek, currentWeekMatchups]);
 
-    // Fetch historical data for projections (always needed for smart projections)
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
 
-    // Default to logged-in user if available, otherwise first user
     useEffect(() => {
         if (users && users.length > 0 && !selectedUserId) {
             if (user?.user_id) {
@@ -71,68 +62,73 @@ const DashboardPage = () => {
         }
     }, [users, user, selectedUserId]);
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading Dashboard...</div>;
-    if (error) return <div className="p-8 text-center text-destructive">Error loading dashboard data.</div>;
+    if (loading) {
+        return (
+            <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Loading dashboard…
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-bad">
+                Error loading dashboard data
+            </div>
+        );
+    }
 
-    // Generate Week Options (1 to 18)
     const weekOptions = Array.from({ length: 18 }, (_, i) => i + 1);
+    const isTimeTraveling = selectedWeek !== currentNFLWeek;
 
     return (
-        <div className="space-y-6">
-            {/* Header & Switcher */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+        <div className="space-y-5">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-line pb-5">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">League Dashboard</h1>
-                    <div className="flex items-center gap-3 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                            {selectedWeek === currentNFLWeek ? 'Current Week Overview' : `Week ${selectedWeek} History`}
-                        </p>
-                        {selectedWeek !== currentNFLWeek && (
-                            <Badge variant="secondary">Time Travel Active</Badge>
-                        )}
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        {isTimeTraveling
+                            ? <>Time Travel · Week <span className="tnum text-signal">{selectedWeek}</span></>
+                            : <>Current Week Overview</>}
                     </div>
+                    <h1 className="mt-1 font-display text-3xl font-bold tracking-snug text-text">
+                        League Dashboard
+                    </h1>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                    {/* Week Selector */}
-                    <div className="flex items-center gap-2 bg-card p-1.5 rounded-lg border border-border">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider pl-2">Week</span>
+                <div className="flex flex-wrap items-center gap-2">
+                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
                         <select
-                            className="bg-transparent text-sm font-medium text-foreground rounded-md border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pl-1 pr-8"
+                            className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(Number(e.target.value))}
                         >
                             {weekOptions.map(w => (
                                 <option key={w} value={w}>
-                                    {w} {w === currentNFLWeek ? '(Current)' : ''}
+                                    {w}{w === currentNFLWeek ? ' (Current)' : ''}
                                 </option>
                             ))}
                         </select>
-                    </div>
+                    </label>
 
-                    {/* User Selector */}
-                    <div className="flex items-center gap-2 bg-card p-1.5 rounded-lg border border-border">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider pl-2">View As</span>
+                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">View as</span>
                         <select
-                            className="bg-transparent text-sm font-medium text-foreground rounded-md border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pl-1 pr-8"
+                            className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6"
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                         >
-                            {users?.map(user => (
-                                <option key={user.user_id} value={user.user_id}>
-                                    {displayTeamName(user)}
+                            {users?.map(u => (
+                                <option key={u.user_id} value={u.user_id}>
+                                    {displayTeamName(u)}
                                 </option>
                             ))}
                         </select>
-                    </div>
+                    </label>
                 </div>
-            </div>
+            </header>
 
-            {/* Main Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column: Hero & Stats */}
-                <div className="space-y-6">
-                    {/* Hero Widget: Lineup Status */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="space-y-5">
                     <WidgetLineupStatus
                         week={selectedWeek}
                         users={users}
@@ -142,14 +138,12 @@ const DashboardPage = () => {
                         selectedUserId={selectedUserId}
                     />
 
-                    {/* AI Team Analysis */}
                     <AnalyzeMyTeam
                         leagueId={league?.league_id}
                         userId={selectedUserId}
                         week={selectedWeek}
                     />
 
-                    {/* Quick Stats Row */}
                     <WidgetQuickStats
                         rosters={rosters}
                         selectedUserId={selectedUserId}
@@ -159,7 +153,6 @@ const DashboardPage = () => {
                         state={state}
                     />
 
-                    {/* Team Roster with Dossier */}
                     <TeamRoster
                         roster={rosters?.find(r => r.owner_id === selectedUserId)}
                         players={players}
@@ -172,9 +165,7 @@ const DashboardPage = () => {
                     />
                 </div>
 
-                {/* Right Column: Matchup & Ticker */}
-                <div className="space-y-6">
-                    {/* Matchup Preview */}
+                <div className="space-y-5">
                     <div className={`transition-opacity duration-300 ${loadingMatchups ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                         <WidgetMatchupPreview
                             week={selectedWeek}
@@ -188,7 +179,6 @@ const DashboardPage = () => {
                         />
                     </div>
 
-                    {/* League Ticker - Always shows latest transactions, independent of time travel */}
                     <RosterNews
                         roster={rosters?.find(r => r.owner_id === selectedUserId)}
                         players={players}

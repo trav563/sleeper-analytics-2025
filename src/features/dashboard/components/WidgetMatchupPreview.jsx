@@ -3,7 +3,6 @@ import { displayTeamName } from '../../../utils/nflData';
 import { getGameStatuses, getGameWeather } from '../../../services/nflSchedule';
 import { calculateProjectedScore } from '../../../utils/scoreProjections';
 import { Info, CloudRain } from 'lucide-react';
-import { Card, CardHeader, CardContent, CardTitle } from '../../../components/ui/Card';
 
 const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, selectedUserId, players, seasonMatchups }) => {
     const [gameStatuses, setGameStatuses] = useState({});
@@ -46,8 +45,6 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
         const opponentRemaining = [];
 
         if (players && Object.keys(gameStatuses).length > 0) {
-            // Logic for remaining players omitted for brevity but assumed similar structure
-            // Simplified for this rewriting step to focus on UI
             const userStarters = userMatchup.starters || [];
             userStarters.forEach(playerId => {
                 const player = players[playerId];
@@ -72,80 +69,87 @@ const WidgetMatchupPreview = ({ week, currentNFLWeek, users, rosters, matchups, 
             opponentName: displayTeamName(opponentUser),
             userRemaining,
             opponentRemaining,
-            useProjections
+            useProjections,
         };
     }, [week, currentNFLWeek, users, rosters, matchups, selectedUserId, players, gameStatuses, seasonMatchups]);
 
     if (!matchupData) return null;
 
+    const userValue = matchupData.useProjections ? matchupData.userProjected : matchupData.userScore;
+    const oppValue  = matchupData.useProjections ? matchupData.opponentProjected : matchupData.opponentScore;
+    const userLeading = userValue > oppValue;
+    const oppLeading = oppValue > userValue;
+
     return (
-        <Card className="h-full bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2 border-b border-slate-700">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-                        Week {week} Matchup
-                    </CardTitle>
-                    {/* Weather badge for user's team */}
-                    {(() => {
-                        const userRoster = rosters?.find(r => r.owner_id === selectedUserId);
-                        const userStarters = userRoster?.starters || [];
-                        const starterTeams = userStarters.map(pid => players?.[pid]?.team).filter(Boolean);
-                        const adverseWeather = starterTeams.find(t => weather[t]?.isAdverse && !weather[t]?.isIndoor);
-                        if (!adverseWeather) return null;
-                        const w = weather[adverseWeather];
-                        return (
-                            <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-                                <CloudRain className="w-3 h-3" />
-                                {w.displayValue || 'Adverse weather'}
-                            </span>
-                        );
-                    })()}
-                </div>
-            </CardHeader>
-            <CardContent className="pt-6 text-center">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="text-center">
-                        <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-primary/80' : 'text-white'}`}>
-                            {matchupData.useProjections ? matchupData.userProjected.toFixed(2) : matchupData.userScore.toFixed(2)}
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+            <header className="flex justify-between items-center px-4 pt-3 pb-2 border-b border-line">
+                <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    Week <span className="tnum">{week}</span> Matchup
+                </h3>
+                {(() => {
+                    const userRoster = rosters?.find(r => r.owner_id === selectedUserId);
+                    const userStarters = userRoster?.starters || [];
+                    const starterTeams = userStarters.map(pid => players?.[pid]?.team).filter(Boolean);
+                    const adverseWeather = starterTeams.find(t => weather[t]?.isAdverse && !weather[t]?.isIndoor);
+                    if (!adverseWeather) return null;
+                    const w = weather[adverseWeather];
+                    return (
+                        <span className="inline-flex items-center gap-1 font-mono text-2xs uppercase tracking-wider text-warn bg-warn/10 border border-warn/30 px-2 py-0.5 rounded-sm">
+                            <CloudRain className="w-3 h-3" />
+                            {w.displayValue || 'Adverse'}
+                        </span>
+                    );
+                })()}
+            </header>
+
+            <div className="px-4 py-5 text-center">
+                <div className="flex justify-between items-center mb-4 gap-3">
+                    <div className="text-center flex-1 min-w-0">
+                        <div className={`font-display tnum text-3xl font-bold ${userLeading ? 'text-signal' : matchupData.useProjections ? 'text-text-dim' : 'text-text'}`}>
+                            {userValue.toFixed(2)}
                         </div>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-center">
+                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1 flex items-center gap-1 justify-center">
                             My Score
-                            {matchupData.useProjections && (
-                                <Info className="w-3 h-3 text-primary cursor-help" />
-                            )}
+                            {matchupData.useProjections && <Info className="w-3 h-3 text-text-dim cursor-help" />}
                         </div>
-                        {matchupData.useProjections && <div className="text-[10px] text-primary/70 font-medium mt-0.5">Proj (Avg)*</div>}
+                        {matchupData.useProjections && (
+                            <div className="font-mono text-2xs text-text-mute mt-0.5">Proj · Avg</div>
+                        )}
                     </div>
 
-                    <div className="text-sm font-bold text-slate-500">VS</div>
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">VS</div>
 
-                    <div className="text-center">
-                        <div className={`text-3xl font-bold ${matchupData.useProjections ? 'text-primary/80' : 'text-white'}`}>
-                            {matchupData.useProjections ? matchupData.opponentProjected.toFixed(2) : matchupData.opponentScore.toFixed(2)}
+                    <div className="text-center flex-1 min-w-0">
+                        <div className={`font-display tnum text-3xl font-bold ${oppLeading ? 'text-signal-2' : matchupData.useProjections ? 'text-text-dim' : 'text-text'}`}>
+                            {oppValue.toFixed(2)}
                         </div>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-center">
+                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1 truncate">
                             {matchupData.opponentName}
                         </div>
-                        {matchupData.useProjections && <div className="text-[10px] text-primary/70 font-medium mt-0.5">Proj (Avg)*</div>}
+                        {matchupData.useProjections && (
+                            <div className="font-mono text-2xs text-text-mute mt-0.5">Proj · Avg</div>
+                        )}
                     </div>
                 </div>
 
                 {(matchupData.userRemaining.length > 0 || matchupData.opponentRemaining.length > 0) && (
-                    <div className="space-y-2 mt-4 text-left">
+                    <div className="space-y-2 mt-4 text-left border-t border-line pt-3">
                         {matchupData.userRemaining.length > 0 && (
-                            <div className="text-xs text-slate-400">
-                                <span className="font-semibold text-slate-300">Yet to Play:</span> {matchupData.userRemaining.join(', ')}
+                            <div className="text-xs text-text-dim">
+                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Yet to play</span>{' '}
+                                {matchupData.userRemaining.join(', ')}
                             </div>
                         )}
                         {matchupData.opponentRemaining.length > 0 && (
-                            <div className="text-xs text-orange-400/80">
-                                <span className="font-semibold text-orange-400">Opponent Remaining:</span> {matchupData.opponentRemaining.join(', ')}
+                            <div className="text-xs text-text-dim">
+                                <span className="font-mono text-2xs uppercase tracking-wider text-signal-2">Opponent remaining</span>{' '}
+                                {matchupData.opponentRemaining.join(', ')}
                             </div>
                         )}
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     );
 };
 

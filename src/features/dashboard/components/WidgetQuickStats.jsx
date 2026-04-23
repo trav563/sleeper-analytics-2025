@@ -4,7 +4,29 @@ import { Trophy, TrendingUp, BarChart2, HelpCircle } from 'lucide-react';
 import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import { fetchLeagueRosters } from '../../../utils/sleeper';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
+
+const StatCard = ({ label, value, sub, icon: Icon, iconTone = 'text-signal', valueTone = 'text-text', tooltip }) => (
+    <div className="relative group bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
+        <div className="px-4 pt-3 pb-2 border-b border-line/60 flex items-center justify-between">
+            <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute">{label}</h3>
+            <Icon className={`w-4 h-4 ${iconTone}`} aria-hidden="true" />
+        </div>
+        <div className="px-4 py-4 text-center">
+            <div className={`font-display tnum text-3xl font-bold ${valueTone}`}>{value}</div>
+            {sub && (
+                <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1 flex items-center justify-center gap-1">
+                    {sub}
+                    {tooltip && <HelpCircle className="w-3 h-3" aria-hidden="true" />}
+                </div>
+            )}
+        </div>
+        {tooltip && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-bg-1 text-xs text-left text-text rounded-md shadow-pop opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none z-20 border border-line">
+                {tooltip}
+            </div>
+        )}
+    </div>
+);
 
 const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, seasonMatchups, state }) => {
     const { data: marketValues } = useQuery({
@@ -18,7 +40,6 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
         enabled: !!league,
     });
 
-    // Fetch previous season rosters for offseason projections
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
     useEffect(() => {
         if (!league?.previous_league_id) return;
@@ -45,11 +66,10 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
 
         const rank = sortedRosters.findIndex(r => r.roster_id === roster.roster_id) + 1;
 
-        // Calculate real streak from matchup data
         let streak = '—';
+        let streakType = null;
         if (seasonMatchups && Object.keys(seasonMatchups).length > 0) {
             let streakCount = 0;
-            let streakType = null; // 'W' or 'L'
             const weeks = Object.keys(seasonMatchups).map(Number).sort((a, b) => b - a);
             for (const week of weeks) {
                 const weekData = seasonMatchups[week];
@@ -58,7 +78,6 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
                 if (!userMatch || userMatch.matchup_id == null) continue;
                 const opponent = weekData.find(m => m.matchup_id === userMatch.matchup_id && m.roster_id !== roster.roster_id);
                 if (!opponent) continue;
-                // Skip weeks where neither team has scored (future/unplayed)
                 if ((userMatch.points || 0) === 0 && (opponent.points || 0) === 0) continue;
                 const won = (userMatch.points || 0) > (opponent.points || 0);
                 const result = won ? 'W' : 'L';
@@ -71,12 +90,10 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
                     break;
                 }
             }
-            if (streakCount > 0) {
-                streak = `${streakCount}${streakType}`;
-            }
+            if (streakCount > 0) streak = `${streakCount}${streakType}`;
         }
 
-        let playoffOddsDisplay = '...';
+        let playoffOddsDisplay = '…';
         let playoffStatus = '';
 
         if (odds && odds[roster.roster_id]) {
@@ -90,70 +107,52 @@ const WidgetQuickStats = ({ rosters, selectedUserId, league, currentWeek, season
             rank,
             wins: roster.settings.wins,
             losses: roster.settings.losses,
+            ties: roster.settings.ties,
             playoffOddsDisplay,
             playoffStatus,
-            streak
+            streak,
+            streakType,
         };
     }, [selectedUserId, rosters, odds, seasonMatchups]);
 
     if (!stats) return null;
 
+    const rankTone = stats.rank === 1 ? 'text-signal' : stats.rank <= 3 ? 'text-text' : 'text-text-dim';
+    const playoffTone =
+        stats.playoffStatus === 'Clinched' ? 'text-good'
+        : stats.playoffStatus === 'Eliminated' ? 'text-bad'
+        : 'text-text';
+    const streakTone = stats.streakType === 'W' ? 'text-good' : stats.streakType === 'L' ? 'text-bad' : 'text-text-dim';
+
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="h-full bg-slate-800/50 border-slate-700">
-                <CardHeader className="pb-2 border-b border-slate-700">
-                    <div className="flex justify-between items-center">
-                        <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">Current Rank</CardTitle>
-                        <Trophy className="w-4 h-4 text-yellow-500" />
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-6 text-center">
-                    <div className="text-3xl font-bold text-white">#{stats.rank}</div>
-                    <p className="text-xs text-slate-400 mt-1">
-                        {stats.wins}-{stats.losses}{stats.ties > 0 ? `-${stats.ties}` : ''}
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card className="relative group cursor-help transition-all hover:bg-muted/50 bg-slate-800/50 border-slate-700">
-                <CardHeader className="pb-2 border-b border-slate-700">
-                    <div className="flex justify-between items-center">
-                        <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">Playoff Odds</CardTitle>
-                        <BarChart2 className={`w-4 h-4 ${stats.playoffStatus === 'Clinched' ? 'text-green-500' : stats.playoffStatus === 'Eliminated' ? 'text-destructive' : 'text-blue-400'}`} />
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-6 text-center">
-                    <div className={`text-3xl font-bold ${stats.playoffStatus === 'Clinched' ? 'text-green-500' : stats.playoffStatus === 'Eliminated' ? 'text-destructive' : 'text-white'}`}>
-                        {oddsLoading ? '...' : stats.playoffOddsDisplay}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1">
-                        {isProjection ? 'Preseason Projection' : 'Monte Carlo Simulation'}
-                        <HelpCircle className="w-3 h-3" />
-                    </div>
-                </CardContent>
-
-                {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 bg-popover text-xs text-left text-popover-foreground rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none z-20 border border-border">
-                    <p className="font-semibold mb-1">{isProjection ? 'Preseason Projection' : 'Monte Carlo Simulation'}</p>
-                    <p>{isProjection
-                        ? 'Simulates 10,000 seasons using previous season performance and current roster dynasty values. Updates as you make trades, pickups, and draft picks.'
-                        : 'Simulates the remaining schedule 10,000 times based on each team\'s Average Points Per Game.'
-                    }</p>
-                </div>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-                <CardHeader className="pb-2 border-b border-slate-700">
-                    <div className="flex justify-between items-center">
-                        <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">Streak</CardTitle>
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-6 text-center">
-                    <div className="text-3xl font-bold text-white">{stats.streak}</div>
-                    <div className="text-xs text-slate-400 mt-1">Current Streak</div>
-                </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <StatCard
+                label="Current Rank"
+                value={`#${stats.rank}`}
+                sub={`${stats.wins}-${stats.losses}${stats.ties > 0 ? `-${stats.ties}` : ''}`}
+                icon={Trophy}
+                iconTone="text-signal"
+                valueTone={rankTone}
+            />
+            <StatCard
+                label="Playoff Odds"
+                value={oddsLoading ? '…' : stats.playoffOddsDisplay}
+                sub={isProjection ? 'Preseason Projection' : 'Monte Carlo Sim'}
+                icon={BarChart2}
+                iconTone={stats.playoffStatus === 'Clinched' ? 'text-good' : stats.playoffStatus === 'Eliminated' ? 'text-bad' : 'text-signal'}
+                valueTone={playoffTone}
+                tooltip={isProjection
+                    ? 'Simulates 10,000 seasons using previous season performance and current roster dynasty values. Updates as you make trades, pickups, and draft picks.'
+                    : "Simulates the remaining schedule 10,000 times based on each team's Average Points Per Game."}
+            />
+            <StatCard
+                label="Streak"
+                value={stats.streak}
+                sub="Current Streak"
+                icon={TrendingUp}
+                iconTone={streakTone}
+                valueTone={streakTone}
+            />
         </div>
     );
 };

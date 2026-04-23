@@ -1,15 +1,20 @@
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Activity, Skull, AlertCircle, HelpCircle } from 'lucide-react';
 import { avatarUrl } from '../../../utils/nflData';
 
+const STATUS_TONE = {
+    IR:           'bg-bad/15 text-bad border-bad/40',
+    Out:          'bg-bad/15 text-bad border-bad/30',
+    Doubtful:     'bg-signal-2/15 text-signal-2 border-signal-2/30',
+    Questionable: 'bg-warn/15 text-warn border-warn/30',
+};
+const defaultStatusTone = 'bg-bg-3 text-text-dim border-line';
+
 const InjuryReport = ({ roster, players }) => {
-    // 1. Filter Injured Players
     const injuredPlayers = (roster?.players || [])
         .map(pid => players?.[pid])
         .filter(p => p && p.position !== 'DEF' && (p.status !== 'Active' || p.injury_status))
         .sort((a, b) => {
-            // Sort Priority: IR > Out > Doubtful > Questionable > Sus > Other
-            const priority = { 'IR': 5, 'Out': 4, 'Doubtful': 3, 'Questionable': 2, 'Sus': 1 };
+            const priority = { IR: 5, Out: 4, Doubtful: 3, Questionable: 2, Sus: 1 };
             const statusA = a.injury_status || a.status;
             const statusB = b.injury_status || b.status;
             return (priority[statusB] || 0) - (priority[statusA] || 0);
@@ -17,58 +22,51 @@ const InjuryReport = ({ roster, players }) => {
 
     if (!injuredPlayers.length) return null;
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'IR': return 'bg-red-900/50 text-red-200 border-red-700/50';
-            case 'Out': return 'bg-red-500/20 text-red-300 border-red-500/30';
-            case 'Doubtful': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-            case 'Questionable': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-            default: return 'bg-slate-700 text-slate-300';
-        }
-    };
-
     const getStatusIcon = (status) => {
         switch (status) {
-            case 'IR': return <Skull className="w-3 h-3" />;
-            case 'Out': return <AlertCircle className="w-3 h-3" />;
+            case 'IR':           return <Skull className="w-3 h-3" />;
+            case 'Out':          return <AlertCircle className="w-3 h-3" />;
             case 'Questionable': return <HelpCircle className="w-3 h-3" />;
-            default: return <Activity className="w-3 h-3" />;
+            default:             return <Activity className="w-3 h-3" />;
         }
     };
 
     return (
-        <Card className="bg-slate-800/50 border-slate-700 w-full mt-4">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-white flex items-center gap-2 text-base">
-                    <Activity className="w-5 h-5 text-red-400" />
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card mt-3">
+            <header className="px-4 pt-3 pb-2 border-b border-line">
+                <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1.5">
+                    <Activity className="w-3 h-3 text-bad" aria-hidden="true" />
                     Injury Report
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+                </h3>
+            </header>
+            <div className="px-4 py-3 space-y-2">
                 {injuredPlayers.map(p => {
                     const status = p.injury_status || p.status;
+                    const tone = STATUS_TONE[status] || defaultStatusTone;
                     return (
-                        <div key={p.player_id} className="flex items-center justify-between bg-slate-900/30 p-2 rounded border border-slate-800">
-                            <div className="flex items-center gap-3">
+                        <div key={p.player_id} className="flex items-center justify-between gap-2 bg-bg-2 p-2 rounded-md border border-line">
+                            <div className="flex items-center gap-3 min-w-0">
                                 <img
                                     src={avatarUrl(p.player_id)}
-                                    alt={p.last_name}
-                                    className="w-8 h-8 rounded-full border border-slate-700"
+                                    alt=""
+                                    className="w-8 h-8 rounded-full ring-1 ring-line shrink-0"
                                 />
-                                <div>
-                                    <p className="text-sm font-bold text-white leading-none">{p.first_name} {p.last_name}</p>
-                                    <p className="text-[10px] text-slate-500 mt-1">{p.team || 'FA'} • {p.position}</p>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-text leading-none truncate">{p.first_name} {p.last_name}</p>
+                                    <p className="font-mono text-2xs text-text-mute mt-1 uppercase tracking-wider">
+                                        {p.team || 'FA'} · {p.position}
+                                    </p>
                                 </div>
                             </div>
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase border ${getStatusColor(status)}`}>
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-sm font-mono text-2xs font-bold uppercase tracking-wider border shrink-0 ${tone}`}>
                                 {getStatusIcon(status)}
                                 {status}
                             </div>
                         </div>
                     );
                 })}
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     );
 };
 

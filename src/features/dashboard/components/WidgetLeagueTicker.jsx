@@ -1,12 +1,10 @@
 import { useMemo } from 'react';
 import { ArrowRightLeft, PlusCircle, MinusCircle } from 'lucide-react';
-import { Card, CardHeader, CardContent, CardTitle } from '../../../components/ui/Card';
 
 const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
     const recentActivity = useMemo(() => {
         if (!transactions || transactions.length === 0) return [];
 
-        // Filter for complete transactions only and sort by most recent
         const sorted = [...transactions]
             .filter(tx => tx.status === 'complete' && (tx.type === 'trade' || (tx.adds && Object.keys(tx.adds).length > 0) || (tx.drops && Object.keys(tx.drops).length > 0)))
             .sort((a, b) => b.created - a.created)
@@ -23,16 +21,16 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
         const getTimeAgo = (date) => {
             const seconds = Math.floor((new Date() - date) / 1000);
             let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + "y ago";
+            if (interval > 1) return Math.floor(interval) + 'y ago';
             interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + "mo ago";
+            if (interval > 1) return Math.floor(interval) + 'mo ago';
             interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + "d ago";
+            if (interval > 1) return Math.floor(interval) + 'd ago';
             interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + "h ago";
+            if (interval > 1) return Math.floor(interval) + 'h ago';
             interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + "m ago";
-            return Math.floor(seconds) + "s ago";
+            if (interval > 1) return Math.floor(interval) + 'm ago';
+            return Math.floor(seconds) + 's ago';
         };
 
         return sorted.map(tx => {
@@ -84,45 +82,43 @@ const WidgetLeagueTicker = ({ transactions, users, rosters, players }) => {
 
     const getIcon = (type) => {
         switch (type) {
-            case 'trade': return <ArrowRightLeft className="w-4 h-4 text-purple-400" />;
-            case 'add': return <PlusCircle className="w-4 h-4 text-green-400" />;
-            case 'drop': return <MinusCircle className="w-4 h-4 text-destructive" />;
-            default: return <PlusCircle className="w-4 h-4 text-muted-foreground" />;
+            case 'trade': return <ArrowRightLeft className="w-4 h-4 text-signal-2" aria-hidden="true" />;
+            case 'add':   return <PlusCircle className="w-4 h-4 text-good" aria-hidden="true" />;
+            case 'drop':  return <MinusCircle className="w-4 h-4 text-bad" aria-hidden="true" />;
+            default:      return <PlusCircle className="w-4 h-4 text-text-mute" aria-hidden="true" />;
         }
     };
 
     if (!transactions || transactions.length === 0) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">League Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-sm text-muted-foreground text-center py-4">No recent activity</div>
-                </CardContent>
-            </Card>
+            <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+                <header className="px-4 pt-3 pb-2 border-b border-line">
+                    <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute">League Activity</h3>
+                </header>
+                <div className="px-4 py-6 text-sm text-text-mute text-center">
+                    No recent activity
+                </div>
+            </section>
         );
     }
 
     return (
-        <Card className="w-full bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2 border-b border-slate-700">
-                <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">League Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {recentActivity.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3 pb-3 border-b border-slate-700 last:border-0 last:pb-0">
-                            <div className="mt-0.5">{getIcon(item.type)}</div>
-                            <div>
-                                <p className="text-sm text-foreground leading-tight">{item.desc}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{item.time}</p>
-                            </div>
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+            <header className="px-4 pt-3 pb-2 border-b border-line">
+                <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute">League Activity</h3>
+            </header>
+            <div className="px-4 py-3 space-y-3">
+                {recentActivity.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3 pb-3 border-b border-line last:border-0 last:pb-0">
+                        <div className="mt-0.5 shrink-0">{getIcon(item.type)}</div>
+                        <div className="min-w-0">
+                            <p className="text-sm text-text leading-snug">{item.desc}</p>
+                            <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">{item.time}</p>
                         </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                    </div>
+                ))}
+            </div>
+        </section>
     );
 };
 

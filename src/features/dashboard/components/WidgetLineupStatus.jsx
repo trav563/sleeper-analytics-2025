@@ -1,8 +1,12 @@
 import { useMemo } from 'react';
 import { useLineupStatus } from '../../league/hooks/useLineupStatus';
 import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
-import { cn } from '../../../lib/utils';
+
+const TONE = {
+    error:   { text: 'text-bad',  bg: 'bg-bad/10',  border: 'border-bad/40' },
+    warning: { text: 'text-warn', bg: 'bg-warn/10', border: 'border-warn/40' },
+    success: { text: 'text-good', bg: 'bg-good/10', border: 'border-good/40' },
+};
 
 const WidgetLineupStatus = ({ week, users, rosters, matchups, players, selectedUserId }) => {
     const { grouped } = useLineupStatus(week, users, rosters, matchups, players);
@@ -16,79 +20,58 @@ const WidgetLineupStatus = ({ week, users, rosters, matchups, players, selectedU
 
         if (isIncomplete) {
             const details = grouped.INCOMPLETE.find(item => item.owner_id === selectedUserId);
-            const issues = (details?.flagged || []).map(f => f.reason === "Empty Slot" ? f.reason : `${f.name} (${f.reason})`);
-            return { type: 'error', message: 'Lineup Incomplete', details: issues, icon: XCircle, variant: 'destructive', className: 'border-destructive/50 bg-destructive/10 text-destructive' };
+            const issues = (details?.flagged || []).map(f => f.reason === 'Empty Slot' ? f.reason : `${f.name} (${f.reason})`);
+            return {
+                tone: 'error',
+                label: 'Lineup Incomplete',
+                message: 'Your lineup has incomplete slots or critical issues.',
+                details: issues,
+                icon: XCircle,
+            };
         }
         if (isPotential) {
             const details = grouped.POTENTIAL.find(item => item.owner_id === selectedUserId);
             const issues = (details?.flagged || []).map(f => `${f.name} (${f.reason})`);
-            return { type: 'warning', message: 'Potential Issues', details: issues, icon: AlertTriangle, variant: 'warning', className: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500' };
+            return {
+                tone: 'warning',
+                label: 'Potential Issues',
+                message: 'Some players may not be optimally set or have minor issues.',
+                details: issues,
+                icon: AlertTriangle,
+            };
         }
         if (isOk) {
-            return { type: 'success', message: 'Lineup Set', details: [], icon: CheckCircle, variant: 'success', className: 'border-green-500/50 bg-green-500/10 text-green-500' };
+            return {
+                tone: 'success',
+                label: 'Lineup Set',
+                message: `Your starting lineup is optimized and ready for Week ${week}.`,
+                details: [],
+                icon: CheckCircle,
+            };
         }
         return null;
-    }, [grouped, selectedUserId]);
-
-    const statusInfo = useMemo(() => {
-        if (!status) return { label: '', message: '', details: null, color: '', bgColor: '' };
-
-        switch (status.type) {
-            case 'error':
-                return {
-                    label: status.message,
-                    message: "Your lineup has incomplete slots or critical issues.",
-                    details: status.details.join(', '),
-                    color: 'text-red-500',
-                    bgColor: 'bg-red-950/20'
-                };
-            case 'warning':
-                return {
-                    label: status.message,
-                    message: "Some players may not be optimally set or have minor issues.",
-                    details: status.details.join(', '),
-                    color: 'text-yellow-500',
-                    bgColor: 'bg-yellow-950/20'
-                };
-            case 'success':
-                return {
-                    label: status.message,
-                    message: `Your starting lineup is optimized and ready for Week ${week}.`,
-                    details: null,
-                    color: 'text-green-500',
-                    bgColor: 'bg-green-950/20'
-                };
-            default:
-                return { label: '', message: '', details: null, color: '', bgColor: '' };
-        }
-    }, [status, week]);
+    }, [grouped, selectedUserId, week]);
 
     if (!status) return null;
 
+    const t = TONE[status.tone];
     const StatusIcon = status.icon;
-    const { color: statusColor, bgColor } = statusInfo;
 
     return (
-        <Card className={`border-slate-700 ${bgColor}`}>
-            <CardHeader className="pb-2 border-b border-slate-700/50">
-                <div className="flex items-center gap-2">
-                    <StatusIcon className={`w-5 h-5 ${statusColor}`} />
-                    <CardTitle className={`text-lg font-bold ${statusColor}`}>
-                        {statusInfo.label}
-                    </CardTitle>
-                </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-                <p className="text-slate-300 text-sm">
-                    {statusInfo.message}
-                </p>
-                {statusInfo.details && (
-                    <div className="mt-2 text-xs text-slate-400">
-                        {statusInfo.details}
+        <section className={`rounded-xl border ${t.border} ${t.bg} shadow-card`}>
+            <header className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-line/60">
+                <StatusIcon className={`w-5 h-5 ${t.text}`} aria-hidden="true" />
+                <h3 className={`font-display text-lg font-bold ${t.text}`}>{status.label}</h3>
+            </header>
+            <div className="px-4 pb-4 pt-3">
+                <p className="text-sm text-text-dim">{status.message}</p>
+                {status.details && status.details.length > 0 && (
+                    <div className="mt-2 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        {status.details.join(' · ')}
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     );
 };
 

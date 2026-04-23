@@ -1,24 +1,31 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Badge } from '../../../components/ui/Badge';
-import { Users, Flame, Snowflake, ChevronRight } from 'lucide-react';
-import { avatarUrl, playerHeadshotUrl } from '../../../utils/nflData';
+import { Users, Flame, ChevronRight } from 'lucide-react';
+import { playerHeadshotUrl } from '../../../utils/nflData';
 import { fetchTrendingPlayers } from '../../../utils/sleeper';
 import { fetchMarketValues } from '../../../utils/fantasyCalc';
 import PlayerDossier from './PlayerDossier';
 
-const TeamRoster = ({ roster, players, users, currentWeek, transactions, seasonMatchups, league, rosters }) => {
+// Position chips repointed to broadcast tokens
+const POS_TONE = {
+    QB:  'bg-bad/15 text-bad border-bad/30',
+    RB:  'bg-good/15 text-good border-good/30',
+    WR:  'bg-signal/15 text-signal border-signal/30',
+    TE:  'bg-signal-2/15 text-signal-2 border-signal-2/30',
+    K:   'bg-warn/15 text-warn border-warn/30',
+    DEF: 'bg-bg-3 text-text-dim border-line',
+};
+const defaultPosTone = 'bg-bg-3 text-text-dim border-line';
+
+const TeamRoster = ({ roster, players, users, transactions, seasonMatchups, league, rosters }) => {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
 
-    // Fetch Trending Data (Top 20 Adds)
     const { data: trendingAdds } = useQuery({
         queryKey: ['trendingAdds'],
         queryFn: () => fetchTrendingPlayers('add', 24, 25),
         staleTime: 60 * 60 * 1000,
     });
 
-    // Fetch Market Values
     const { data: marketValues } = useQuery({
         queryKey: ['fantasyCalc', league?.league_id],
         queryFn: () => fetchMarketValues(
@@ -29,143 +36,111 @@ const TeamRoster = ({ roster, players, users, currentWeek, transactions, seasonM
         staleTime: 60 * 60 * 1000,
     });
 
-    if (!roster) return <Card className="p-4 text-center text-slate-500">Select a team to view roster.</Card>;
+    if (!roster) {
+        return (
+            <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                Select a team to view roster
+            </section>
+        );
+    }
 
-    // Helpers
-    const getTrendIcon = (pid) => {
-        if (trendingAdds?.some(t => t.player_id === pid)) return <Flame className="w-3 h-3 text-orange-500" />;
-        // Could check drops too, but requests asked for Hot/Cold. We'll stick to Hot for positive reinforcement or implement drops if needed.
-        return null;
-    };
+    const isTrending = (pid) => trendingAdds?.some(t => t.player_id === pid);
 
-    const getPosColor = (pos) => {
-        switch (pos) {
-            case 'QB': return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-            case 'RB': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-            case 'WR': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-            case 'TE': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-            default: return 'bg-slate-500/20 text-slate-300';
-        }
-    };
-
-    // Organize Players
     const starters = roster.starters || [];
     const rosterPlayers = roster.players || [];
     const taxi = roster.taxi || [];
     const ir = roster.reserve || [];
 
     const getGroupedPlayers = () => {
-        const groups = {
-            'Starters': [],
-            'Bench': [],
-            'Taxi': [],
-            'IR': []
-        };
-
+        const groups = { Starters: [], Bench: [], Taxi: [], IR: [] };
         const processedIds = new Set();
 
-        starters.forEach((pid, idx) => {
-            if (pid === '0') return; // Empty slot
+        starters.forEach((pid) => {
+            if (pid === '0') return;
             const p = players[pid];
-            if (p) {
-                groups['Starters'].push({ ...p, role: 'Starter' });
-                processedIds.add(pid);
-            }
+            if (p) { groups.Starters.push({ ...p, role: 'Starter' }); processedIds.add(pid); }
         });
 
         taxi.forEach(pid => {
             const p = players[pid];
-            if (p) {
-                groups['Taxi'].push({ ...p, role: 'Taxi' });
-                processedIds.add(pid);
-            }
+            if (p) { groups.Taxi.push({ ...p, role: 'Taxi' }); processedIds.add(pid); }
         });
 
         ir.forEach(pid => {
             const p = players[pid];
-            if (p) {
-                groups['IR'].push({ ...p, role: 'IR' });
-                processedIds.add(pid);
-            }
+            if (p) { groups.IR.push({ ...p, role: 'IR' }); processedIds.add(pid); }
         });
 
-        // Bench = Everyone else
         rosterPlayers.forEach(pid => {
-            if (!processedIds.has(pid) && !starters.includes(pid)) { // Simple check, though starters array has processedIds
+            if (!processedIds.has(pid) && !starters.includes(pid)) {
                 const p = players[pid];
-                if (p) {
-                    groups['Bench'].push({ ...p, role: 'Bench' });
-                }
+                if (p) groups.Bench.push({ ...p, role: 'Bench' });
             }
         });
 
-        // Sort bench by Market Value desc
-        groups['Bench'].sort((a, b) => (marketValues?.[b.player_id] || 0) - (marketValues?.[a.player_id] || 0));
-
+        groups.Bench.sort((a, b) => (marketValues?.[b.player_id] || 0) - (marketValues?.[a.player_id] || 0));
         return groups;
     };
 
     const playerGroups = getGroupedPlayers();
 
     const PlayerRow = ({ player }) => (
-        <div
-            className="group flex items-center justify-between p-2 hover:bg-slate-800 rounded cursor-pointer transition-colors border-b border-slate-800/50 last:border-0"
+        <button
+            type="button"
             onClick={() => setSelectedPlayer(player)}
+            className="group w-full flex items-center justify-between gap-3 p-2 hover:bg-bg-2 rounded-md transition-colors duration-fast border-b border-line/30 last:border-0 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
         >
-            <div className="flex items-center gap-3">
-                <div className={`text-[10px] font-bold w-8 text-center py-0.5 rounded border ${getPosColor(player.position)}`}>
+            <div className="flex items-center gap-3 min-w-0">
+                <div className={`font-mono text-2xs font-bold w-9 text-center py-0.5 rounded-sm border uppercase tracking-wider ${POS_TONE[player.position] || defaultPosTone}`}>
                     {player.position}
                 </div>
-                <div className="flex items-center gap-3">
-                    <img
-                        src={playerHeadshotUrl(player.player_id)}
-                        alt=""
-                        className="w-8 h-8 rounded-full bg-slate-800 object-cover"
-                        onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
-                    />
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-slate-200">{player.first_name[0]}. {player.last_name}</span>
-                            {getTrendIcon(player.player_id)}
-                        </div>
-                        <div className="text-[10px] text-slate-500 flex gap-2">
-                            <span>{player.team || 'FA'}</span>
-                            {player.injury_status && <span className="text-red-400 font-semibold">{player.injury_status}</span>}
-                        </div>
+                <img
+                    src={playerHeadshotUrl(player.player_id)}
+                    alt=""
+                    className="w-8 h-8 rounded-full bg-bg-3 object-cover ring-1 ring-line shrink-0"
+                    onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
+                />
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-sm text-text truncate">{player.first_name[0]}. {player.last_name}</span>
+                        {isTrending(player.player_id) && (
+                            <Flame className="w-3 h-3 text-signal-2 shrink-0" aria-label="Trending" />
+                        )}
+                    </div>
+                    <div className="font-mono text-2xs text-text-mute mt-0.5 flex gap-1.5 uppercase tracking-wider">
+                        <span>{player.team || 'FA'}</span>
+                        {player.injury_status && (
+                            <span className="text-bad font-bold">{player.injury_status}</span>
+                        )}
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 text-right">
+            <div className="flex items-center gap-3 shrink-0">
                 {marketValues && marketValues[player.player_id] && (
-                    <div className="hidden sm:block">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Value</p>
-                        <p className="text-xs font-mono text-purple-300">{marketValues[player.player_id].toLocaleString()}</p>
+                    <div className="hidden sm:block text-right">
+                        <p className="font-mono text-2xs text-text-mute uppercase tracking-wider">Value</p>
+                        <p className="font-mono text-xs text-signal-2 tnum">{marketValues[player.player_id].toLocaleString()}</p>
                     </div>
                 )}
-                <div className="w-12">
-                    {/* Placeholder for PPG if we calculate it cheaply, otherwise skip or add later */}
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors" />
+                <ChevronRight className="w-4 h-4 text-text-mute group-hover:text-signal transition-colors duration-fast" aria-hidden="true" />
             </div>
-        </div>
+        </button>
     );
 
     return (
         <>
-            <Card className="bg-slate-800/50 border-slate-700">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-white flex items-center gap-2 text-base">
-                        <Users className="w-5 h-5 text-blue-400" />
-                        Team Roster
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+            <section className="bg-bg-1 rounded-xl border border-line shadow-card">
+                <header className="px-4 pt-3 pb-2 border-b border-line flex items-center gap-2">
+                    <Users className="w-4 h-4 text-signal" aria-hidden="true" />
+                    <h3 className="font-display text-md font-semibold text-text">Team Roster</h3>
+                </header>
+                <div className="px-4 py-4 space-y-5">
                     {['Starters', 'Bench', 'Taxi', 'IR'].map(group => {
                         if (playerGroups[group].length === 0) return null;
                         return (
                             <div key={group}>
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">
+                                <h4 className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2 border-b border-line pb-1">
                                     {group}
                                 </h4>
                                 <div className="space-y-0.5">
@@ -174,8 +149,8 @@ const TeamRoster = ({ roster, players, users, currentWeek, transactions, seasonM
                             </div>
                         );
                     })}
-                </CardContent>
-            </Card>
+                </div>
+            </section>
 
             <PlayerDossier
                 player={selectedPlayer}
