@@ -15,7 +15,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels }
 
     const rows = useMemo(() => {
         if (!roster?.starters) return [];
-        return roster.starters.slice(0, 5).map((pid, i) => {
+        return roster.starters.map((pid, i) => {
             const slot = slotLabels?.[i] || '?';
             const player = pid && pid !== '0' ? players?.[pid] : null;
             const team = player?.team;
@@ -91,15 +91,13 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels }
                 );
             })}
 
-            {totalSlots > 5 && (
-                <button
-                    type="button"
-                    onClick={() => navigate(`/league/${league?.league_id}/team/${roster.roster_id}`)}
-                    className="w-full text-center px-4 py-2.5 font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal hover:bg-bg-2/60 border-t border-line/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
-                >
-                    + <span className="tnum">{totalSlots - 5}</span> more · view full lineup
-                </button>
-            )}
+            <button
+                type="button"
+                onClick={() => navigate(`/league/${league?.league_id}/team/${roster.roster_id}`)}
+                className="w-full text-center px-4 py-2.5 font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal hover:bg-bg-2/60 border-t border-line/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
+            >
+                Bench, taxi & IR · view full team ›
+            </button>
         </section>
     );
 };
