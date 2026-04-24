@@ -1,6 +1,27 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { streamText } from 'ai';
+import { google } from '@ai-sdk/google';
+import { anthropic } from '@ai-sdk/anthropic';
 
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
+
+// Vercel AI Gateway routes both providers via a single key (AI_GATEWAY_API_KEY).
+// Primary = Gemini Flash (cheap, fast). Fallback = Claude Haiku 4.5 for the
+// rare 429 / safety-blocked case Gemini hits.
+const PRIMARY_MODEL = google('gemini-2.0-flash');
+const FALLBACK_MODEL = anthropic('claude-haiku-4-5');
+
+async function streamWithFailover(prompt) {
+    try {
+        return await streamText({ model: PRIMARY_MODEL, prompt });
+    } catch (err) {
+        const msg = err?.message || '';
+        if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE/i.test(msg)) {
+            console.warn(`[ai] primary failed (${msg.slice(0, 120)}); falling back to Claude Haiku`);
+            return await streamText({ model: FALLBACK_MODEL, prompt });
+        }
+        throw err;
+    }
+}
 
 // ── Rate Limiting (in-memory, per serverless instance) ──
 const rateLimitMap = new Map();
@@ -582,8 +603,10 @@ ${instructions}${constraintTail}`;
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
+    // Gateway-managed; either AI_GATEWAY_API_KEY (preferred) or auto-OIDC on Vercel.
+    if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
+        return res.status(500).json({ error: 'AI service not configured (set AI_GATEWAY_API_KEY in Vercel)' });
+    }
 
     const { leagueId, userId, week, analysisType = 'roster', constraint = null } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
@@ -701,19 +724,16 @@ export default async function handler(req, res) {
             playerNews, weekContext, lockState
         }, analysisType, constraint);
 
-        // Stream from Gemini
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-        const result = await model.generateContentStream(prompt);
+        // Stream via Vercel AI Gateway (Gemini primary, Claude Haiku failover).
+        const result = await streamWithFailover(prompt);
 
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Remaining', String(rateCheck.remaining));
 
-        for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        for await (const chunk of result.textStream) {
+            if (chunk) res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
         }
 
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
@@ -729,7 +749,7 @@ export default async function handler(req, res) {
         } else if (/SAFETY|blocked|safety_settings/i.test(raw)) {
             userMessage = 'Gemini blocked this analysis (safety filter). Try a different card or constraint.';
         } else if (/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED/i.test(raw)) {
-            userMessage = 'AI service unauthenticated. Verify GEMINI_API_KEY in Vercel.';
+            userMessage = 'AI service unauthenticated. Verify AI_GATEWAY_API_KEY in Vercel.';
         } else if (/timeout|ETIMEDOUT|ECONNRESET|503|UNAVAILABLE/i.test(raw)) {
             userMessage = 'Gemini service unavailable right now. Try again in a moment.';
         }

@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/google": "^3.0.64",
     "@fontsource-variable/geist": "^5.2.5",
     "@fontsource-variable/geist-mono": "^5.2.5",
-    "@google/generative-ai": "^0.24.1",
     "@tanstack/react-query": "^5.90.12",
     "@vercel/analytics": "^1.6.0",
+    "ai": "^6.0.168",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
     "html-to-image": "^1.11.13",
