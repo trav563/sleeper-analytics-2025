@@ -470,9 +470,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     </span>
                 </div>
 
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 md:gap-6 items-center">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-6 items-center">
                     {/* My side */}
-                    <div className="text-center md:text-left flex flex-col md:flex-row items-center md:items-center gap-3 md:gap-5">
+                    <div className="text-center md:text-left flex flex-col items-center md:flex-row md:items-center gap-2 md:gap-5 min-w-0">
                         <button
                             type="button"
                             onClick={() => myRoster && navigate(`/league/${league?.league_id}/team/${myRoster.roster_id}`)}
@@ -480,9 +480,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             aria-label={`View ${displayTeamName(myUser)}`}
                         >
                             {myUser?.avatar ? (
-                                <img src={avatarUrl(myUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
+                                <img src={avatarUrl(myUser.avatar)} alt="" className="w-12 h-12 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
                             ) : (
-                                <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={56} />
+                                <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={48} />
                             )}
                         </button>
                         <div className="min-w-0">
@@ -492,7 +492,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             <button
                                 type="button"
                                 onClick={() => myRoster && navigate(`/league/${league?.league_id}/team/${myRoster.roster_id}`)}
-                                className="block font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px] hover:text-signal transition-colors duration-fast text-left md:text-left"
+                                className="block font-display text-sm md:text-lg font-bold text-text truncate max-w-[140px] md:max-w-[320px] mx-auto md:mx-0 hover:text-signal transition-colors duration-fast md:text-left"
                             >
                                 {displayTeamName(myUser)}
                             </button>
@@ -510,7 +510,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
                     {/* Center pod */}
                     <div className="flex flex-col items-center gap-2 shrink-0">
-                        <div className="px-3 py-2 rounded-md bg-bg-2 border border-line text-center min-w-[100px]">
+                        <div className="px-2 md:px-3 py-2 rounded-md bg-bg-2 border border-line text-center min-w-[68px] md:min-w-[100px]">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
                                 Win Prob
                             </div>
@@ -526,7 +526,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     </div>
 
                     {/* Opp side */}
-                    <div className="text-center md:text-right flex flex-col md:flex-row-reverse items-center md:items-center gap-3 md:gap-5">
+                    <div className="text-center md:text-right flex flex-col items-center md:flex-row-reverse md:items-center gap-2 md:gap-5 min-w-0">
                         <button
                             type="button"
                             onClick={() => oppRoster && navigate(`/league/${league?.league_id}/team/${oppRoster.roster_id}`)}
@@ -534,9 +534,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             aria-label={`View ${displayTeamName(oppUser)}`}
                         >
                             {oppUser?.avatar ? (
-                                <img src={avatarUrl(oppUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
+                                <img src={avatarUrl(oppUser.avatar)} alt="" className="w-12 h-12 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
                             ) : (
-                                <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={56} />
+                                <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={48} />
                             )}
                         </button>
                         <div className="min-w-0">
@@ -546,7 +546,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             <button
                                 type="button"
                                 onClick={() => oppRoster && navigate(`/league/${league?.league_id}/team/${oppRoster.roster_id}`)}
-                                className="block font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px] hover:text-signal transition-colors duration-fast md:ml-auto md:text-right"
+                                className="block font-display text-sm md:text-lg font-bold text-text truncate max-w-[140px] md:max-w-[320px] mx-auto md:mx-0 md:ml-auto hover:text-signal transition-colors duration-fast md:text-right"
                             >
                                 {displayTeamName(oppUser)}
                             </button>

@@ -42,6 +42,17 @@ function renderMarkdownTable(lines) {
     const headerCells = parseRow(rows[0]);
     const bodyRows = rows.slice(1).map(parseRow);
 
+    // Defense in depth: if the model collapsed the whole table onto one line
+    // (header + separator + body merged), bodyRows will be empty and the
+    // "header" will be a garbled mix of cells. Render readable text instead.
+    if (bodyRows.length === 0) {
+        return (
+            <pre className="my-2 whitespace-pre-wrap text-xs text-text-dim font-mono">
+                {lines.join('\n')}
+            </pre>
+        );
+    }
+
     return (
         <div className="my-2 overflow-x-auto">
             <table className="w-full text-xs">
