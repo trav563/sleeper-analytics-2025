@@ -152,11 +152,8 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
             <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
                 {/* Main table */}
                 <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
-                    {/* Desktop column headers */}
-                    <div
-                        className="hidden md:grid font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border-b border-line px-4 py-2.5 bg-bg-2"
-                        style={{ gridTemplateColumns: '40px 36px 1fr 60px 70px 70px 80px 50px' }}
-                    >
+                    {/* Desktop column headers — match the row template exactly */}
+                    <div className="hidden md:grid grid-cols-[40px_36px_1fr_60px_70px_70px_80px_50px] gap-2 font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border-b border-line px-4 py-2.5 bg-bg-2">
                         <span>#</span>
                         <span />
                         <span>Team</span>
@@ -176,12 +173,9 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                                 <button
                                     type="button"
                                     onClick={() => navigate(`/league/${league.league_id}/team/${row.rosterId}`)}
-                                    className={`w-full text-left grid items-center gap-2 px-4 py-2.5 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
+                                    className={`w-full text-left grid items-center gap-2 px-4 py-2.5 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal grid-cols-[40px_28px_1fr_50px] md:grid-cols-[40px_36px_1fr_60px_70px_70px_80px_50px] ${
                                         isMe ? 'bg-bg-2/40' : ''
                                     } border-b border-line/60`}
-                                    style={{
-                                        gridTemplateColumns: 'auto auto 1fr auto auto auto auto auto',
-                                    }}
                                 >
                                     <span className={`tnum text-sm md:text-md font-extrabold w-8 text-center ${rankColor}`}>
                                         {i + 1}
