@@ -1,66 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { displayTeamName } from '../utils/nflData';
-import WidgetLineupStatus from '../features/dashboard/components/WidgetLineupStatus';
-import WidgetMatchupPreview from '../features/dashboard/components/WidgetMatchupPreview';
+import MyMatchupHero from '../features/dashboard/components/MyMatchupHero';
+import LeaguePulse from '../features/dashboard/components/LeaguePulse';
+import LineupToday from '../features/dashboard/components/LineupToday';
+import Insights from '../features/dashboard/components/Insights';
+import StandingsStrip from '../features/dashboard/components/StandingsStrip';
 import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats';
-import WidgetLeagueTicker from '../features/dashboard/components/WidgetLeagueTicker';
-import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
-import TeamRoster from '../features/dashboard/components/TeamRoster';
-import AnalyzeMyTeam from '../features/dashboard/components/AnalyzeMyTeam';
 
 const DashboardPage = () => {
-    const { users, rosters, matchups: currentWeekMatchups, players, state, transactions, loading, error, user, league } = useOutletContext();
+    const { users, rosters, matchups: currentWeekMatchups, players, state, loading, error, user, league } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
 
     const currentNFLWeek = state?.display_week || state?.week || 1;
-
     const [selectedWeek, setSelectedWeek] = useState(currentNFLWeek);
     const [viewMatchups, setViewMatchups] = useState([]);
     const [loadingMatchups, setLoadingMatchups] = useState(false);
 
     useEffect(() => {
-        if (state?.display_week) {
-            setSelectedWeek(state.display_week);
-        }
+        if (state?.display_week) setSelectedWeek(state.display_week);
     }, [state?.display_week]);
 
     useEffect(() => {
-        const loadMatchups = async () => {
-            if (!league?.league_id || !selectedWeek) return;
-
-            if (selectedWeek === currentNFLWeek && currentWeekMatchups.length > 0) {
-                setViewMatchups(currentWeekMatchups);
-                return;
-            }
-
-            setLoadingMatchups(true);
-            try {
-                const data = await fetchLeagueMatchups(league.league_id, selectedWeek);
-                setViewMatchups(data);
-            } catch (err) {
-                console.error('Failed to fetch matchups for week', selectedWeek, err);
-            } finally {
-                setLoadingMatchups(false);
-            }
-        };
-
-        loadMatchups();
+        if (!league?.league_id || !selectedWeek) return;
+        if (selectedWeek === currentNFLWeek && currentWeekMatchups?.length > 0) {
+            setViewMatchups(currentWeekMatchups);
+            return;
+        }
+        let cancelled = false;
+        setLoadingMatchups(true);
+        fetchLeagueMatchups(league.league_id, selectedWeek)
+            .then((data) => { if (!cancelled) setViewMatchups(data || []); })
+            .catch((err) => { if (!cancelled) console.error('Failed to fetch matchups', err); })
+            .finally(() => { if (!cancelled) setLoadingMatchups(false); });
+        return () => { cancelled = true; };
     }, [selectedWeek, league?.league_id, currentNFLWeek, currentWeekMatchups]);
 
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
 
     useEffect(() => {
         if (users && users.length > 0 && !selectedUserId) {
-            if (user?.user_id) {
-                setSelectedUserId(user.user_id);
-            } else {
-                setSelectedUserId(users[0].user_id);
-            }
+            setSelectedUserId(user?.user_id || users[0].user_id);
         }
     }, [users, user, selectedUserId]);
+
+    const myRoster = useMemo(
+        () => rosters?.find((r) => r.owner_id === selectedUserId) || null,
+        [rosters, selectedUserId]
+    );
 
     if (loading) {
         return (
@@ -82,6 +71,7 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-5">
+            {/* Header */}
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-line pb-5">
                 <div>
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
@@ -93,7 +83,6 @@ const DashboardPage = () => {
                         League Dashboard
                     </h1>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-2">
                     <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
@@ -102,14 +91,13 @@ const DashboardPage = () => {
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(Number(e.target.value))}
                         >
-                            {weekOptions.map(w => (
+                            {weekOptions.map((w) => (
                                 <option key={w} value={w}>
                                     {w}{w === currentNFLWeek ? ' (Current)' : ''}
                                 </option>
                             ))}
                         </select>
                     </label>
-
                     <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">View as</span>
                         <select
@@ -117,7 +105,7 @@ const DashboardPage = () => {
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                         >
-                            {users?.map(u => (
+                            {users?.map((u) => (
                                 <option key={u.user_id} value={u.user_id}>
                                     {displayTeamName(u)}
                                 </option>
@@ -127,68 +115,64 @@ const DashboardPage = () => {
                 </div>
             </header>
 
+            {/* Hero matchup */}
+            <MyMatchupHero
+                league={league}
+                week={selectedWeek}
+                viewMatchups={viewMatchups}
+                rosters={rosters}
+                users={users}
+                players={players}
+                seasonMatchups={seasonMatchups}
+                selectedUserId={selectedUserId}
+            />
+
+            {/* Quick stats row (uses existing WidgetQuickStats) */}
+            <WidgetQuickStats
+                rosters={rosters}
+                selectedUserId={selectedUserId}
+                league={league}
+                currentWeek={selectedWeek}
+                seasonMatchups={seasonMatchups}
+                state={state}
+            />
+
+            {/* League pulse — horizontal scroll all matchups */}
+            <div className={loadingMatchups ? 'opacity-60 pointer-events-none' : ''}>
+                <LeaguePulse
+                    league={league}
+                    week={selectedWeek}
+                    viewMatchups={viewMatchups}
+                    rosters={rosters}
+                    users={users}
+                    players={players}
+                />
+            </div>
+
+            {/* Two-column body: lineup + insights | standings strip */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="space-y-5">
-                    <WidgetLineupStatus
+                    <LineupToday
+                        league={league}
                         week={selectedWeek}
-                        users={users}
-                        rosters={rosters}
-                        matchups={viewMatchups}
+                        roster={myRoster}
                         players={players}
-                        selectedUserId={selectedUserId}
+                        viewMatchups={viewMatchups}
+                        slotLabels={league?.roster_positions || []}
                     />
-
-                    <AnalyzeMyTeam
+                    <Insights
                         leagueId={league?.league_id}
                         userId={selectedUserId}
                         week={selectedWeek}
                     />
-
-                    <WidgetQuickStats
-                        rosters={rosters}
-                        selectedUserId={selectedUserId}
-                        league={league}
-                        currentWeek={selectedWeek}
-                        seasonMatchups={seasonMatchups}
-                        state={state}
-                    />
-
-                    <TeamRoster
-                        roster={rosters?.find(r => r.owner_id === selectedUserId)}
-                        players={players}
-                        users={users}
-                        currentWeek={selectedWeek}
-                        transactions={transactions}
-                        seasonMatchups={seasonMatchups}
-                        league={league}
-                        rosters={rosters}
-                    />
                 </div>
-
                 <div className="space-y-5">
-                    <div className={`transition-opacity duration-300 ${loadingMatchups ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        <WidgetMatchupPreview
-                            week={selectedWeek}
-                            currentNFLWeek={currentNFLWeek}
-                            users={users}
-                            rosters={rosters}
-                            matchups={viewMatchups}
-                            selectedUserId={selectedUserId}
-                            players={players}
-                            seasonMatchups={seasonMatchups}
-                        />
-                    </div>
-
-                    <RosterNews
-                        roster={rosters?.find(r => r.owner_id === selectedUserId)}
-                        players={players}
-                    />
-
-                    <WidgetLeagueTicker
-                        transactions={transactions}
-                        users={users}
+                    <StandingsStrip
+                        league={league}
                         rosters={rosters}
-                        players={players}
+                        users={users}
+                        seasonMatchups={seasonMatchups}
+                        currentUserId={selectedUserId}
                     />
                 </div>
             </div>
