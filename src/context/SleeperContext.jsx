@@ -39,6 +39,7 @@ export const SleeperProvider = ({ children }) => {
     }, [user]);
     const [leagues, setLeagues] = useState([]);
     const [leagueHistory, setLeagueHistory] = useState(null);
+    const [leagueChains, setLeagueChains] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [season, setSeason] = useState(null);
@@ -96,6 +97,22 @@ export const SleeperProvider = ({ children }) => {
         try {
             const userLeagues = await fetchUserLeagues(userId, targetSeason);
             setLeagues(userLeagues);
+            // Fire-and-forget: pre-walk every league's previous_league_id chain so
+            // the navbar season selector can show the full family even when the
+            // user is currently viewing a past-season URL.
+            if (userLeagues?.length) {
+                Promise.all(
+                    userLeagues.map((l) =>
+                        fetchLeagueHistory(l.league_id, userId).then((chain) => [l.league_id, chain || []])
+                    )
+                )
+                    .then((entries) => {
+                        const map = {};
+                        entries.forEach(([head, chain]) => { map[head] = chain; });
+                        setLeagueChains(map);
+                    })
+                    .catch((err) => console.warn('Failed to pre-walk league chains', err));
+            }
             return userLeagues;
         } catch (err) {
             console.error(err);
@@ -106,6 +123,20 @@ export const SleeperProvider = ({ children }) => {
             setLoading(false);
         }
     }, [season]);
+
+    /** Find the cached chain that contains a given league_id, or null. */
+    const findChainContaining = useCallback((urlLeagueId) => {
+        if (!urlLeagueId) return null;
+        for (const chain of Object.values(leagueChains)) {
+            if (chain?.some((l) => l.league_id === urlLeagueId)) return chain;
+        }
+        return null;
+    }, [leagueChains]);
+
+    /** Set the active history chain. Used by LeagueLayout when navigating between leagues. */
+    const selectActiveChain = useCallback((chain) => {
+        setLeagueHistory(chain || []);
+    }, []);
 
     // Keep fetchLeagueData for backward compatibility or convenience, using the new functions
     const fetchLeagueData = useCallback(async (username) => {
@@ -149,7 +180,10 @@ export const SleeperProvider = ({ children }) => {
         getLeagues,
         fetchLeagueData,
         loadHistory,
-        leagueHistory
+        leagueHistory,
+        leagueChains,
+        findChainContaining,
+        selectActiveChain
     };
 
     return (

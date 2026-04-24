@@ -68,12 +68,15 @@ const LeaguePulse = ({ league, week, viewMatchups, rosters, users, players }) =>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {pairs.slice(0, 6).map((p, i) => {
                     const aWin = (p.a.points || 0) > (p.b.points || 0);
+                    const goMatchup = () => navigate(`/league/${league?.league_id}/matchup`);
                     return (
-                        <button
+                        <div
                             key={i}
-                            type="button"
-                            onClick={() => navigate(`/league/${league?.league_id}/matchup`)}
-                            className={`rounded-md p-2.5 text-left border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
+                            role="button"
+                            tabIndex={0}
+                            onClick={goMatchup}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goMatchup(); } }}
+                            className={`cursor-pointer rounded-md p-2.5 text-left border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
                                 p.isClose
                                     ? 'bg-signal/5 border-signal/40'
                                     : 'bg-bg-2 border-line hover:border-line-strong'
@@ -86,9 +89,9 @@ const LeaguePulse = ({ league, week, viewMatchups, rosters, users, players }) =>
                                     {p.isClose ? '◉ Close' : p.isLive ? '● Live' : 'Soon'}
                                 </span>
                             </div>
-                            <PairRow roster={p.ar} user={p.au} score={p.a.points || 0} winning={aWin} />
-                            <PairRow roster={p.br} user={p.bu} score={p.b.points || 0} winning={!aWin} />
-                        </button>
+                            <PairRow roster={p.ar} user={p.au} score={p.a.points || 0} winning={aWin} leagueId={league?.league_id} />
+                            <PairRow roster={p.br} user={p.bu} score={p.b.points || 0} winning={!aWin} leagueId={league?.league_id} />
+                        </div>
                     );
                 })}
             </div>
@@ -96,20 +99,40 @@ const LeaguePulse = ({ league, week, viewMatchups, rosters, users, players }) =>
     );
 };
 
-const PairRow = ({ roster, user, score, winning }) => (
-    <div className="grid grid-cols-[20px_1fr_auto] gap-2 items-center py-0.5">
-        {user?.avatar ? (
-            <img src={avatarUrl(user.avatar)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line" />
-        ) : (
-            <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={20} />
-        )}
-        <span className={`text-xs truncate ${winning ? 'text-text font-semibold' : 'text-text-dim'}`}>
-            {displayTeamName(user)}
-        </span>
-        <span className={`tnum text-sm font-bold tracking-tight ${winning ? 'text-signal' : 'text-text'}`}>
-            {score.toFixed(1)}
-        </span>
-    </div>
-);
+const PairRow = ({ roster, user, score, winning, leagueId }) => {
+    const navigate = useNavigate();
+    const goTeam = (e) => {
+        e.stopPropagation();
+        if (leagueId && roster?.roster_id) {
+            navigate(`/league/${leagueId}/team/${roster.roster_id}`);
+        }
+    };
+    return (
+        <div className="grid grid-cols-[20px_1fr_auto] gap-2 items-center py-0.5">
+            <button
+                type="button"
+                onClick={goTeam}
+                className="hover:ring-2 hover:ring-signal/60 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                aria-label={`View ${displayTeamName(user)}`}
+            >
+                {user?.avatar ? (
+                    <img src={avatarUrl(user.avatar)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line" />
+                ) : (
+                    <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={20} />
+                )}
+            </button>
+            <button
+                type="button"
+                onClick={goTeam}
+                className={`text-xs truncate text-left hover:text-signal transition-colors duration-fast ${winning ? 'text-text font-semibold' : 'text-text-dim'}`}
+            >
+                {displayTeamName(user)}
+            </button>
+            <span className={`tnum text-sm font-bold tracking-tight ${winning ? 'text-signal' : 'text-text'}`}>
+                {score.toFixed(1)}
+            </span>
+        </div>
+    );
+};
 
 export default LeaguePulse;

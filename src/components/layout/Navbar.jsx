@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 
 const Navbar = () => {
-    const { user, leagues, getLeagues } = useSleeper();
+    const { user, leagues, leagueHistory, getLeagues } = useSleeper();
     const location = useLocation();
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -14,6 +14,20 @@ const Navbar = () => {
     // Robustly extract leagueId from URL regardless of route nesting
     const leagueIdMatch = location.pathname.match(/\/league\/(\d+)/);
     const leagueId = leagueIdMatch ? leagueIdMatch[1] : null;
+
+    const hasHistory = Array.isArray(leagueHistory) && leagueHistory.length > 1;
+    const currentSeasonLeagueId = hasHistory ? leagueHistory[0]?.league_id : null;
+    const isHistoricalView = hasHistory && currentSeasonLeagueId && leagueId !== currentSeasonLeagueId;
+
+    const handleSeasonSwitch = (e) => {
+        const nextLeagueId = e.target.value;
+        if (!nextLeagueId || nextLeagueId === leagueId) return;
+        // Preserve tab where safe; degrade to dashboard for season-scoped tail params (team/:rosterId).
+        let tail = location.pathname.replace(/^\/league\/[^/]+/, '');
+        if (/^\/team\/\d+/.test(tail)) tail = '';
+        navigate(`/league/${nextLeagueId}${tail || ''}`);
+        setIsMobileMenuOpen(false);
+    };
 
     useEffect(() => {
         if (user && leagues.length === 0) {
@@ -91,40 +105,67 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 lg:gap-3 shrink-0">
                         {user && (
-                            <div className="hidden md:flex items-center space-x-6">
-                                {/* League Switcher */}
-                                {leagues.length > 0 && (
-                                    <div className="hidden sm:block">
-                                        <select
-                                            value={leagueId || ''}
-                                            onChange={handleLeagueSwitch}
-                                            className="bg-bg-2 text-text text-sm rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal block w-full px-3 py-2 transition-colors duration-fast"
-                                        >
-                                            <option value="" disabled>Switch League</option>
-                                            {leagues.map((league) => (
-                                                <option key={league.league_id} value={league.league_id}>
-                                                    {league.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                            <div className="hidden md:flex items-center gap-2 lg:gap-3">
+                                {/* League Switcher — hidden when only one league */}
+                                {leagues.length > 1 && (
+                                    <select
+                                        value={leagueId || ''}
+                                        onChange={handleLeagueSwitch}
+                                        title="Switch league"
+                                        aria-label="Switch league"
+                                        className="bg-bg-2 text-text text-xs rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast max-w-[140px] truncate"
+                                    >
+                                        <option value="" disabled>League</option>
+                                        {leagues.map((league) => (
+                                            <option key={league.league_id} value={league.league_id}>
+                                                {league.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 )}
 
-                                <div className="flex items-center gap-3">
-                                    <div className="hidden sm:block text-right">
-                                        <p className="text-sm font-semibold leading-none text-text">{user.display_name}</p>
-                                        <p className="font-mono text-2xs text-text-mute mt-1">@{user.username}</p>
+                                {/* Season Switcher */}
+                                {hasHistory && (
+                                    <select
+                                        value={leagueId || ''}
+                                        onChange={handleSeasonSwitch}
+                                        title="Switch season"
+                                        aria-label="Switch season"
+                                        className={cn(
+                                            "bg-bg-2 text-xs rounded-md border focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast",
+                                            isHistoricalView ? "border-warn/40 text-warn" : "border-line text-text"
+                                        )}
+                                    >
+                                        {leagueHistory.map((l, i) => (
+                                            <option key={l.league_id} value={l.league_id}>
+                                                {i === 0 ? `Current · ${l.season}` : l.season}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+
+                                {isHistoricalView && (
+                                    <span className="hidden xl:inline-flex items-center font-mono text-2xs uppercase tracking-wider font-bold text-warn bg-warn/10 border border-warn/30 rounded-sm px-2 py-0.5">
+                                        Historical
+                                    </span>
+                                )}
+
+                                <div className="flex items-center gap-2 pl-1">
+                                    <div className="hidden xl:block text-right leading-tight">
+                                        <p className="text-sm font-semibold text-text">{user.display_name}</p>
+                                        <p className="font-mono text-2xs text-text-mute mt-0.5">@{user.username}</p>
                                     </div>
                                     {user.avatar ? (
                                         <img
                                             src={`https://sleepercdn.com/avatars/thumbs/${user.avatar}`}
                                             alt={user.username}
+                                            title={`@${user.username}`}
                                             className="h-9 w-9 rounded-full ring-1 ring-line"
                                         />
                                     ) : (
-                                        <div className="h-9 w-9 rounded-full bg-bg-2 flex items-center justify-center ring-1 ring-line">
+                                        <div className="h-9 w-9 rounded-full bg-bg-2 flex items-center justify-center ring-1 ring-line" title={`@${user.username}`}>
                                             <User className="h-5 w-5 text-text-dim" />
                                         </div>
                                     )}
@@ -209,6 +250,28 @@ const Navbar = () => {
                                         {leagues.map((league) => (
                                             <option key={league.league_id} value={league.league_id}>
                                                 {league.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {hasHistory && (
+                                <div className="px-3 mt-3">
+                                    <label className="block font-mono text-2xs text-text-mute uppercase tracking-wider mb-1">
+                                        Season {isHistoricalView && <span className="ml-2 text-warn">· Historical</span>}
+                                    </label>
+                                    <select
+                                        value={leagueId || ''}
+                                        onChange={handleSeasonSwitch}
+                                        className={cn(
+                                            "bg-bg-2 text-sm rounded-md border focus:ring-1 focus:ring-signal focus:border-signal block w-full px-3 py-2.5 transition-colors duration-fast",
+                                            isHistoricalView ? "border-warn/40 text-warn" : "border-line text-text"
+                                        )}
+                                    >
+                                        {leagueHistory.map((l, i) => (
+                                            <option key={l.league_id} value={l.league_id}>
+                                                {i === 0 ? `Current · ${l.season}` : l.season}
                                             </option>
                                         ))}
                                     </select>

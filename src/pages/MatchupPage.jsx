@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import MatchupDetail from '../features/league/components/MatchupDetail';
 import { fetchLeagueMatchups } from '../utils/sleeper';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 
 const MatchupPage = () => {
-    const { week: weekParam } = useParams();
+    const { leagueId, week: weekParam } = useParams();
+    const navigate = useNavigate();
     const ctx = useOutletContext();
-    const { league, rosters, users, players, state, matchups: currentWeekMatchups, user } = ctx || {};
-    const currentNFLWeek = state?.display_week || state?.week || 1;
+    const { league, rosters, users, players, state, matchups: currentWeekMatchups, user, currentWeek } = ctx || {};
+    const currentNFLWeek = currentWeek || state?.display_week || state?.week || 1;
     const week = weekParam ? Number(weekParam) : currentNFLWeek;
+    const handleWeekChange = (nextWeek) => {
+        const w = Number(nextWeek);
+        if (!w || w === week) return;
+        navigate(`/league/${leagueId}/matchup/${w}`);
+    };
 
     const [viewMatchups, setViewMatchups] = useState(week === currentNFLWeek ? currentWeekMatchups : []);
     const [loading, setLoading] = useState(week !== currentNFLWeek);
@@ -64,6 +70,8 @@ const MatchupPage = () => {
             users={users}
             players={players}
             week={week}
+            currentNFLWeek={currentNFLWeek}
+            onWeekChange={handleWeekChange}
             viewMatchups={viewMatchups}
             seasonMatchups={seasonMatchups}
             selectedRosterId={selectedRosterId}

@@ -11,10 +11,9 @@ import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { theme } from '../../../lib/theme';
 
 /* ---------- helpers ---------- */
-const sumProjFromSeason = (starters, seasonMatchups) => {
-    if (!Array.isArray(starters) || !seasonMatchups) return 0;
-    // For each starter, average their non-zero weeks → that's the proj.
+const buildPlayerSeasonAvg = (seasonMatchups) => {
     const totals = {};
+    if (!seasonMatchups) return totals;
     Object.values(seasonMatchups).forEach((ms) => {
         if (!Array.isArray(ms)) return;
         ms.forEach((m) => {
@@ -27,11 +26,24 @@ const sumProjFromSeason = (starters, seasonMatchups) => {
             });
         });
     });
+    const avg = {};
+    Object.entries(totals).forEach(([pid, t]) => {
+        avg[pid] = t.n > 0 ? t.sum / t.n : 0;
+    });
+    return avg;
+};
+
+const sumProjFromAvg = (starters, avgByPid) => {
+    if (!Array.isArray(starters)) return 0;
     return starters.reduce((acc, pid) => {
         if (!pid || pid === '0') return acc;
-        const t = totals[pid];
-        return acc + (t && t.n > 0 ? t.sum / t.n : 0);
+        return acc + (avgByPid[pid] || 0);
     }, 0);
+};
+
+// Back-compat helper for callers that pass seasonMatchups directly.
+const sumProjFromSeason = (starters, seasonMatchups) => {
+    return sumProjFromAvg(starters, buildPlayerSeasonAvg(seasonMatchups));
 };
 
 const bucketStarter = (m, idx, players, gameStatuses) => {
@@ -50,7 +62,7 @@ const bucketStarter = (m, idx, players, gameStatuses) => {
 const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'];
 
 /* ---------- main component ---------- */
-const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
+const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
     const navigate = useNavigate();
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
@@ -202,6 +214,105 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
         });
     }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels]);
 
+    /* Per-player season-average map (built once) for fast projection lookups. */
+    const playerAvg = useMemo(() => buildPlayerSeasonAvg(seasonMatchups), [seasonMatchups]);
+
+    /* Win-probability checkpoint trajectory. Each checkpoint is one call to
+       computeWinProbability with progressively more "actual" points and less
+       "projected remaining" as starters' NFL games conclude. */
+    const winProbCheckpoints = useMemo(() => {
+        if (!myMatchup) return [];
+
+        const myStarters = (myMatchup.starters || []).filter((p) => p && p !== '0');
+        const oppStarters = (oppMatchup?.starters || []).filter((p) => p && p !== '0');
+        const myPoints = myMatchup.starters_points || [];
+        const oppPoints = oppMatchup?.starters_points || [];
+
+        // Treat any week before the live one as fully concluded (no live data).
+        const isHistorical = currentNFLWeek != null && week < currentNFLWeek;
+
+        const myFullProj = sumProjFromAvg(myStarters, playerAvg);
+        const oppFullProj = sumProjFromAvg(oppStarters, playerAvg);
+
+        // Pregame checkpoint: predict purely from season averages.
+        const pregameWP = computeWinProbability({
+            myCurrent: 0,
+            oppCurrent: 0,
+            myProjRemaining: myFullProj,
+            oppProjRemaining: oppFullProj,
+        });
+        const checkpoints = [{ label: 'Pregame', myWP: pregameWP }];
+
+        if (isHistorical) {
+            // Past-season match: jump straight to the final state from actual scores.
+            checkpoints.push({
+                label: 'Final',
+                myWP: (myMatchup.points || 0) > (oppMatchup?.points || 0) ? 1
+                    : (myMatchup.points || 0) < (oppMatchup?.points || 0) ? 0 : 0.5,
+            });
+            return checkpoints;
+        }
+
+        // Map each starter to its NFL game (gameId, kickoff). Group by game so a
+        // game's completion advances both teams' starters in that game at once.
+        const gameMap = new Map(); // gameId -> { kickoff, statusName }
+        const starterRefs = []; // { side, idx, pid, gameId, actualPts }
+        const recordStarter = (side, idx, pid, actualPts) => {
+            const team = players?.[pid]?.team;
+            const live = team ? liveDetails?.[team] : null;
+            const gameId = live?.gameId || `noGame:${pid}`;
+            const kickoff = live?.kickoff || null;
+            const statusName = live?.statusName || null;
+            if (!gameMap.has(gameId)) gameMap.set(gameId, { kickoff, statusName });
+            starterRefs.push({ side, idx, pid, gameId, actualPts });
+        };
+        myStarters.forEach((pid, i) => recordStarter('me', i, pid, myPoints[i] || 0));
+        oppStarters.forEach((pid, i) => recordStarter('opp', i, pid, oppPoints[i] || 0));
+
+        // Order completed games by kickoff so the checkpoint trail walks Thu → MNF.
+        const completedGames = Array.from(gameMap.entries())
+            .filter(([, g]) => g.statusName === 'STATUS_FINAL')
+            .sort((a, b) => {
+                const ta = a[1].kickoff ? Date.parse(a[1].kickoff) : 0;
+                const tb = b[1].kickoff ? Date.parse(b[1].kickoff) : 0;
+                return ta - tb;
+            })
+            .map(([gameId]) => gameId);
+
+        if (completedGames.length === 0) {
+            return checkpoints; // pregame only
+        }
+
+        const finishedGameIds = new Set();
+        completedGames.forEach((gameId) => {
+            finishedGameIds.add(gameId);
+            let myActual = 0;
+            let oppActual = 0;
+            const myRemaining = [];
+            const oppRemaining = [];
+            starterRefs.forEach((s) => {
+                if (finishedGameIds.has(s.gameId)) {
+                    if (s.side === 'me') myActual += s.actualPts;
+                    else oppActual += s.actualPts;
+                } else {
+                    if (s.side === 'me') myRemaining.push(s.pid);
+                    else oppRemaining.push(s.pid);
+                }
+            });
+            const myProjRemaining = sumProjFromAvg(myRemaining, playerAvg);
+            const oppProjRemaining = sumProjFromAvg(oppRemaining, playerAvg);
+            const myWP = computeWinProbability({
+                myCurrent: myActual,
+                oppCurrent: oppActual,
+                myProjRemaining,
+                oppProjRemaining,
+            });
+            checkpoints.push({ label: `+${finishedGameIds.size}`, myWP });
+        });
+
+        return checkpoints;
+    }, [myMatchup, oppMatchup, players, liveDetails, playerAvg, week, currentNFLWeek]);
+
     /* No matchup found */
     if (!myMatchup) {
         return (
@@ -260,9 +371,29 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
     const myHue = myRoster ? Number(myRoster.roster_id) * 47 % 360 : 0;
     const oppHue = oppRoster ? Number(oppRoster.roster_id) * 47 % 360 : 180;
 
+    const weekOptions = Array.from({ length: 18 }, (_, i) => i + 1);
+
     return (
         <section className="space-y-5 pb-10">
-            <Back onClick={() => navigate(-1)} />
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <Back onClick={() => navigate(-1)} />
+                {onWeekChange && (
+                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
+                        <select
+                            className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
+                            value={week}
+                            onChange={(e) => onWeekChange(e.target.value)}
+                        >
+                            {weekOptions.map((w) => (
+                                <option key={w} value={w}>
+                                    {w}{currentNFLWeek && w === currentNFLWeek ? ' (Current)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
+            </div>
 
             {/* Matchup picker — horizontal scroll of all pairs this week */}
             {matchupPairs.length > 1 && (
@@ -342,18 +473,29 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-3 md:gap-6 items-center">
                     {/* My side */}
                     <div className="text-center md:text-left flex flex-col md:flex-row items-center md:items-center gap-3 md:gap-5">
-                        {myUser?.avatar ? (
-                            <img src={avatarUrl(myUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line shrink-0" />
-                        ) : (
-                            <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={56} />
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => myRoster && navigate(`/league/${league?.league_id}/team/${myRoster.roster_id}`)}
+                            className="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-signal/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                            aria-label={`View ${displayTeamName(myUser)}`}
+                        >
+                            {myUser?.avatar ? (
+                                <img src={avatarUrl(myUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
+                            ) : (
+                                <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={56} />
+                            )}
+                        </button>
                         <div className="min-w-0">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                                 {myRoster?.settings?.wins ?? 0}-{myRoster?.settings?.losses ?? 0} · You
                             </div>
-                            <div className="font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px]">
+                            <button
+                                type="button"
+                                onClick={() => myRoster && navigate(`/league/${league?.league_id}/team/${myRoster.roster_id}`)}
+                                className="block font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px] hover:text-signal transition-colors duration-fast text-left md:text-left"
+                            >
                                 {displayTeamName(myUser)}
-                            </div>
+                            </button>
                             <div
                                 className={`tnum font-display text-4xl md:text-6xl font-extrabold tracking-tight leading-none mt-2 ${winning ? 'text-signal' : 'text-text'}`}
                                 style={winning ? { textShadow: '0 0 24px rgba(245,179,1,0.33)' } : undefined}
@@ -385,18 +527,29 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
 
                     {/* Opp side */}
                     <div className="text-center md:text-right flex flex-col md:flex-row-reverse items-center md:items-center gap-3 md:gap-5">
-                        {oppUser?.avatar ? (
-                            <img src={avatarUrl(oppUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line shrink-0" />
-                        ) : (
-                            <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={56} />
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => oppRoster && navigate(`/league/${league?.league_id}/team/${oppRoster.roster_id}`)}
+                            className="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-signal/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                            aria-label={`View ${displayTeamName(oppUser)}`}
+                        >
+                            {oppUser?.avatar ? (
+                                <img src={avatarUrl(oppUser.avatar)} alt="" className="w-14 h-14 md:w-20 md:h-20 rounded-full ring-1 ring-line" />
+                            ) : (
+                                <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={56} />
+                            )}
+                        </button>
                         <div className="min-w-0">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                                 {oppRoster?.settings?.wins ?? 0}-{oppRoster?.settings?.losses ?? 0} · Opp
                             </div>
-                            <div className="font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px]">
+                            <button
+                                type="button"
+                                onClick={() => oppRoster && navigate(`/league/${league?.league_id}/team/${oppRoster.roster_id}`)}
+                                className="block font-display text-md md:text-lg font-bold text-text truncate max-w-[280px] md:max-w-[320px] hover:text-signal transition-colors duration-fast md:ml-auto md:text-right"
+                            >
                                 {displayTeamName(oppUser)}
-                            </div>
+                            </button>
                             <div
                                 className={`tnum font-display text-4xl md:text-6xl font-extrabold tracking-tight leading-none mt-2 ${!winning ? 'text-signal' : 'text-text'}`}
                                 style={!winning ? { textShadow: '0 0 24px rgba(245,179,1,0.33)' } : undefined}
@@ -474,8 +627,20 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
                             </div>
                         </SectionShell>
 
-                        <SectionShell title="Win Probability" sub={anyLive ? 'Live · 60s refresh' : 'Updated'}>
-                            <WinProbCurve winProb={winProb} />
+                        <SectionShell
+                            title="Win Probability"
+                            sub={anyLive
+                                ? `Live · ${winProbCheckpoints.length} checkpoints`
+                                : winProbCheckpoints.length <= 1 ? 'Pregame · projection-based' : `${winProbCheckpoints.length} checkpoints`}
+                        >
+                            <WinProbCurve
+                                checkpoints={winProbCheckpoints}
+                                winProb={winProb}
+                                myName={displayTeamName(myUser)}
+                                oppName={displayTeamName(oppUser)}
+                                myHue={myHue}
+                                oppHue={oppHue}
+                            />
                         </SectionShell>
                     </aside>
                 </div>
@@ -620,18 +785,65 @@ const Stat = ({ label, value, tone }) => {
     );
 };
 
-const WinProbCurve = ({ winProb }) => {
-    // Tiny stub curve from 0.5 → winProb across 4 quarters.
-    const path = `M0,${100 - 0.5 * 100} L80,${100 - (0.5 + (winProb - 0.5) * 0.25) * 100} L160,${100 - (0.5 + (winProb - 0.5) * 0.55) * 100} L240,${100 - (0.5 + (winProb - 0.5) * 0.85) * 100} L320,${100 - winProb * 100}`;
+const WinProbCurve = ({ checkpoints = [], winProb, myName, oppName, myHue = 45, oppHue = 200 }) => {
+    const myColor = `oklch(72% 0.16 ${myHue})`;
+    const oppColor = `oklch(72% 0.16 ${oppHue})`;
+    const W = 320;
+    const H = 100;
+
+    // Build polyline points from checkpoints. Single checkpoint (pregame only)
+    // renders as just two pips so the user sees "this is the prediction, no data yet".
+    const myPoints = checkpoints.map((c, i) => {
+        const x = checkpoints.length > 1 ? (i / (checkpoints.length - 1)) * W : W / 2;
+        const y = H - c.myWP * H;
+        return [x, y];
+    });
+    const oppPoints = checkpoints.map((c, i) => {
+        const x = checkpoints.length > 1 ? (i / (checkpoints.length - 1)) * W : W / 2;
+        const y = H - (1 - c.myWP) * H;
+        return [x, y];
+    });
+    const toPath = (pts) => pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+
+    const lastIdx = checkpoints.length - 1;
+    const lastMyWP = lastIdx >= 0 ? checkpoints[lastIdx].myWP : (winProb ?? 0.5);
+    const lastOppWP = 1 - lastMyWP;
+
     return (
         <>
-            <svg viewBox="0 0 320 110" width="100%" height="110">
-                <line x1="0" x2="320" y1="50" y2="50" stroke={theme.color.line} strokeDasharray="2 3" />
-                <path d={path} fill="none" stroke={theme.color.signal} strokeWidth="2" />
-                <circle cx="320" cy={100 - winProb * 100} r="4" fill={theme.color.signal} />
+            <svg viewBox={`0 0 ${W} ${H + 10}`} width="100%" height="110" preserveAspectRatio="none">
+                <line x1="0" x2={W} y1={H / 2} y2={H / 2} stroke={theme.color.line} strokeDasharray="2 3" />
+                {checkpoints.length > 1 && (
+                    <>
+                        <path d={toPath(oppPoints)} fill="none" stroke={oppColor} strokeWidth="2" strokeOpacity="0.85" />
+                        <path d={toPath(myPoints)} fill="none" stroke={myColor} strokeWidth="2.5" />
+                    </>
+                )}
+                {myPoints.map(([x, y], i) => (
+                    <circle key={`m${i}`} cx={x} cy={y} r={i === lastIdx ? 4 : 2.5} fill={myColor} />
+                ))}
+                {oppPoints.map(([x, y], i) => (
+                    <circle key={`o${i}`} cx={x} cy={y} r={i === lastIdx ? 3.5 : 2} fill={oppColor} />
+                ))}
             </svg>
-            <div className="flex justify-between font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                <span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span>
+            {checkpoints.length > 1 && (
+                <div className="flex justify-between font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
+                    {checkpoints.map((c, i) => (
+                        <span key={i} className="tnum">{c.label}</span>
+                    ))}
+                </div>
+            )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-mono text-2xs">
+                <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 rounded-sm" style={{ background: myColor }} />
+                    <span className="text-text truncate max-w-[120px]">{myName || 'You'}</span>
+                    <span className="tnum text-text-dim">{Math.round(lastMyWP * 100)}%</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 rounded-sm" style={{ background: oppColor }} />
+                    <span className="text-text truncate max-w-[120px]">{oppName || 'Opp'}</span>
+                    <span className="tnum text-text-dim">{Math.round(lastOppWP * 100)}%</span>
+                </span>
             </div>
         </>
     );

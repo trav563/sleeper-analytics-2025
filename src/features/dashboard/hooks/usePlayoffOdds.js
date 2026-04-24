@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 
-/**
- * Generate a round-robin schedule for N teams over totalWeeks weeks.
- * Wraps around if totalWeeks > N-1.
- */
+const CACHE_PREFIX = 'playoffOdds:';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 function generateRoundRobin(rosterIds, totalWeeks) {
     const ids = [...rosterIds];
     if (ids.length % 2 !== 0) ids.push(null);
@@ -38,15 +37,75 @@ function offseasonWinProbability(strengthA, strengthB) {
     return adjA / (adjA + adjB);
 }
 
-/**
- * Normalize an array of values to 0-1 scale.
- * Returns all zeros if values are identical (no differentiation).
- */
 function normalize(values) {
     const min = Math.min(...values);
     const max = Math.max(...values);
     if (max === min) return values.map(() => 0);
     return values.map(v => (v - min) / (max - min));
+}
+
+// FNV-1a 32-bit hash → unsigned int. Used to derive a deterministic PRNG seed
+// from a stable composite string of the simulation inputs.
+function hashSeed(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+}
+
+// mulberry32 PRNG. Given the same seed, always produces the same sequence.
+function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function readCache(seedKey) {
+    try {
+        const raw = localStorage.getItem(CACHE_PREFIX + seedKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.ts !== 'number') return null;
+        if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function writeCache(seedKey, payload) {
+    try {
+        localStorage.setItem(CACHE_PREFIX + seedKey, JSON.stringify({ ...payload, ts: Date.now() }));
+    } catch {
+        // localStorage may be full or disabled — silently skip.
+    }
+}
+
+function pruneStaleCache() {
+    try {
+        const now = Date.now();
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith(CACHE_PREFIX)) continue;
+            try {
+                const parsed = JSON.parse(localStorage.getItem(key));
+                if (!parsed || typeof parsed.ts !== 'number' || now - parsed.ts > CACHE_TTL_MS) {
+                    localStorage.removeItem(key);
+                }
+            } catch {
+                localStorage.removeItem(key);
+            }
+        }
+    } catch {
+        // ignore
+    }
 }
 
 export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters) {
@@ -57,13 +116,15 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
     useEffect(() => {
         if (!league || !rosters || !currentWeek) return;
 
+        let cancelled = false;
+        pruneStaleCache();
+
         const runSimulation = async () => {
             setLoading(true);
             try {
                 const playoffStartWeek = league.settings.playoff_week_start;
                 const playoffSpots = league.settings.playoff_teams;
 
-                // 1. Prepare Team Data
                 const teams = rosters.map(r => {
                     const gamesPlayed = r.settings.wins + r.settings.losses + r.settings.ties;
                     const fpts = r.settings.fpts + (r.settings.fpts_decimal || 0) / 100;
@@ -80,18 +141,15 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     };
                 });
 
-                // 2. Determine weeks to simulate
                 const weeksToSimulate = [];
                 for (let w = currentWeek; w < playoffStartWeek; w++) {
                     weeksToSimulate.push(w);
                 }
 
-                // 3. Check for offseason via NFL state season_type
                 const isOffseasonState = seasonType === 'off' || seasonType === 'pre';
 
                 // --- OFFSEASON PROJECTION ---
                 if (isOffseasonState) {
-                    // Build previous season stats by owner_id
                     const prevStatsByOwner = {};
                     if (prevSeasonRosters && prevSeasonRosters.length > 0) {
                         prevSeasonRosters.forEach(r => {
@@ -106,50 +164,58 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         });
                     }
 
-                    // Gather raw signals for each team
                     const ppgValues = teams.map(t => prevStatsByOwner[t.ownerId]?.ppg || 0);
                     const maxPFValues = teams.map(t => prevStatsByOwner[t.ownerId]?.ppts || 0);
                     const dynastyValues = teams.map(t =>
                         t.players.reduce((sum, pid) => sum + (marketValues?.[pid] || 0), 0)
                     );
 
-                    // Check which signals have data
                     const hasPrevSeason = ppgValues.some(v => v > 0);
                     const hasDynastyData = dynastyValues.some(v => v > 0);
 
-                    // Need at least one signal to produce meaningful odds
                     if (!hasPrevSeason && !hasDynastyData) {
-                        // No data at all — keep loading state, wait for data to arrive
-                        // (marketValues may still be loading from useQuery)
                         return;
                     }
 
-                    // Normalize each signal
                     const normPPG = normalize(ppgValues);
                     const normMaxPF = normalize(maxPFValues);
                     const normDynasty = normalize(dynastyValues);
 
-                    // Compute blended team strength
                     const teamStrengths = {};
                     teams.forEach((t, i) => {
                         if (hasPrevSeason && hasDynastyData) {
-                            // All signals: 40% prev PPG, 30% prev MaxPF, 30% dynasty value
                             teamStrengths[t.rosterId] = 0.4 * normPPG[i] + 0.3 * normMaxPF[i] + 0.3 * normDynasty[i];
                         } else if (hasPrevSeason) {
-                            // No dynasty data yet: 60% prev PPG, 40% prev MaxPF
                             teamStrengths[t.rosterId] = 0.6 * normPPG[i] + 0.4 * normMaxPF[i];
                         } else {
-                            // Only dynasty data (no previous league history)
                             teamStrengths[t.rosterId] = normDynasty[i];
                         }
                     });
 
-                    // Generate synthetic round-robin schedule
+                    // Build a deterministic seed from the inputs that should change the answer.
+                    const seedString = [
+                        league.league_id,
+                        'preseason',
+                        teams
+                            .map(t => `${t.rosterId}:${(t.players || []).slice().sort().join('-')}:${(prevStatsByOwner[t.ownerId]?.ppg || 0).toFixed(2)}:${dynastyValues[teams.indexOf(t)].toFixed(0)}`)
+                            .sort()
+                            .join('|'),
+                    ].join('::');
+
+                    const cached = readCache(seedString);
+                    if (cached?.odds) {
+                        if (cancelled) return;
+                        setOdds(cached.odds);
+                        setIsProjection(true);
+                        setLoading(false);
+                        return;
+                    }
+
+                    const rng = mulberry32(hashSeed(seedString));
                     const totalRegularWeeks = playoffStartWeek - 1;
                     const rosterIds = teams.map(t => t.rosterId);
                     const syntheticSchedule = generateRoundRobin(rosterIds, totalRegularWeeks);
 
-                    // Run Monte Carlo
                     const SIMULATIONS = 10000;
                     const results = {};
                     teams.forEach(t => results[t.rosterId] = 0);
@@ -166,14 +232,14 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                                 const s2 = teamStrengths[r2] || 0;
                                 const prob1 = offseasonWinProbability(s1, s2);
 
-                                if (Math.random() < prob1) {
+                                if (rng() < prob1) {
                                     simState[r1].wins += 1;
                                 } else {
                                     simState[r2].wins += 1;
                                 }
 
-                                simState[r1].fpts += s1 * (0.8 + Math.random() * 0.4);
-                                simState[r2].fpts += s2 * (0.8 + Math.random() * 0.4);
+                                simState[r1].fpts += s1 * (0.8 + rng() * 0.4);
+                                simState[r2].fpts += s2 * (0.8 + rng() * 0.4);
                             });
                         });
 
@@ -200,6 +266,8 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         finalOdds[t.rosterId] = { percent, status };
                     });
 
+                    if (cancelled) return;
+                    writeCache(seedString, { odds: finalOdds, isProjection: true });
                     setOdds(finalOdds);
                     setIsProjection(true);
                     setLoading(false);
@@ -223,14 +291,33 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         };
                     });
 
+                    if (cancelled) return;
                     setOdds(finalOdds);
                     setIsProjection(false);
                     setLoading(false);
                     return;
                 }
 
-                // --- IN-SEASON MONTE CARLO (unchanged) ---
+                // --- IN-SEASON MONTE CARLO ---
                 setIsProjection(false);
+
+                const seedString = [
+                    league.league_id,
+                    `wk${currentWeek}`,
+                    teams
+                        .map(t => `${t.rosterId}:${t.currentWins}:${t.currentTies}:${t.currentFpts.toFixed(2)}`)
+                        .sort()
+                        .join('|'),
+                ].join('::');
+
+                const cached = readCache(seedString);
+                if (cached?.odds) {
+                    if (cancelled) return;
+                    setOdds(cached.odds);
+                    setIsProjection(false);
+                    setLoading(false);
+                    return;
+                }
 
                 const schedulePromises = weeksToSimulate.map(w => fetchLeagueMatchups(league.league_id, w));
                 const schedule = await Promise.all(schedulePromises);
@@ -244,6 +331,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     return Object.values(matchupsById);
                 });
 
+                const rng = mulberry32(hashSeed(seedString));
                 const SIMULATIONS = 10000;
                 const results = {};
                 teams.forEach(t => results[t.rosterId] = 0);
@@ -271,7 +359,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
 
                             const prob1 = team1.ppg / (team1.ppg + team2.ppg);
 
-                            if (Math.random() < prob1) {
+                            if (rng() < prob1) {
                                 simState[r1].wins += 1;
                             } else {
                                 simState[r2].wins += 1;
@@ -308,16 +396,22 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     };
                 });
 
+                if (cancelled) return;
+                writeCache(seedString, { odds: finalOdds, isProjection: false });
                 setOdds(finalOdds);
 
             } catch (err) {
                 console.error("Error calculating playoff odds:", err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         runSimulation();
+
+        return () => {
+            cancelled = true;
+        };
     }, [league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters]);
 
     return { odds, loading, isProjection };

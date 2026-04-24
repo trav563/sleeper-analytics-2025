@@ -125,6 +125,8 @@ export const getGameLiveDetails = async (weekNumber) => {
             const status = competition.status?.type?.name || 'STATUS_UNKNOWN';
             const period = competition.status?.period ?? 0;
             const displayClock = competition.status?.displayClock || '';
+            const gameId = event.id || competition.id || null;
+            const kickoff = event.date || competition.date || null;
 
             const competitors = competition.competitors || [];
             competitors.forEach((c) => {
@@ -143,6 +145,8 @@ export const getGameLiveDetails = async (weekNumber) => {
                     statusName: status,
                     opponent: oppAbbr || null,
                     isHome: c.homeAway === 'home',
+                    gameId,
+                    kickoff,
                 };
             });
         });

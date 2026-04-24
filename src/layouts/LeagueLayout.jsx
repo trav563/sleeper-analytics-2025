@@ -1,30 +1,47 @@
 import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Outlet, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
-import LeagueCard from '../features/league/components/LeagueCard';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { fetchLeagueTransactions } from '../utils/sleeper';
-import { Button } from '../components/ui/Button';
 import PageTransition from '../components/PageTransition';
+
+/** For past seasons anchor to end-of-regular-season; for the live season use NFL state. */
+function deriveCurrentWeek(league, state) {
+    const leagueSeason = league?.season ? Number(league.season) : null;
+    const nflSeason = state?.season ? Number(state.season) : null;
+    const isHistoricalSeason = leagueSeason && nflSeason && leagueSeason < nflSeason;
+    if (isHistoricalSeason) {
+        return league?.settings?.playoff_week_start
+            ? league.settings.playoff_week_start - 1
+            : 17;
+    }
+    return state?.display_week ?? state?.week ?? state?.leg ?? 1;
+}
 
 const LeagueLayout = () => {
     const { leagueId } = useParams();
-    const navigate = useNavigate();
     const location = useLocation();
-    const { user, loadHistory } = useSleeper();
+    const { user, loadHistory, findChainContaining, selectActiveChain } = useSleeper();
     const { league, rosters, users, players, state, matchups, tradedPicks, loading, error } = useLeagueData(leagueId);
     const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
-        if (leagueId && user?.user_id) {
+        if (!leagueId || !user?.user_id) return;
+        // Prefer the pre-walked chain that contains this league so the season
+        // selector exposes both prior AND future seasons. Fall back to walking
+        // backward from the URL leagueId for deep-linked leagues outside the
+        // user's getLeagues list.
+        const cached = findChainContaining(leagueId);
+        if (cached?.length) {
+            selectActiveChain(cached);
+        } else {
             loadHistory(leagueId, user.user_id);
         }
-    }, [leagueId, user, loadHistory]);
+    }, [leagueId, user, loadHistory, findChainContaining, selectActiveChain]);
 
-    // Fetch transactions for the current week
     useEffect(() => {
         const getTransactions = async () => {
             if (leagueId && state?.display_week) {
@@ -38,12 +55,6 @@ const LeagueLayout = () => {
         };
         getTransactions();
     }, [leagueId, state?.display_week]);
-
-    const handleLeagueChange = (e) => {
-        if (e.key === "Enter") {
-            navigate(`/league/${e.target.value.trim()}`);
-        }
-    };
 
     if (loading) {
         return (
@@ -68,7 +79,7 @@ const LeagueLayout = () => {
     }
 
     return (
-        <div className="space-y-6 sm:space-y-8 pb-12">
+        <>
             <Helmet>
                 <title>{league ? `${league.name} Analysis | League Analysis` : 'League Analysis'}</title>
                 <meta name="description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
@@ -83,47 +94,6 @@ const LeagueLayout = () => {
                 <meta name="twitter:image" content="/favicon.png" />
             </Helmet>
 
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6 bg-bg-1 p-5 rounded-xl border border-line shadow-card">
-                <div>
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                        League ID · <span className="tnum text-text-dim">{leagueId}</span>
-                    </div>
-                    <h1 className="mt-1 font-display text-2xl md:text-3xl font-bold tracking-snug text-text">
-                        League Analysis
-                    </h1>
-                </div>
-                <div className="flex items-stretch gap-2">
-                    <input
-                        className="px-3 py-2 min-h-[40px] rounded-md border border-line bg-bg-2 text-text text-sm placeholder:text-text-mute focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal w-full sm:w-64 transition-colors duration-fast"
-                        placeholder="Enter League ID"
-                        defaultValue={leagueId}
-                        onKeyDown={handleLeagueChange}
-                    />
-                    <Button
-                        onClick={() => {
-                            const el = document.querySelector("input[placeholder='Enter League ID']");
-                            if (el?.value) navigate(`/league/${el.value.trim()}`);
-                        }}
-                        className="bg-signal text-ink font-semibold hover:bg-signal/90"
-                    >
-                        Load
-                    </Button>
-                </div>
-            </header>
-
-            <div>
-                <Button
-                    variant="ghost"
-                    onClick={() => navigate('/')}
-                    className="gap-2 mb-4 pl-0 text-text-dim hover:bg-transparent hover:text-signal transition-colors duration-fast"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back to Dashboard
-                </Button>
-
-                {league && <LeagueCard league={league} />}
-            </div>
-
             <AnimatePresence mode="wait">
                 <PageTransition key={location.pathname} className="min-h-[50vh]">
                     <Outlet context={{
@@ -133,7 +103,7 @@ const LeagueLayout = () => {
                         players,
                         user,
                         state,
-                        currentWeek: state?.display_week ?? state?.week ?? state?.leg ?? 1,
+                        currentWeek: deriveCurrentWeek(league, state),
                         matchups,
                         transactions,
                         tradedPicks,
@@ -142,7 +112,7 @@ const LeagueLayout = () => {
                     }} />
                 </PageTransition>
             </AnimatePresence>
-        </div>
+        </>
     );
 };
 

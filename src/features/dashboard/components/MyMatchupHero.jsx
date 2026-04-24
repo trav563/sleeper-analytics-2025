@@ -136,24 +136,41 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
         const recordLabel = roster
             ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
             : (mirror ? 'Opp' : 'You');
+        const goTeam = (e) => {
+            e.stopPropagation();
+            if (league?.league_id && roster?.roster_id) {
+                navigate(`/league/${league.league_id}/team/${roster.roster_id}`);
+            }
+        };
         return (
             <div className={`flex items-center gap-3 md:gap-5 min-w-0 ${mirror ? 'flex-row-reverse text-right' : ''}`}>
-                {user?.avatar ? (
-                    <img
-                        src={avatarUrl(user.avatar)}
-                        alt=""
-                        className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line shrink-0"
-                    />
-                ) : (
-                    <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={56} />
-                )}
+                <button
+                    type="button"
+                    onClick={goTeam}
+                    className="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-signal/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                    aria-label={`View ${displayTeamName(user)}`}
+                >
+                    {user?.avatar ? (
+                        <img
+                            src={avatarUrl(user.avatar)}
+                            alt=""
+                            className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line"
+                        />
+                    ) : (
+                        <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={56} />
+                    )}
+                </button>
                 <div className="min-w-0">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-dim font-bold">
                         {recordLabel}
                     </div>
-                    <div className="font-display text-md md:text-xl font-bold tracking-snug text-text truncate max-w-[180px] md:max-w-[280px]">
+                    <button
+                        type="button"
+                        onClick={goTeam}
+                        className={`block font-display text-md md:text-xl font-bold tracking-snug text-text truncate max-w-[180px] md:max-w-[280px] hover:text-signal transition-colors duration-fast ${mirror ? 'ml-auto text-right' : 'text-left'}`}
+                    >
                         {displayTeamName(user)}
-                    </div>
+                    </button>
                     <div
                         className={`tnum font-display text-5xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
                         style={isWinning ? { textShadow: '0 0 28px rgba(245,179,1,0.33)' } : undefined}
@@ -171,11 +188,14 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
         );
     };
 
+    const goMatchup = () => navigate(`/league/${league?.league_id}/matchup`);
     return (
-        <button
-            type="button"
-            onClick={() => navigate(`/league/${league?.league_id}/matchup`)}
-            className="w-full text-left rounded-xl border border-line p-5 md:p-6 shadow-card relative overflow-hidden transition-colors duration-fast hover:border-line-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={goMatchup}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goMatchup(); } }}
+            className="cursor-pointer w-full text-left rounded-xl border border-line p-5 md:p-6 shadow-card relative overflow-hidden transition-colors duration-fast hover:border-line-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
             style={{
                 background: `
                     radial-gradient(circle at 10% 0%, oklch(62% 0.18 ${myHue} / 0.32), transparent 55%),
@@ -252,7 +272,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     }}
                 />
             </div>
-        </button>
+        </div>
     );
 };
 

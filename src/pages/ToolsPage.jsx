@@ -5,6 +5,7 @@ import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
 import RosterClogger from '../features/tools/components/RosterClogger';
 import ScheduleGenerator from '../features/tools/components/ScheduleGenerator';
+import HistoricalBanner from '../components/layout/HistoricalBanner';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
@@ -20,21 +21,27 @@ const ToolsPage = () => {
         );
     }
 
+    const isHistoricalSeason = league?.season && state?.season &&
+        Number(league.season) < Number(state.season);
+
     return (
         <div className="space-y-6">
+            <HistoricalBanner message="These tools are forward-looking and assume the active season." />
             <ScheduleGenerator
                 league={league}
                 rosters={rosters}
                 users={users}
             />
 
-            <TradeSimulator
-                league={league}
-                rosters={rosters}
-                users={users}
-                players={players}
-                currentWeek={currentWeek}
-            />
+            {!isHistoricalSeason && (
+                <TradeSimulator
+                    league={league}
+                    rosters={rosters}
+                    users={users}
+                    players={players}
+                    currentWeek={currentWeek}
+                />
+            )}
 
             <DynastyLandscape
                 rosters={rosters}
@@ -44,12 +51,14 @@ const ToolsPage = () => {
                 state={state}
             />
 
-            <RosterClogger
-                rosters={rosters}
-                players={players}
-                league={league}
-                state={state}
-            />
+            {!isHistoricalSeason && (
+                <RosterClogger
+                    rosters={rosters}
+                    players={players}
+                    league={league}
+                    state={state}
+                />
+            )}
 
             <TankTracker
                 rosters={rosters}
@@ -58,15 +67,17 @@ const ToolsPage = () => {
                 league={league}
             />
 
-            <TradeFinder
-                leagueId={leagueId}
-                currentWeek={currentWeek}
-                rosters={rosters}
-                users={users}
-                players={players}
-                league={league}
-                tradedPicks={tradedPicks}
-            />
+            {!isHistoricalSeason && (
+                <TradeFinder
+                    leagueId={leagueId}
+                    currentWeek={currentWeek}
+                    rosters={rosters}
+                    users={users}
+                    players={players}
+                    league={league}
+                    tradedPicks={tradedPicks}
+                />
+            )}
         </div>
     );
 };
