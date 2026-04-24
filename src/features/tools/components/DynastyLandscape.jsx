@@ -9,6 +9,36 @@ import { useSleeper } from '../../../context/SleeperContext';
 
 const TEAM_HUE = (rosterId) => `oklch(72% 0.16 ${(Number(rosterId || 0) * 47) % 360})`;
 
+const SKILL_POS = new Set(['QB', 'RB', 'WR', 'TE']);
+const MIN_GAMES = 4;
+const MIN_SKILL_SAMPLE = 6;
+
+function computeSeasonStats(seasonRoster, players, yearsAgo) {
+    const s = seasonRoster?.settings || {};
+    const games = (s.wins || 0) + (s.losses || 0) + (s.ties || 0);
+    if (games < MIN_GAMES) return null;
+
+    const fpts = (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
+    const ppts = (s.ppts || 0) + (s.ppts_decimal || 0) / 100;
+    if (fpts <= 0) return null;
+
+    const ids = seasonRoster.players || [];
+    const skill = ids
+        .map((id) => players[id])
+        .filter((p) => p && SKILL_POS.has(p.position) && p.age);
+    if (skill.length < MIN_SKILL_SAMPLE) return null;
+
+    const avgAge =
+        skill.reduce((sum, p) => sum + Math.max(20, p.age - yearsAgo), 0) / skill.length;
+
+    return {
+        avgAge: +avgAge.toFixed(1),
+        ppg: +(fpts / games).toFixed(1),
+        pptsPerGame: ppts > 0 ? +(ppts / games).toFixed(1) : null,
+        games,
+    };
+}
+
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const { leagueChains, user } = useSleeper();
     const [useMaxPf, setUseMaxPf] = useState(false);
@@ -41,44 +71,42 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     // Per-season aggregate trail. Each chain entry's roster already includes
     // settings.fpts/ppts/wins/losses/ties + players[] — no API fetches needed.
     // Production unit (PPG vs Max PF) tracks the snapshot's useMaxPf toggle.
-    // Anchor season is the URL's league.season (so when viewing the 2025
-    // league, the snapshot represents 2025, not the live NFL year).
-    const anchorSeason = Number(league?.season) || Number(state?.season) || new Date().getFullYear();
+    // Anchor season tracks what the snapshot is actually showing — when we
+    // fall back to the previous league's data (in-progress current season
+    // with no fpts yet), the snapshot represents that prior season, so the
+    // trail should be anchored there too.
+    const urlSeason = Number(league?.season) || Number(state?.season) || new Date().getFullYear();
+    const anchorSeason = usingPrevSeason ? urlSeason - 1 : urlSeason;
 
     const trailByOwner = useMemo(() => {
         if (!activeChain || activeChain.length < 2 || !players) return null;
         const out = {};
         activeChain.forEach((entry) => {
-            const yearsAgo = Math.max(0, anchorSeason - Number(entry.season));
+            const season = Number(entry.season);
+            // Skip the anchor + any future season; the snapshot append in
+            // `selectedTrail` provides the anchor point. This prevents the
+            // current in-progress NFL season from showing up at clamped
+            // yearsAgo=0 with mid-season cumulative stats.
+            if (!season || season >= anchorSeason) return;
+            const yearsAgo = anchorSeason - season;
+
             Object.values(entry.rosters || {}).forEach((seasonRoster) => {
                 const ownerId = seasonRoster?.owner_id;
                 if (!ownerId) return;
 
-                const settings = seasonRoster.settings || {};
-                const wins = settings.wins || 0;
-                const losses = settings.losses || 0;
-                const ties = settings.ties || 0;
-                const games = wins + losses + ties;
-                if (games === 0) return; // skip preseason / no completed games
+                const stats = computeSeasonStats(seasonRoster, players, yearsAgo);
+                if (!stats) return;
 
-                const fpts = (settings.fpts || 0) + ((settings.fpts_decimal || 0) / 100);
-                const ppts = (settings.ppts || 0) + ((settings.ppts_decimal || 0) / 100);
-                const ppg = fpts / games;
-                const production = parseFloat((useMaxPf ? ppts : ppg).toFixed(1));
-
-                const skillAges = (seasonRoster.players || [])
-                    .map((pid) => players[pid])
-                    .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age)
-                    .map((p) => Math.max(20, p.age - yearsAgo));
-                if (skillAges.length === 0) return;
-                const avgAge = parseFloat(
-                    (skillAges.reduce((s, a) => s + a, 0) / skillAges.length).toFixed(1)
-                );
+                // Trail always plots per-game so seasons of different lengths
+                // are comparable. In Max PF mode, drop seasons where the old
+                // league never populated `ppts` (pptsPerGame === null).
+                const production = useMaxPf ? stats.pptsPerGame : stats.ppg;
+                if (production == null) return;
 
                 if (!out[ownerId]) out[ownerId] = [];
                 out[ownerId].push({
-                    season: Number(entry.season),
-                    age: avgAge,
+                    season,
+                    age: stats.avgAge,
                     production,
                     isTrail: true,
                 });
@@ -147,6 +175,10 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 avatar: avatarUrl(owner?.avatar),
                 age: parseFloat(avgAge.toFixed(1)),
                 production: parseFloat(productionMetric.toFixed(1)),
+                ppg: parseFloat(ppg.toFixed(1)),
+                pptsPerGame: maxPf > 0 && gamesPlayed > 0
+                    ? parseFloat((maxPf / gamesPlayed).toFixed(1))
+                    : null,
                 productionLabel: useMaxPf ? 'Max PF' : 'PPG',
             };
         });
@@ -163,6 +195,18 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             production: parseFloat((totalProd / data.length).toFixed(1)),
         };
     }, [data]);
+
+    // When Trail is on, the rendered Y is per-game — recompute the production
+    // average against the per-game scale so the quadrant cross stays valid.
+    const renderAverages = useMemo(() => {
+        if (!showTrail || data.length === 0) return averages;
+        const perGameProds = data.map((d) => useMaxPf ? (d.pptsPerGame ?? d.ppg) : d.ppg);
+        const totalProd = perGameProds.reduce((sum, p) => sum + p, 0);
+        return {
+            age: averages.age,
+            production: parseFloat((totalProd / perGameProds.length).toFixed(1)),
+        };
+    }, [showTrail, useMaxPf, data, averages]);
 
     const { bestId, worstId } = useMemo(() => {
         if (data.length === 0) return { bestId: null, worstId: null };
@@ -205,9 +249,29 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         dim: showTrail && selectedTrailRosterId && d.rosterId !== selectedTrailRosterId,
     })), [enrichedData, showTrail, selectedTrailRosterId]);
 
+    // When Trail is on, swap snapshot production to per-game so it shares the
+    // chart's Y scale with the trail dots (which are always per-game for
+    // cross-season comparability). Trail off → unchanged behavior.
+    const enrichedForRender = useMemo(() => enrichedWithDim.map((d) => {
+        if (!showTrail) return d;
+        const perGame = useMaxPf ? (d.pptsPerGame ?? d.ppg) : d.ppg;
+        return {
+            ...d,
+            production: perGame,
+            productionLabel: useMaxPf ? 'Max PPG' : 'PPG',
+        };
+    }), [enrichedWithDim, showTrail, useMaxPf]);
+
+    // selectedTrailHistorical = trail entries whose season is NOT the anchor
+    // (the anchor coincides with the selected team's bright snapshot avatar
+    // — keeping both would render a small dot on top of the avatar).
+    // Used as the data array for the unified Scatter so trail dots compete
+    // with avatars in the same hit-test pool.
+
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
-        const size = payload.isBest || payload.isWorst ? 48 : 40;
+        // Shrink dimmed avatars so they don't visually swamp trail dots.
+        const size = payload.dim ? 24 : (payload.isBest || payload.isWorst ? 48 : 40);
         const offset = size / 2;
 
         let borderStyle = {};
@@ -235,50 +299,54 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
     const TrailDot = (props) => {
         const { cx, cy } = props;
-        // Visible 3px dot + invisible 14-radius hit area so Recharts can pick
-        // the trail dot's payload over a nearby snapshot avatar (40px wide).
         return (
-            <g>
-                <circle cx={cx} cy={cy} r={14} fill="transparent" />
-                <circle cx={cx} cy={cy} r={3} fill={trailColor} fillOpacity={0.7} />
+            <g style={{ cursor: 'pointer' }}>
+                <circle cx={cx} cy={cy} r={5} fill={trailColor} fillOpacity={0.95} stroke={theme.color.bg} strokeWidth={1} />
             </g>
         );
     };
+
+    // Dispatching shape so all hover-able points (snapshot avatars + trail
+    // dots) live in a single Scatter. Recharts' nearest-point hit-test then
+    // operates on one unified pool, so the trail dot you actually hover wins
+    // instead of losing the tie-break to a separate-Scatter snapshot point.
+    const UnifiedShape = (props) => (
+        props.payload?.isTrail ? <TrailDot {...props} /> : <CustomNode {...props} />
+    );
+
+    const renderTrailTooltip = (d) => (
+        <div className="bg-bg-1 border border-line p-3 rounded-md shadow-pop z-50">
+            <p className="font-semibold text-text mb-1">
+                {selectedTeamName} <span className="font-mono text-2xs text-text-mute">· {d.season}</span>
+            </p>
+            <div className="space-y-1 text-xs text-text-dim">
+                <div className="flex justify-between gap-4">
+                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg Age</span>
+                    <span className="font-mono tnum text-text">{d.age} yrs</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PPG' : 'PPG'}</span>
+                    <span className="font-mono font-bold tnum text-text">{d.production}</span>
+                </div>
+            </div>
+        </div>
+    );
 
     const CustomTooltip = ({ active, payload }) => {
         if (!active || !payload || !payload.length) return null;
         const d = payload[0].payload;
 
         // Trail-dot tooltip — show selected team + season + production.
-        if (d.isTrail) {
-            return (
-                <div className="bg-bg-1 border border-line p-3 rounded-md shadow-pop z-50">
-                    <p className="font-semibold text-text mb-1">
-                        {selectedTeamName} <span className="font-mono text-2xs text-text-mute">· {d.season}</span>
-                    </p>
-                    <div className="space-y-1 text-xs text-text-dim">
-                        <div className="flex justify-between gap-4">
-                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg Age</span>
-                            <span className="font-mono tnum text-text">{d.age} yrs</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
-                            <span className="font-mono font-bold tnum text-text">{d.production}</span>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
+        if (d.isTrail) return renderTrailTooltip(d);
 
-        // When trail is on, only the SELECTED team's snapshot produces a
-        // tooltip. Hovering other (dimmed) avatars stays silent so trail
-        // focus is preserved and we never label the wrong team.
-        if (showTrail && d.rosterId !== selectedTrailRosterId) return null;
-
+        // Snapshot tooltip for the selected team (or any team when Trail is
+        // off). Compare against renderAverages so the classification matches
+        // the axis the user is currently looking at (per-game when Trail on).
+        const avg = renderAverages;
         let classification = '';
-        if (d.production >= averages.production && d.age <= averages.age) classification = 'Dynasty Elite';
-        else if (d.production >= averages.production && d.age > averages.age) classification = 'Win-Now';
-        else if (d.production < averages.production && d.age <= averages.age) classification = 'Rebuilder';
+        if (d.production >= avg.production && d.age <= avg.age) classification = 'Dynasty Elite';
+        else if (d.production >= avg.production && d.age > avg.age) classification = 'Win-Now';
+        else if (d.production < avg.production && d.age <= avg.age) classification = 'Rebuilder';
         else classification = 'Danger Zone';
 
         let highlight = '';
@@ -295,7 +363,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                     </div>
                     <div className="flex justify-between gap-4">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{d.productionLabel}</span>
-                        <span className={`font-mono font-bold tnum ${d.production >= averages.production ? 'text-good' : 'text-bad'}`}>
+                        <span className={`font-mono font-bold tnum ${d.production >= avg.production ? 'text-good' : 'text-bad'}`}>
                             {d.production}
                         </span>
                     </div>
@@ -312,10 +380,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         );
     };
 
-    // Selected team's trail. Replace the chain's anchor-season entry with the
-    // snapshot's exact (age, production) so the line tail lands on the bright
-    // current marker. We do NOT filter by snapshot bounds — showing all of
-    // the team's chain seasons is the whole point, even if PPG/age diverged.
+    // Selected team's trail. Append the snapshot anchor at its per-game value
+    // so the line tail lands on the bright current marker (which is now also
+    // rendered per-game when Trail is on — see enrichedForRender).
     const selectedTrail = useMemo(() => {
         if (!showTrail || !trailByOwner || !selectedTrailRosterId || !enrichedData) return [];
         const r = rosters?.find((x) => x.roster_id === selectedTrailRosterId);
@@ -324,16 +391,34 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         const baseTrail = trailByOwner[ownerId] || [];
         const currentSnapshot = enrichedData.find((d) => d.rosterId === selectedTrailRosterId);
         if (!currentSnapshot) return baseTrail;
+        const anchorProduction = useMaxPf
+            ? (currentSnapshot.pptsPerGame ?? currentSnapshot.ppg)
+            : currentSnapshot.ppg;
+        if (anchorProduction == null) return baseTrail;
         return [
             ...baseTrail.filter((p) => p.season !== anchorSeason),
             {
                 season: anchorSeason,
                 age: currentSnapshot.age,
-                production: currentSnapshot.production,
+                production: anchorProduction,
                 isTrail: true,
             },
         ].sort((a, b) => a.season - b.season);
-    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters, enrichedData, anchorSeason]);
+    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters, enrichedData, anchorSeason, useMaxPf]);
+
+    // Trail data without the anchor entry — used for the unified Scatter so
+    // the bright snapshot avatar isn't covered by a small trail dot at the
+    // same coordinate. The full `selectedTrail` (including anchor) is still
+    // used by the line-only Scatter so the dashed line reaches the avatar.
+    const trailHistorical = useMemo(
+        () => selectedTrail.filter((p) => p.season !== anchorSeason),
+        [selectedTrail, anchorSeason]
+    );
+
+    const combinedScatterData = useMemo(
+        () => (showTrail ? [...enrichedForRender, ...trailHistorical] : enrichedForRender),
+        [enrichedForRender, trailHistorical, showTrail]
+    );
 
     const selectedTeamName = useMemo(() => {
         if (!selectedTrailRosterId) return '';
@@ -346,15 +431,32 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
     if (!enrichedData || enrichedData.length === 0) return null;
 
-    // Display bounds — include both snapshot AND selected trail so every dot
-    // is visible. Reference lines stay at snapshot averages (still meaningful
-    // as "league baseline") even when the chart range expands.
-    const ages = [...enrichedData.map(d => d.age), ...selectedTrail.map(d => d.age)];
-    const prods = [...enrichedData.map(d => d.production), ...selectedTrail.map(d => d.production)];
-    const minAge = Math.floor(Math.min(...ages) - 0.5);
-    const maxAge = Math.ceil(Math.max(...ages) + 0.5);
-    const minProd = Math.floor(Math.min(...prods) * 0.95);
-    const maxProd = Math.ceil(Math.max(...prods) * 1.05);
+    // Display bounds — anchor on the snapshot (rendered values, which may be
+    // per-game if Trail is on) so the cluster stays readable. Expand toward
+    // trail data only within a soft cap so a single outlier season can't
+    // squash the rest of the chart.
+    const snapAges = enrichedForRender.map((d) => d.age);
+    const snapProds = enrichedForRender.map((d) => d.production);
+    const sAgeMin = Math.min(...snapAges);
+    const sAgeMax = Math.max(...snapAges);
+    const sPrdMin = Math.min(...snapProds);
+    const sPrdMax = Math.max(...snapProds);
+    const prdRange = Math.max(1, sPrdMax - sPrdMin);
+
+    const trailAges = selectedTrail.map((d) => d.age);
+    const trailProds = selectedTrail.map((d) => d.production);
+    const ageCap = 2;                  // ±2 yrs absolute cap on age expansion
+    const prdCap = prdRange * 0.5;     // ±50% of snapshot range cap on production
+
+    const trailAgeLo = trailAges.length ? Math.min(...trailAges) : sAgeMin;
+    const trailAgeHi = trailAges.length ? Math.max(...trailAges) : sAgeMax;
+    const trailPrdLo = trailProds.length ? Math.min(...trailProds) : sPrdMin;
+    const trailPrdHi = trailProds.length ? Math.max(...trailProds) : sPrdMax;
+
+    const minAge = Math.floor(Math.max(sAgeMin - ageCap, Math.min(sAgeMin, trailAgeLo)) - 0.5);
+    const maxAge = Math.ceil(Math.min(sAgeMax + ageCap, Math.max(sAgeMax, trailAgeHi)) + 0.5);
+    const minProd = Math.floor(Math.max(sPrdMin - prdCap, Math.min(sPrdMin, trailPrdLo)) * 0.95);
+    const maxProd = Math.ceil(Math.min(sPrdMax + prdCap, Math.max(sPrdMax, trailPrdHi)) * 1.05);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
@@ -417,10 +519,10 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke={theme.color.lineStrong} opacity={0.4} />
 
-                            <ReferenceArea x1={minAge} x2={averages.age} y1={averages.production} y2={maxProd} fill={theme.color.good} fillOpacity={0.05} />
-                            <ReferenceArea x1={averages.age} x2={maxAge} y1={averages.production} y2={maxProd} fill={theme.color.signal} fillOpacity={0.05} />
-                            <ReferenceArea x1={minAge} x2={averages.age} y1={minProd} y2={averages.production} fill={theme.color.signal2} fillOpacity={0.05} />
-                            <ReferenceArea x1={averages.age} x2={maxAge} y1={minProd} y2={averages.production} fill={theme.color.bad} fillOpacity={0.05} />
+                            <ReferenceArea x1={minAge} x2={renderAverages.age} y1={renderAverages.production} y2={maxProd} fill={theme.color.good} fillOpacity={0.05} />
+                            <ReferenceArea x1={renderAverages.age} x2={maxAge} y1={renderAverages.production} y2={maxProd} fill={theme.color.signal} fillOpacity={0.05} />
+                            <ReferenceArea x1={minAge} x2={renderAverages.age} y1={minProd} y2={renderAverages.production} fill={theme.color.signal2} fillOpacity={0.05} />
+                            <ReferenceArea x1={renderAverages.age} x2={maxAge} y1={minProd} y2={renderAverages.production} fill={theme.color.bad} fillOpacity={0.05} />
 
                             <XAxis
                                 type="number"
@@ -443,23 +545,32 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                                 domain={[minProd, maxProd]}
                                 stroke={theme.color.textDim}
                                 tick={{ fill: theme.color.textDim, fontSize: 11, fontFamily: 'var(--font-mono)' }}
-                                width={32}
-                            />
+                                width={36}
+                            >
+                                <Label
+                                    value={showTrail && useMaxPf ? 'Max PPG' : (useMaxPf ? 'Max PF' : 'PPG')}
+                                    angle={-90}
+                                    position="insideLeft"
+                                    offset={14}
+                                    fill={theme.color.textMute}
+                                    style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                                />
+                            </YAxis>
 
                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: theme.color.lineStrong, strokeDasharray: '3 3' }} />
 
-                            <ReferenceLine x={averages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
-                            <ReferenceLine y={averages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
+                            <ReferenceLine x={renderAverages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
+                            <ReferenceLine y={renderAverages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
 
-                            <Scatter name="Teams" data={enrichedWithDim} shape={<CustomNode />} />
-                            {showTrail && selectedTrail.length > 0 && (
+                            {/* Unified Scatter: snapshot avatars + trail dots in one hit-test pool */}
+                            <Scatter name="Teams" data={combinedScatterData} shape={<UnifiedShape />} />
+                            {/* Line-only Scatter: invisible shape, just provides the dashed trail line */}
+                            {showTrail && selectedTrail.length > 1 && (
                                 <Scatter
-                                    name="Trail"
+                                    name="TrailLine"
                                     data={selectedTrail}
-                                    shape={<TrailDot />}
-                                    line={selectedTrail.length > 1
-                                        ? { stroke: trailColor, strokeOpacity: 0.5, strokeDasharray: '4 4', strokeWidth: 1.5 }
-                                        : false}
+                                    shape={() => null}
+                                    line={{ stroke: trailColor, strokeOpacity: 0.5, strokeDasharray: '4 4', strokeWidth: 1.5 }}
                                     legendType="none"
                                     isAnimationActive={false}
                                 />
@@ -476,7 +587,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                             </span>
                         ) : (
                             <span className="text-text-dim">
-                                Trail · <span className="text-text">{selectedTeamName}</span> · <span className="tnum">{selectedTrail.length}</span> {selectedTrail.length === 1 ? 'season' : 'seasons'} (oldest → current)
+                                Trail · <span className="text-text">{selectedTeamName}</span>{useMaxPf && <span className="text-text-mute"> · per-game scale</span>} · <span className="tnum">{selectedTrail.length}</span> {selectedTrail.length === 1 ? 'season' : 'seasons'} (oldest → current)
                             </span>
                         )}
                     </div>
