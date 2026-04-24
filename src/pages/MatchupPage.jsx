@@ -63,6 +63,9 @@ const MatchupPage = () => {
         );
     }
 
+    const isHistoricalSeason = league?.season && state?.season &&
+        Number(league.season) < Number(state.season);
+
     return (
         <MatchupDetail
             league={league}
@@ -71,6 +74,7 @@ const MatchupPage = () => {
             players={players}
             week={week}
             currentNFLWeek={currentNFLWeek}
+            isHistoricalSeason={isHistoricalSeason}
             onWeekChange={handleWeekChange}
             viewMatchups={viewMatchups}
             seasonMatchups={seasonMatchups}

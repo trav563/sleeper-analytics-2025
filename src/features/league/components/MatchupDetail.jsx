@@ -62,7 +62,7 @@ const bucketStarter = (m, idx, players, gameStatuses) => {
 const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'];
 
 /* ---------- main component ---------- */
-const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
+const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, isHistoricalSeason, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
     const navigate = useNavigate();
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
@@ -409,7 +409,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         >
                             {weekOptions.map((w) => (
                                 <option key={w} value={w}>
-                                    {w}{currentNFLWeek && w === currentNFLWeek ? ' (Current)' : ''}
+                                    {w}{currentNFLWeek && w === currentNFLWeek ? (isHistoricalSeason ? ' (Final)' : ' (Current)') : ''}
                                 </option>
                             ))}
                         </select>
