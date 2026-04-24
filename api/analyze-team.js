@@ -721,11 +721,27 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Analyze team error:', error);
+        const raw = error?.message || 'Analysis failed. Please try again.';
+        // Translate common Gemini SDK errors into user-actionable messages.
+        let userMessage = raw;
+        if (/quota|rate.?limit|429|RESOURCE_EXHAUSTED/i.test(raw)) {
+            userMessage = 'AI service is busy (Gemini rate limit hit). Wait ~60 seconds and try again.';
+        } else if (/SAFETY|blocked|safety_settings/i.test(raw)) {
+            userMessage = 'Gemini blocked this analysis (safety filter). Try a different card or constraint.';
+        } else if (/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED/i.test(raw)) {
+            userMessage = 'AI service unauthenticated. Verify GEMINI_API_KEY in Vercel.';
+        } else if (/timeout|ETIMEDOUT|ECONNRESET|503|UNAVAILABLE/i.test(raw)) {
+            userMessage = 'Gemini service unavailable right now. Try again in a moment.';
+        }
         if (res.headersSent) {
-            res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+            res.write(`data: ${JSON.stringify({ error: userMessage, raw })}\n\n`);
             res.end();
         } else {
-            res.status(500).json({ error: 'Analysis failed. Please try again.' });
+            res.status(500).json({
+                error: userMessage,
+                raw,
+                code: error?.status || error?.code || null
+            });
         }
     }
 }

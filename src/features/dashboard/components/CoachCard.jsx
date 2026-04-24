@@ -118,9 +118,18 @@ const CoachCard = ({
                 )}
 
                 {!loading && error && (
-                    <div className="flex items-start gap-2 p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-xs">
-                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-                        <span>{error}</span>
+                    <div className="p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-xs">
+                        <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                            <span>{error}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => analyze({ force: true, constraint: activeConstraint })}
+                            className="mt-2 inline-flex items-center gap-1 font-mono text-2xs uppercase tracking-wider font-bold text-bad hover:text-bad/80 transition-colors duration-fast"
+                        >
+                            <RefreshCw className="w-3 h-3" /> Retry
+                        </button>
                     </div>
                 )}
 
