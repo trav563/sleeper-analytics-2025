@@ -21,6 +21,11 @@ export const BYE_MAP_2025 = {
     14: ["SF", "NYG", "CAR", "NE"],
 };
 
+// Indoor stadiums — skip weather alerts for these teams (domes/retractable roofs)
+export const INDOOR_STADIUMS = new Set([
+    'ARI', 'ATL', 'DAL', 'DET', 'HOU', 'IND', 'LAC', 'LAR', 'LV', 'MIN', 'NO'
+]);
+
 // Position display order for lineup
 export const POSITION_ORDER = {
     QB: 1,
@@ -33,28 +38,31 @@ export const POSITION_ORDER = {
 };
 
 /**
- * Color tokens for status
+ * Color tokens for lineup status. Semantic broadcast tokens:
+ *   OK         → good   (green)
+ *   POTENTIAL  → warn   (amber)
+ *   INCOMPLETE → bad    (red)
  */
 export const STATUS_COLORS = {
     BG: {
-        OK: "bg-emerald-600",
-        POTENTIAL: "bg-amber-500",
-        INCOMPLETE: "bg-rose-600",
+        OK: "bg-good",
+        POTENTIAL: "bg-warn",
+        INCOMPLETE: "bg-bad",
     },
     LIGHT: {
-        OK: "bg-emerald-50 border border-emerald-200",
-        POTENTIAL: "bg-amber-50 border border-amber-200",
-        INCOMPLETE: "bg-rose-50 border border-rose-200",
+        OK: "bg-good/10 border border-good/30",
+        POTENTIAL: "bg-warn/10 border border-warn/30",
+        INCOMPLETE: "bg-bad/10 border border-bad/30",
     },
     DOT: {
-        OK: "bg-emerald-600",
-        POTENTIAL: "bg-amber-500",
-        INCOMPLETE: "bg-rose-600",
+        OK: "bg-good",
+        POTENTIAL: "bg-warn",
+        INCOMPLETE: "bg-bad",
     },
     TEXT: {
-        OK: "text-emerald-600",
-        POTENTIAL: "text-amber-500",
-        INCOMPLETE: "text-rose-600",
+        OK: "text-good",
+        POTENTIAL: "text-warn",
+        INCOMPLETE: "text-bad",
     }
 };
 
@@ -64,6 +72,14 @@ export const STATUS_COLORS = {
 export function avatarUrl(avatarId, size = "thumbs") {
     if (!avatarId) return null;
     return `https://sleepercdn.com/avatars/${size === "thumbs" ? "thumbs/" : ""}${avatarId}`;
+}
+
+/**
+ * Get player headshot URL from Sleeper CDN
+ */
+export function playerHeadshotUrl(playerId) {
+    if (!playerId) return null;
+    return `https://sleepercdn.com/content/nfl/players/${playerId}.jpg`;
 }
 
 /**
