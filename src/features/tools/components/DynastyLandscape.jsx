@@ -415,12 +415,14 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                             <ReferenceLine x={averages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
                             <ReferenceLine y={averages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
 
-                            {showTrail && selectedTrail.length > 1 && (
+                            {showTrail && selectedTrail.length > 0 && (
                                 <Scatter
                                     name="Trail"
                                     data={selectedTrail}
                                     shape={<TrailDot />}
-                                    line={{ stroke: trailColor, strokeOpacity: 0.5, strokeDasharray: '4 4', strokeWidth: 1.5 }}
+                                    line={selectedTrail.length > 1
+                                        ? { stroke: trailColor, strokeOpacity: 0.5, strokeDasharray: '4 4', strokeWidth: 1.5 }
+                                        : false}
                                     legendType="none"
                                     isAnimationActive={false}
                                 />
@@ -429,6 +431,24 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                         </ScatterChart>
                     </ResponsiveContainer>
                 </div>
+
+                {showTrail && (
+                    <div className="mt-2 px-2 sm:px-0 font-mono text-2xs uppercase tracking-wider">
+                        {trailLoading ? (
+                            <span className="text-text-mute">Loading multi-season trail…</span>
+                        ) : selectedTrail.length === 0 ? (
+                            <span className="text-warn">
+                                No trail data found for this team. Either no scoring weeks were
+                                recorded across the available seasons, or the league chain only
+                                has the current season.
+                            </span>
+                        ) : (
+                            <span className="text-text-dim">
+                                Trail · <span className="tnum">{selectedTrail.length}</span> snapshots across <span className="tnum">{new Set(selectedTrail.map(p => p.season)).size}</span> seasons
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2 mt-4 px-2 pb-2 sm:px-0 sm:pb-0">
                     {[
