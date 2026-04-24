@@ -298,7 +298,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                             Actual wins minus expected wins (from all-play %).
                         </p>
                         <ul className="space-y-1.5">
-                            {luckRows.slice(0, Math.min(luckRows.length, 8)).map((r) => (
+                            {luckRows.map((r) => (
                                 <li key={r.rosterId} className="grid grid-cols-[24px_1fr_60px] gap-2 items-center py-1">
                                     <Pip seed={r.rosterId} name={r.name} size={20} />
                                     <span className="text-xs text-text truncate">{r.name}</span>

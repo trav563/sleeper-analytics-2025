@@ -2,14 +2,112 @@ import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Switch } from '../../../components/ui/Switch';
-import { fetchLeagueRosters } from '../../../utils/sleeper';
+import { fetchLeagueRosters, fetchLeagueMatchups } from '../../../utils/sleeper';
 import { Globe } from 'lucide-react';
 import { theme } from '../../../lib/theme';
+import { useSleeper } from '../../../context/SleeperContext';
+
+const TEAM_HUE = (rosterId) => `oklch(72% 0.16 ${(Number(rosterId || 0) * 47) % 360})`;
 
 const DynastyLandscape = ({ rosters, users, players, league, state }) => {
+    const { leagueChains, user } = useSleeper();
     const [useMaxPf, setUseMaxPf] = useState(false);
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
     const [usingPrevSeason, setUsingPrevSeason] = useState(false);
+
+    // Trail state — multi-season per-week trajectory for one selected team.
+    const [showTrail, setShowTrail] = useState(false);
+    const [selectedTrailRosterId, setSelectedTrailRosterId] = useState(null);
+    const [trailByOwner, setTrailByOwner] = useState(null);
+    const [trailLoading, setTrailLoading] = useState(false);
+
+    // Find the chain that contains this league (for past-season rosters + league_ids).
+    const activeChain = useMemo(() => {
+        if (!leagueChains || !league?.league_id) return null;
+        for (const chain of Object.values(leagueChains)) {
+            if (chain?.some((l) => l.league_id === league.league_id)) return chain;
+        }
+        return null;
+    }, [leagueChains, league?.league_id]);
+
+    const hasMultiSeasonHistory = (activeChain?.length || 0) > 1;
+
+    // Default the trail picker to the logged-in user's team.
+    useEffect(() => {
+        if (selectedTrailRosterId || !rosters?.length) return;
+        const mine = user ? rosters.find((r) => r.owner_id === user.user_id) : null;
+        setSelectedTrailRosterId((mine || rosters[0])?.roster_id ?? null);
+    }, [rosters, user, selectedTrailRosterId]);
+
+    // Lazy-load all chain seasons' weekly matchups when the user toggles the trail.
+    useEffect(() => {
+        if (!showTrail || trailByOwner || trailLoading) return;
+        if (!activeChain || activeChain.length === 0 || !players) return;
+
+        const currentSeason = Number(state?.season) || new Date().getFullYear();
+        let cancelled = false;
+        setTrailLoading(true);
+
+        (async () => {
+            try {
+                const seasonResults = await Promise.all(activeChain.map(async (entry) => {
+                    const weeks = await Promise.all(
+                        Array.from({ length: 18 }, (_, i) =>
+                            fetchLeagueMatchups(entry.league_id, i + 1).catch(() => null)
+                        )
+                    );
+                    return { season: entry.season, rosters: entry.rosters, weeks };
+                }));
+                if (cancelled) return;
+
+                const byOwner = {};
+                seasonResults.forEach(({ season, rosters: seasonRosters, weeks }) => {
+                    const yearsAgo = Math.max(0, currentSeason - Number(season));
+                    Object.values(seasonRosters || {}).forEach((seasonRoster) => {
+                        const ownerId = seasonRoster?.owner_id;
+                        if (!ownerId) return;
+
+                        const skillAges = (seasonRoster.players || [])
+                            .map((pid) => players[pid])
+                            .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age)
+                            .map((p) => Math.max(20, p.age - yearsAgo));
+                        if (skillAges.length === 0) return;
+                        const avgAge = parseFloat(
+                            (skillAges.reduce((s, a) => s + a, 0) / skillAges.length).toFixed(1)
+                        );
+
+                        let cumulPoints = 0;
+                        let cumulGames = 0;
+                        weeks.forEach((wkData, idx) => {
+                            if (!Array.isArray(wkData)) return;
+                            const m = wkData.find((x) => x.roster_id === seasonRoster.roster_id);
+                            if (!m || !((m.points || 0) > 0)) return;
+                            cumulPoints += m.points;
+                            cumulGames += 1;
+                            const ppg = cumulPoints / cumulGames;
+                            if (!byOwner[ownerId]) byOwner[ownerId] = [];
+                            byOwner[ownerId].push({
+                                season: Number(season),
+                                week: idx + 1,
+                                age: avgAge,
+                                production: parseFloat(ppg.toFixed(1)),
+                            });
+                        });
+                    });
+                });
+                Object.keys(byOwner).forEach((k) => {
+                    byOwner[k].sort((a, b) => (a.season - b.season) || (a.week - b.week));
+                });
+                if (!cancelled) setTrailByOwner(byOwner);
+            } catch (err) {
+                console.warn('Failed to build dynasty trail', err);
+            } finally {
+                if (!cancelled) setTrailLoading(false);
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [showTrail, activeChain, players, state?.season, trailByOwner, trailLoading]);
 
     const hasCurrentSeasonData = useMemo(() => {
         if (!rosters) return false;
@@ -122,6 +220,12 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         }));
     }, [data, bestId, worstId]);
 
+    // When the trail is shown, dim non-selected teams so the focus stays on the trail.
+    const enrichedWithDim = useMemo(() => enrichedData.map((d) => ({
+        ...d,
+        dim: showTrail && selectedTrailRosterId && d.rosterId !== selectedTrailRosterId,
+    })), [enrichedData, showTrail, selectedTrailRosterId]);
+
     const CustomNode = (props) => {
         const { cx, cy, payload } = props;
         const size = payload.isBest || payload.isWorst ? 48 : 40;
@@ -136,16 +240,23 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             borderStyle = { border: `2px solid ${theme.color.lineStrong}` };
         }
 
+        const opacity = payload.dim ? 0.25 : 1;
+
         return (
             <foreignObject x={cx - offset} y={cy - offset} width={size} height={size}>
                 <img
                     src={payload.avatar}
                     alt={payload.name}
-                    style={{ width: size, height: size, borderRadius: '50%', ...borderStyle, cursor: 'pointer', background: theme.color.bg2 }}
+                    style={{ width: size, height: size, borderRadius: '50%', ...borderStyle, cursor: 'pointer', background: theme.color.bg2, opacity }}
                     title={payload.name}
                 />
             </foreignObject>
         );
+    };
+
+    const TrailDot = (props) => {
+        const { cx, cy } = props;
+        return <circle cx={cx} cy={cy} r={3} fill={trailColor} fillOpacity={0.7} />;
     };
 
     const CustomTooltip = ({ active, payload }) => {
@@ -191,12 +302,25 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return null;
     };
 
+    // Selected team's trail data (resolved by owner_id since chain rosters
+    // map by owner across seasons).
+    const selectedTrail = useMemo(() => {
+        if (!showTrail || !trailByOwner || !selectedTrailRosterId) return [];
+        const r = rosters?.find((x) => x.roster_id === selectedTrailRosterId);
+        const ownerId = r?.owner_id;
+        return ownerId ? (trailByOwner[ownerId] || []) : [];
+    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters]);
+
+    const trailColor = TEAM_HUE(selectedTrailRosterId);
+
     if (!enrichedData || enrichedData.length === 0) return null;
 
-    const minAge = Math.floor(Math.min(...enrichedData.map(d => d.age)) - 0.5);
-    const maxAge = Math.ceil(Math.max(...enrichedData.map(d => d.age)) + 0.5);
-    const minProd = Math.floor(Math.min(...enrichedData.map(d => d.production)) * 0.95);
-    const maxProd = Math.ceil(Math.max(...enrichedData.map(d => d.production)) * 1.05);
+    // Combine current snapshot + trail bounds so the visible domain doesn't clip the trail.
+    const allPoints = [...enrichedData, ...selectedTrail];
+    const minAge = Math.floor(Math.min(...allPoints.map(d => d.age)) - 0.5);
+    const maxAge = Math.ceil(Math.max(...allPoints.map(d => d.age)) + 0.5);
+    const minProd = Math.floor(Math.min(...allPoints.map(d => d.production)) * 0.95);
+    const maxProd = Math.ceil(Math.max(...allPoints.map(d => d.production)) * 1.05);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
@@ -214,9 +338,42 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                         {usingPrevSeason && <span className="text-warn ml-1">— using <span className="tnum">{parseInt(state?.season || '2026') - 1}</span> season data</span>}
                     </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
-                    <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} className="scale-75 sm:scale-100" />
+                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                    {showTrail && hasMultiSeasonHistory && (
+                        <select
+                            value={selectedTrailRosterId || ''}
+                            onChange={(e) => setSelectedTrailRosterId(Number(e.target.value))}
+                            className="bg-bg-2 border border-line text-text text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-signal max-w-[160px]"
+                            aria-label="Trail team"
+                        >
+                            {rosters?.map((r) => {
+                                const u = users?.find((u) => u.user_id === r.owner_id);
+                                return (
+                                    <option key={r.roster_id} value={r.roster_id}>
+                                        {displayTeamName(u)}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                        <span
+                            className={`font-mono text-2xs uppercase tracking-wider ${hasMultiSeasonHistory ? 'text-text-mute' : 'text-text-mute/40'}`}
+                            title={hasMultiSeasonHistory ? '' : 'Trend trail unlocks after one full season of league history'}
+                        >
+                            Trail
+                        </span>
+                        <Switch
+                            checked={showTrail}
+                            onCheckedChange={setShowTrail}
+                            disabled={!hasMultiSeasonHistory}
+                            className="scale-75 sm:scale-90"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
+                        <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} className="scale-75 sm:scale-100" />
+                    </div>
                 </div>
             </header>
 
@@ -258,7 +415,17 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                             <ReferenceLine x={averages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
                             <ReferenceLine y={averages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
 
-                            <Scatter name="Teams" data={enrichedData} shape={<CustomNode />} />
+                            {showTrail && selectedTrail.length > 1 && (
+                                <Scatter
+                                    name="Trail"
+                                    data={selectedTrail}
+                                    shape={<TrailDot />}
+                                    line={{ stroke: trailColor, strokeOpacity: 0.5, strokeDasharray: '4 4', strokeWidth: 1.5 }}
+                                    legendType="none"
+                                    isAnimationActive={false}
+                                />
+                            )}
+                            <Scatter name="Teams" data={enrichedWithDim} shape={<CustomNode />} />
                         </ScatterChart>
                     </ResponsiveContainer>
                 </div>

@@ -8,6 +8,36 @@ import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 const POSITION_GROUPS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 const ROSTER_HUE = (rosterId) => (Number(rosterId) * 47) % 360;
 
+// Absolute PPG thresholds for the Positional Strength bars. Mirror the same
+// tiers used in the AI prompt's player evaluation guide. Numbers are PPG
+// in PPR scoring; map to a 0-100 score via piecewise linear interpolation:
+//   0 → 0%, thin → 25%, average → 50%, good → 75%, elite → 100%, capped.
+const POSITION_TIERS = {
+    QB:  { thin: 10, average: 14, good: 18, elite: 22 },
+    RB:  { thin:  7, average: 11, good: 15, elite: 19 },
+    WR:  { thin:  7, average: 11, good: 15, elite: 19 },
+    TE:  { thin:  5, average:  8, good: 12, elite: 16 },
+    K:   { thin:  5, average:  7, good:  9, elite: 11 },
+    DEF: { thin:  5, average:  7, good:  9, elite: 11 },
+};
+const scorePosition = (pos, ppg) => {
+    if (ppg <= 0) return 0;
+    const t = POSITION_TIERS[pos];
+    if (!t) return 0;
+    if (ppg >= t.elite) return 100;
+    if (ppg >= t.good)    return 75 + ((ppg - t.good)    / (t.elite - t.good))    * 25;
+    if (ppg >= t.average) return 50 + ((ppg - t.average) / (t.good  - t.average)) * 25;
+    if (ppg >= t.thin)    return 25 + ((ppg - t.thin)    / (t.average - t.thin))  * 25;
+    return (ppg / t.thin) * 25;
+};
+const labelForScore = (score) => {
+    if (score >= 90) return 'Elite';
+    if (score >= 65) return 'Good';
+    if (score >= 40) return 'Average';
+    if (score > 0)   return 'Thin';
+    return '—';
+};
+
 const RosterDetail = ({ league, rosters, users, players, state, roster, currentWeekMatchups, seasonMatchups }) => {
     const navigate = useNavigate();
     const week = state?.display_week || state?.week || 1;
@@ -85,57 +115,34 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
         };
     }, [roster, players, league?.roster_positions]);
 
-    /* Positional strength: avg per-game points by position group, normalized
-       against the same metric for every other roster in the league. */
+    /* Positional strength: avg per-game points by position group, scored
+       against absolute PPG thresholds (the same tiers the AI prompt uses).
+       Result is consistent across leagues: "Elite" really means elite. */
     const positionalStrength = useMemo(() => {
-        if (!seasonMatchups || !rosters || !players) return [];
-        // For every roster, build avg points contributed by each position
-        // group across all weeks. Normalize each position 0..100.
-        const perRoster = rosters.map((r) => {
-            const totals = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-            const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-            Object.values(seasonMatchups).forEach((ms) => {
-                if (!Array.isArray(ms)) return;
-                const m = ms.find((x) => x.roster_id === r.roster_id);
-                if (!m) return;
-                (m.starters || []).forEach((pid, i) => {
-                    if (!pid || pid === '0') return;
-                    const p = players?.[pid];
-                    if (!p?.position || !POSITION_GROUPS.includes(p.position)) return;
-                    const pts = m.starters_points?.[i] || 0;
-                    if (pts > 0) {
-                        totals[p.position] += pts;
-                        counts[p.position] += 1;
-                    }
-                });
+        if (!seasonMatchups || !roster || !players) return [];
+        const totals = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+        const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+        Object.values(seasonMatchups).forEach((ms) => {
+            if (!Array.isArray(ms)) return;
+            const m = ms.find((x) => x.roster_id === roster.roster_id);
+            if (!m) return;
+            (m.starters || []).forEach((pid, i) => {
+                if (!pid || pid === '0') return;
+                const p = players?.[pid];
+                if (!p?.position || !POSITION_GROUPS.includes(p.position)) return;
+                const pts = m.starters_points?.[i] || 0;
+                if (pts > 0) {
+                    totals[p.position] += pts;
+                    counts[p.position] += 1;
+                }
             });
-            const avg = {};
-            POSITION_GROUPS.forEach((pos) => {
-                avg[pos] = counts[pos] > 0 ? totals[pos] / counts[pos] : 0;
-            });
-            return { roster_id: r.roster_id, avg };
         });
-
-        // Min/max per position across the league for normalization.
-        const range = {};
-        POSITION_GROUPS.forEach((pos) => {
-            const values = perRoster.map((r) => r.avg[pos]).filter((v) => v > 0);
-            range[pos] = {
-                min: values.length ? Math.min(...values) : 0,
-                max: values.length ? Math.max(...values) : 0,
-            };
-        });
-
-        const me = perRoster.find((r) => r.roster_id === roster?.roster_id);
-        if (!me) return [];
         return POSITION_GROUPS.map((pos) => {
-            const v = me.avg[pos];
-            const { min, max } = range[pos];
-            const norm = max > min ? Math.round(((v - min) / (max - min)) * 100) : (v > 0 ? 80 : 0);
-            const label = norm >= 80 ? 'Elite' : norm >= 60 ? 'Strong' : norm >= 40 ? 'Solid' : norm > 0 ? 'Thin' : '—';
-            return { pos, pct: norm, label, ppg: v };
+            const ppg = counts[pos] > 0 ? totals[pos] / counts[pos] : 0;
+            const pct = Math.round(scorePosition(pos, ppg));
+            return { pos, pct, label: labelForScore(pct), ppg };
         });
-    }, [seasonMatchups, rosters, players, roster?.roster_id]);
+    }, [seasonMatchups, players, roster?.roster_id]);
 
     /* Upcoming byes for this team (uses BYE_MAP_2025; will be wrong for
        other seasons but it's the only static map we have right now). */
@@ -297,6 +304,21 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                 {/* Right rail */}
                 <aside className="space-y-4 min-w-0">
                     <SectionShell title="Positional Strength">
+                        <details className="mb-3 group">
+                            <summary className="cursor-pointer font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast list-none inline-flex items-center gap-1 select-none">
+                                <span className="group-open:rotate-90 transition-transform duration-fast inline-block">›</span>
+                                How is this scored?
+                            </summary>
+                            <div className="mt-2 p-3 rounded-md bg-bg-2 border border-line text-xs text-text-dim leading-relaxed space-y-1.5">
+                                <p>Each position is scored 0–100 against absolute PPG thresholds (PPR scoring), independent of how the rest of the league performs.</p>
+                                <ul className="space-y-0.5 mt-1 font-mono text-2xs">
+                                    <li>QB · Elite ≥ 22 · Good ≥ 18 · Avg ≥ 14 · Thin ≥ 10</li>
+                                    <li>RB / WR · Elite ≥ 19 · Good ≥ 15 · Avg ≥ 11 · Thin ≥ 7</li>
+                                    <li>TE · Elite ≥ 16 · Good ≥ 12 · Avg ≥ 8 · Thin ≥ 5</li>
+                                    <li>K / DEF · Elite ≥ 11 · Good ≥ 9 · Avg ≥ 7 · Thin ≥ 5</li>
+                                </ul>
+                            </div>
+                        </details>
                         {positionalStrength.length === 0 ? (
                             <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
                                 Need at least one week of scoring to compute.
@@ -311,9 +333,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                                                 className="h-full"
                                                 style={{
                                                     width: `${p.pct}%`,
-                                                    background: p.pct >= 80
+                                                    background: p.pct >= 65
                                                         ? 'var(--good)'
-                                                        : p.pct >= 60
+                                                        : p.pct >= 40
                                                             ? 'var(--signal)'
                                                             : p.pct > 0 ? 'var(--bad)' : 'transparent',
                                                 }}
