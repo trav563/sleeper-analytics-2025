@@ -17,10 +17,10 @@ import { useGameWeather } from './_useGameWeather';
 
 const STAT_TONE = { signal: 'text-signal', good: 'text-good', text: 'text-text' };
 
-const PlayerDetail = ({ player, league, rosters, users, state }) => {
+const PlayerDetail = ({ player, league, rosters, users, state, currentWeek }) => {
     const navigate = useNavigate();
     const leagueId = league?.league_id;
-    const week = state?.display_week || state?.week || 1;
+    const week = currentWeek || state?.display_week || state?.week || 1;
     const seasonType = state?.season_type;
 
     const { seasonMatchups } = useSeasonMatchups(leagueId, week);
@@ -163,9 +163,9 @@ const PlayerDetail = ({ player, league, rosters, users, state }) => {
             tone: 'text',
         },
         {
-            label: 'Own%',
-            value: ownership != null ? `${ownership}%` : '—',
-            tone: 'text',
+            label: 'Status',
+            value: ownerUser ? 'Rostered' : 'FA',
+            tone: ownerUser ? 'text' : 'good',
         },
         {
             label: 'Rank',
@@ -402,13 +402,12 @@ const PlayerDetail = ({ player, league, rosters, users, state }) => {
                     <section className="bg-bg-1 rounded-xl border border-line p-4 md:p-5 shadow-card">
                         <header className="font-display text-md font-semibold text-text mb-3">In the League</header>
                         <p className="text-sm text-text-dim leading-relaxed mb-3">
-                            {ownership != null ? (
+                            {ownerUser ? (
                                 <>
-                                    Rostered on <span className="text-text font-semibold tnum">{ownership}%</span> of teams
-                                    {ownerUser ? (
-                                        <> · current owner: <span className="text-text font-semibold">{displayTeamName(ownerUser)}</span></>
-                                    ) : ' · currently a free agent.'}
+                                    Owner: <span className="text-text font-semibold">{displayTeamName(ownerUser)}</span>
                                 </>
+                            ) : ownership != null ? (
+                                <>Currently a free agent.</>
                             ) : (
                                 <>Roster ownership data not available.</>
                             )}

@@ -168,6 +168,8 @@ export const usePowerRankings = (seasonMatchups, rosters, users) => {
                     if (teamA.rosterId === teamB.rosterId) return;
                     if (teamA.points > teamB.points && finalScores[teamA.rosterId]) {
                         finalScores[teamA.rosterId].allPlayWins++;
+                    } else if (teamA.points < teamB.points && finalScores[teamA.rosterId]) {
+                        finalScores[teamA.rosterId].allPlayLosses++;
                     }
                 });
             });
