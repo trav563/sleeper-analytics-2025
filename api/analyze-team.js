@@ -1,27 +1,12 @@
 import { streamText } from 'ai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
 
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 
-// Vercel AI Gateway routes both providers via a single key (AI_GATEWAY_API_KEY).
-// Primary = Gemini Flash (cheap, fast). Fallback = Claude Haiku 4.5 for the
-// rare 429 / safety-blocked case Gemini hits.
-const PRIMARY_MODEL = google('gemini-2.0-flash');
-const FALLBACK_MODEL = anthropic('claude-haiku-4-5');
-
-async function streamWithFailover(prompt) {
-    try {
-        return await streamText({ model: PRIMARY_MODEL, prompt });
-    } catch (err) {
-        const msg = err?.message || '';
-        if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE/i.test(msg)) {
-            console.warn(`[ai] primary failed (${msg.slice(0, 120)}); falling back to Claude Haiku`);
-            return await streamText({ model: FALLBACK_MODEL, prompt });
-        }
-        throw err;
-    }
-}
+// String model IDs route through Vercel AI Gateway when AI_GATEWAY_API_KEY
+// is set (or VERCEL_OIDC_TOKEN on Vercel). Single key, pooled rate limits,
+// observability, billed via Vercel.
+const PRIMARY_MODEL = 'google/gemini-2.0-flash';
+const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
 // ── Rate Limiting (in-memory, per serverless instance) ──
 const rateLimitMap = new Map();
@@ -724,16 +709,50 @@ export default async function handler(req, res) {
             playerNews, weekContext, lockState
         }, analysisType, constraint);
 
-        // Stream via Vercel AI Gateway (Gemini primary, Claude Haiku failover).
-        const result = await streamWithFailover(prompt);
+        // Stream via Vercel AI Gateway. streamText() returns immediately;
+        // provider errors fire during textStream iteration. We try the
+        // primary first; if iteration throws BEFORE any chunk has been
+        // written to the response (so headers haven't been flushed), we
+        // restart with the fallback model. If the throw happens mid-stream,
+        // we surface the error via SSE.
+        const tryStream = async (modelId) => {
+            const result = streamText({ model: modelId, prompt });
+            // Buffer the first chunk so we can detect setup-time errors before
+            // committing to streaming the response back to the client.
+            const iterator = result.textStream[Symbol.asyncIterator]();
+            const first = await iterator.next();
+            return { iterator, first };
+        };
+
+        let stream;
+        let usedFallback = false;
+        try {
+            stream = await tryStream(PRIMARY_MODEL);
+        } catch (err) {
+            const msg = err?.message || '';
+            if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE/i.test(msg)) {
+                console.warn(`[ai] primary ${PRIMARY_MODEL} failed (${msg.slice(0, 200)}); falling back to ${FALLBACK_MODEL}`);
+                stream = await tryStream(FALLBACK_MODEL);
+                usedFallback = true;
+            } else {
+                throw err;
+            }
+        }
 
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Remaining', String(rateCheck.remaining));
+        res.setHeader('X-Model', usedFallback ? FALLBACK_MODEL : PRIMARY_MODEL);
 
-        for await (const chunk of result.textStream) {
-            if (chunk) res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+        // Flush the buffered first chunk, then drain the rest.
+        if (!stream.first.done && stream.first.value) {
+            res.write(`data: ${JSON.stringify({ text: stream.first.value })}\n\n`);
+        }
+        while (true) {
+            const { done, value } = await stream.iterator.next();
+            if (done) break;
+            if (value) res.write(`data: ${JSON.stringify({ text: value })}\n\n`);
         }
 
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
