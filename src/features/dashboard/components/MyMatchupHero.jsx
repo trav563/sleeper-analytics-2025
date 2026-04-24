@@ -131,7 +131,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
         return acc;
     }, '');
 
-    /* Renders one side of the hero (mirror = right side). */
+    /* Renders one side of the hero (mirror = right side, desktop only). */
     const TeamSide = ({ user, roster, score, projFinal, ceilFinal, isWinning, mirror = false }) => {
         const recordLabel = roster
             ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
@@ -143,7 +143,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
             }
         };
         return (
-            <div className={`flex items-center gap-3 md:gap-5 min-w-0 ${mirror ? 'flex-row-reverse text-right' : ''}`}>
+            <div className={`flex flex-col items-center text-center gap-2 md:gap-5 min-w-0 md:flex-row md:items-center ${mirror ? 'md:flex-row-reverse md:text-right' : 'md:text-left'}`}>
                 <button
                     type="button"
                     onClick={goTeam}
@@ -154,10 +154,10 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                         <img
                             src={avatarUrl(user.avatar)}
                             alt=""
-                            className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line"
+                            className="w-12 h-12 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line"
                         />
                     ) : (
-                        <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={56} />
+                        <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={48} />
                     )}
                 </button>
                 <div className="min-w-0">
@@ -167,12 +167,12 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     <button
                         type="button"
                         onClick={goTeam}
-                        className={`block font-display text-md md:text-xl font-bold tracking-snug text-text truncate max-w-[180px] md:max-w-[280px] hover:text-signal transition-colors duration-fast ${mirror ? 'ml-auto text-right' : 'text-left'}`}
+                        className={`block font-display text-sm md:text-xl font-bold tracking-snug text-text truncate max-w-[140px] md:max-w-[280px] mx-auto hover:text-signal transition-colors duration-fast ${mirror ? 'md:ml-auto md:mx-0 md:text-right' : 'md:mx-0 md:text-left'}`}
                     >
                         {displayTeamName(user)}
                     </button>
                     <div
-                        className={`tnum font-display text-5xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
+                        className={`tnum font-display text-4xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
                         style={isWinning ? { textShadow: '0 0 28px rgba(245,179,1,0.33)' } : undefined}
                     >
                         {score.toFixed(1)}
@@ -227,7 +227,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
             </div>
 
             {/* Teams + center pod */}
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-4 md:gap-6 items-center">
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-6 items-center">
                 <TeamSide
                     user={myUser}
                     roster={myRoster}
@@ -241,7 +241,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">
                         VS
                     </div>
-                    <div className="px-3 py-1.5 rounded-md bg-bg-3 border border-line text-center min-w-[88px]">
+                    <div className="px-2 md:px-3 py-1.5 rounded-md bg-bg-3 border border-line text-center min-w-[68px] md:min-w-[88px]">
                         <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
                             Win Prob
                         </div>

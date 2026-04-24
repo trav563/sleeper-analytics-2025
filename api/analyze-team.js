@@ -308,24 +308,21 @@ ${oppLines.join('\n')}`;
 
     // ── Instructions per analysis type ──
     const typeInstructions = {
-        full: `You MUST use EXACTLY these sections and formats. Do not deviate.
+        full: `You MUST use EXACTLY these sections and formats. Do not deviate. Do NOT use markdown tables. Use the bullet formats shown.
 
 ## Roster Grade
-Use this EXACT table format:
-| Position | Grade | Key Players | Assessment |
-|----------|-------|-------------|------------|
-| QB | [A+ to F] | [Names] | [1 sentence using their stats/projections] |
-| RB | [A+ to F] | [Names] | [1 sentence] |
-| WR | [A+ to F] | [Names] | [1 sentence] |
-| TE | [A+ to F] | [Names] | [1 sentence] |
-| K | [A+ to F] | [Name] | [1 sentence] |
-| DEF | [A+ to F] | [Name] | [1 sentence] |
-| **Overall** | **[Grade]** | | **[1 sentence summary]** |
+Use this EXACT bullet format, one bullet per position:
+- **QB · [A+ to F]** — [Names] · [1 sentence using their stats/projections]
+- **RB · [A+ to F]** — [Names] · [1 sentence]
+- **WR · [A+ to F]** — [Names] · [1 sentence]
+- **TE · [A+ to F]** — [Names] · [1 sentence]
+- **K · [A+ to F]** — [Name] · [1 sentence]
+- **DEF · [A+ to F]** — [Name] · [1 sentence]
+- **Overall · [Grade]** — [1 sentence summary]
 
 ## This Week: Start/Sit
-Use this EXACT table format for the optimal lineup:
-| Slot | Player | Proj Pts | Why |
-|------|--------|----------|-----|
+Use this EXACT bullet format for the optimal lineup, one bullet per starting slot:
+- **[Slot]:** [Player] — [Proj Pts] proj · [1 sentence why]
 (Fill EVERY starting slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Maximize projected points.)
 
 **On the Bench:**
@@ -347,11 +344,11 @@ ${gp === 0 ? `This is PRESEASON — no games have been played yet. Use this form
 - **Key weeks:** [Identify 2-3 critical upcoming matchups]
 - **Strategy:** [1-2 sentences on compete now vs build for future]`}`,
 
-        startsit: `You MUST use EXACTLY these sections and formats.
+        startsit: `You MUST use EXACTLY these sections and formats. Do NOT use markdown tables.
 
 ## Optimal Lineup
-| Slot | Player | Proj Pts | Why |
-|------|--------|----------|-----|
+Use this EXACT bullet format, one bullet per starting slot:
+- **[Slot]:** [Player] — [Proj Pts] proj · [1 sentence why]
 (Fill EVERY slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Use projections as primary factor.)
 
 **On the Bench:**
@@ -372,14 +369,12 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
 ## Summary
 - [1-2 sentences on overall waiver strategy for this week]`,
 
-        playoff: gp === 0 ? `You MUST use EXACTLY this format. This is PRESEASON — no games have been played yet.
+        playoff: gp === 0 ? `You MUST use EXACTLY this format. This is PRESEASON — no games have been played yet. Do NOT use markdown tables.
 
 ## Season Preview
-| Metric | Value |
-|--------|-------|
-| League Size | ${numTeams} teams |
-| Playoff Cutoff | Top ${settings.playoff_teams || 6} |
-| Playoffs Start | Week ${settings.playoff_week_start || 15} |
+- **League Size:** ${numTeams} teams
+- **Playoff Cutoff:** Top ${settings.playoff_teams || 6}
+- **Playoffs Start:** Week ${settings.playoff_week_start || 15}
 
 ## Roster Readiness
 - **Strengths:** [Position groups that are ready for Week 1]
@@ -391,16 +386,14 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
 - **Move 2:** [Another specific action]
 - **Ceiling:** [Best case scenario for this roster]` :
 
-        `You MUST use EXACTLY this format.
+        `You MUST use EXACTLY this format. Do NOT use markdown tables.
 
 ## Playoff Path
-| Metric | Value |
-|--------|-------|
-| Current Rank | #${myRank} of ${numTeams} |
-| Record | ${record} |
-| Playoff Cutoff | Top ${settings.playoff_teams || 6} |
-| Playoffs Start | Week ${settings.playoff_week_start || 15} |
-| Projected Record Needed | [Your estimate] |
+- **Current Rank:** #${myRank} of ${numTeams}
+- **Record:** ${record}
+- **Playoff Cutoff:** Top ${settings.playoff_teams || 6}
+- **Playoffs Start:** Week ${settings.playoff_week_start || 15}
+- **Projected Record Needed:** [Your estimate]
 
 ## Key Matchups
 Use bullet format:
