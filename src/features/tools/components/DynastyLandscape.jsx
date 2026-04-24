@@ -39,10 +39,19 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     }, [rosters, user, selectedTrailRosterId]);
 
     // Per-season aggregate trail. Each chain entry's roster already includes
-    // settings.fpts/wins/losses/ties + players[] — no API fetches needed.
+    // settings.fpts/ppts/wins/losses/ties + players[] — no API fetches needed.
+    // Production unit (PPG vs Max PF) tracks the snapshot's useMaxPf toggle.
     const trailByOwner = useMemo(() => {
         if (!activeChain || activeChain.length < 2 || !players) return null;
         const currentSeason = Number(state?.season) || new Date().getFullYear();
+
+        // Look up team display names by ownerId once (so trail tooltips can
+        // label themselves without picking up the wrong nearby snapshot).
+        const nameByOwner = {};
+        (users || []).forEach((u) => {
+            if (u?.user_id) nameByOwner[u.user_id] = displayTeamName(u);
+        });
+
         const out = {};
         activeChain.forEach((entry) => {
             const yearsAgo = Math.max(0, currentSeason - Number(entry.season));
@@ -58,7 +67,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 if (games === 0) return; // skip preseason / no completed games
 
                 const fpts = (settings.fpts || 0) + ((settings.fpts_decimal || 0) / 100);
-                const ppg = parseFloat((fpts / games).toFixed(1));
+                const ppts = (settings.ppts || 0) + ((settings.ppts_decimal || 0) / 100);
+                const ppg = fpts / games;
+                const production = parseFloat((useMaxPf ? ppts : ppg).toFixed(1));
 
                 const skillAges = (seasonRoster.players || [])
                     .map((pid) => players[pid])
@@ -73,13 +84,15 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 out[ownerId].push({
                     season: Number(entry.season),
                     age: avgAge,
-                    production: ppg,
+                    production,
+                    name: nameByOwner[ownerId] || 'Unknown',
+                    isTrail: true,
                 });
             });
         });
         Object.keys(out).forEach((k) => out[k].sort((a, b) => a.season - b.season));
         return out;
-    }, [activeChain, players, state?.season]);
+    }, [activeChain, players, state?.season, useMaxPf, users]);
 
     const hasCurrentSeasonData = useMemo(() => {
         if (!rosters) return false;
@@ -232,67 +245,102 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     };
 
     const CustomTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            const d = payload[0].payload;
+        if (!active || !payload || !payload.length) return null;
+        const d = payload[0].payload;
 
-            let classification = '';
-            if (d.production >= averages.production && d.age <= averages.age) classification = 'Dynasty Elite';
-            else if (d.production >= averages.production && d.age > averages.age) classification = 'Win-Now';
-            else if (d.production < averages.production && d.age <= averages.age) classification = 'Rebuilder';
-            else classification = 'Danger Zone';
-
-            let highlight = '';
-            if (d.isBest) highlight = 'Dynasty King';
-            else if (d.isWorst) highlight = 'Cellar Dweller';
-
+        // Trail-dot tooltip: report the trail team + season + production.
+        if (d.isTrail) {
             return (
                 <div className="bg-bg-1 border border-line p-3 rounded-md shadow-pop z-50">
-                    <p className="font-semibold text-text mb-1">{d.name}</p>
+                    <p className="font-semibold text-text mb-1">
+                        {d.name} <span className="font-mono text-2xs text-text-mute">· {d.season}</span>
+                    </p>
                     <div className="space-y-1 text-xs text-text-dim">
                         <div className="flex justify-between gap-4">
                             <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg Age</span>
                             <span className="font-mono tnum text-text">{d.age} yrs</span>
                         </div>
                         <div className="flex justify-between gap-4">
-                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{d.productionLabel}</span>
-                            <span className={`font-mono font-bold tnum ${d.production >= averages.production ? 'text-good' : 'text-bad'}`}>
-                                {d.production}
-                            </span>
+                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
+                            <span className="font-mono font-bold tnum text-text">{d.production}</span>
                         </div>
-                        <div className="pt-2 mt-1 border-t border-line text-center font-mono text-2xs uppercase tracking-wider font-bold text-text">
-                            {classification}
-                        </div>
-                        {highlight && (
-                            <div className={`text-center font-bold font-mono text-2xs uppercase tracking-wider ${d.isBest ? 'text-signal' : 'text-bad'}`}>
-                                {highlight}
-                            </div>
-                        )}
                     </div>
                 </div>
             );
         }
-        return null;
+
+        let classification = '';
+        if (d.production >= averages.production && d.age <= averages.age) classification = 'Dynasty Elite';
+        else if (d.production >= averages.production && d.age > averages.age) classification = 'Win-Now';
+        else if (d.production < averages.production && d.age <= averages.age) classification = 'Rebuilder';
+        else classification = 'Danger Zone';
+
+        let highlight = '';
+        if (d.isBest) highlight = 'Dynasty King';
+        else if (d.isWorst) highlight = 'Cellar Dweller';
+
+        return (
+            <div className="bg-bg-1 border border-line p-3 rounded-md shadow-pop z-50">
+                <p className="font-semibold text-text mb-1">{d.name}</p>
+                <div className="space-y-1 text-xs text-text-dim">
+                    <div className="flex justify-between gap-4">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Avg Age</span>
+                        <span className="font-mono tnum text-text">{d.age} yrs</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{d.productionLabel}</span>
+                        <span className={`font-mono font-bold tnum ${d.production >= averages.production ? 'text-good' : 'text-bad'}`}>
+                            {d.production}
+                        </span>
+                    </div>
+                    <div className="pt-2 mt-1 border-t border-line text-center font-mono text-2xs uppercase tracking-wider font-bold text-text">
+                        {classification}
+                    </div>
+                    {highlight && (
+                        <div className={`text-center font-bold font-mono text-2xs uppercase tracking-wider ${d.isBest ? 'text-signal' : 'text-bad'}`}>
+                            {highlight}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
     };
 
-    // Selected team's trail data (resolved by owner_id since chain rosters
-    // map by owner across seasons).
+    // Selected team's trail. We replace the current-season chain entry with
+    // the snapshot's exact (age, production) so the line tail lands on the
+    // bright current marker — no floating gap.
     const selectedTrail = useMemo(() => {
-        if (!showTrail || !trailByOwner || !selectedTrailRosterId) return [];
+        if (!showTrail || !trailByOwner || !selectedTrailRosterId || !enrichedData) return [];
         const r = rosters?.find((x) => x.roster_id === selectedTrailRosterId);
         const ownerId = r?.owner_id;
-        return ownerId ? (trailByOwner[ownerId] || []) : [];
-    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters]);
+        if (!ownerId) return [];
+        const baseTrail = trailByOwner[ownerId] || [];
+        const currentSnapshot = enrichedData.find((d) => d.rosterId === selectedTrailRosterId);
+        if (!currentSnapshot) return baseTrail;
+        const currentSeason = Number(state?.season) || new Date().getFullYear();
+        const filtered = baseTrail.filter((p) => p.season !== currentSeason);
+        return [
+            ...filtered,
+            {
+                season: currentSeason,
+                age: currentSnapshot.age,
+                production: currentSnapshot.production,
+                name: currentSnapshot.name,
+                isTrail: true,
+            },
+        ];
+    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters, enrichedData, state?.season]);
 
     const trailColor = TEAM_HUE(selectedTrailRosterId);
 
     if (!enrichedData || enrichedData.length === 0) return null;
 
-    // Combine current snapshot + trail bounds so the visible domain doesn't clip the trail.
-    const allPoints = [...enrichedData, ...selectedTrail];
-    const minAge = Math.floor(Math.min(...allPoints.map(d => d.age)) - 0.5);
-    const maxAge = Math.ceil(Math.max(...allPoints.map(d => d.age)) + 0.5);
-    const minProd = Math.floor(Math.min(...allPoints.map(d => d.production)) * 0.95);
-    const maxProd = Math.ceil(Math.max(...allPoints.map(d => d.production)) * 1.05);
+    // Bounds from snapshot only — keeps the grid stable and reference lines
+    // anchored to league averages even when the trail is enabled.
+    const minAge = Math.floor(Math.min(...enrichedData.map(d => d.age)) - 0.5);
+    const maxAge = Math.ceil(Math.max(...enrichedData.map(d => d.age)) + 0.5);
+    const minProd = Math.floor(Math.min(...enrichedData.map(d => d.production)) * 0.95);
+    const maxProd = Math.ceil(Math.max(...enrichedData.map(d => d.production)) * 1.05);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
