@@ -16,6 +16,9 @@ const DashboardPage = () => {
     const [selectedUserId, setSelectedUserId] = useState('');
 
     const currentNFLWeek = currentWeek || state?.display_week || state?.week || 1;
+    const isHistoricalSeason = league?.season && state?.season &&
+        Number(league.season) < Number(state.season);
+    const anchorLabel = isHistoricalSeason ? '(Final)' : '(Current)';
     const [selectedWeek, setSelectedWeek] = useState(currentNFLWeek);
     const [viewMatchups, setViewMatchups] = useState([]);
     const [loadingMatchups, setLoadingMatchups] = useState(false);
@@ -94,7 +97,7 @@ const DashboardPage = () => {
                         >
                             {weekOptions.map((w) => (
                                 <option key={w} value={w}>
-                                    {w}{w === currentNFLWeek ? ' (Current)' : ''}
+                                    {w}{w === currentNFLWeek ? ` ${anchorLabel}` : ''}
                                 </option>
                             ))}
                         </select>
