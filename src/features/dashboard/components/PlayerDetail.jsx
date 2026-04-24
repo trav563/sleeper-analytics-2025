@@ -17,7 +17,7 @@ import { useGameWeather } from './_useGameWeather';
 
 const STAT_TONE = { signal: 'text-signal', good: 'text-good', text: 'text-text' };
 
-const PlayerDetail = ({ player, league, rosters, users, state, currentWeek }) => {
+const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHistoricalSeason }) => {
     const navigate = useNavigate();
     const leagueId = league?.league_id;
     const week = currentWeek || state?.display_week || state?.week || 1;
@@ -359,7 +359,7 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek }) =>
                                     {chartWeeks.map((w, i) => {
                                         const h = (w.points / maxPoints) * 180;
                                         const x = 20 + i * 80;
-                                        const isCurrent = w.week === week;
+                                        const isCurrent = !isHistoricalSeason && w.week === week;
                                         return (
                                             <g key={w.week}>
                                                 <rect

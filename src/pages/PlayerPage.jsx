@@ -5,6 +5,8 @@ const PlayerPage = () => {
     const { playerId } = useParams();
     const { players, rosters, users, league, state, currentWeek } = useOutletContext();
     const player = players?.[playerId] ? { ...players[playerId], player_id: playerId } : null;
+    const isHistoricalSeason = league?.season && state?.season &&
+        Number(league.season) < Number(state.season);
 
     return (
         <PlayerDetail
@@ -14,6 +16,7 @@ const PlayerPage = () => {
             users={users}
             state={state}
             currentWeek={currentWeek}
+            isHistoricalSeason={isHistoricalSeason}
         />
     );
 };
