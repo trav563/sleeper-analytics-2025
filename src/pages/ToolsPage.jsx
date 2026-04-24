@@ -9,7 +9,7 @@ import HistoricalBanner from '../components/layout/HistoricalBanner';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
-    const { league, rosters, users, players, currentWeek, tradedPicks, state } = useOutletContext();
+    const { league, rosters, users, players, currentWeek, tradedPicks, state, drafts } = useOutletContext();
 
     // Comprehensive Loading Guard
     // Ensure all critical data (including Arrays) is present before rendering tools
@@ -57,6 +57,7 @@ const ToolsPage = () => {
                     players={players}
                     league={league}
                     state={state}
+                    drafts={drafts}
                 />
             )}
 

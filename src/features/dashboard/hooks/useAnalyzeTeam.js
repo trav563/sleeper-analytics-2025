@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-const COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
-function getCacheKey(leagueId, userId, week, analysisType) {
-    return `ai_analysis:${leagueId}:${userId}:${week}:${analysisType}`;
+function getCacheKey(leagueId, userId, week, analysisType, constraint) {
+    const c = constraint ? `:${constraint}` : '';
+    return `ai_analysis:${leagueId}:${userId}:${week}:${analysisType}${c}`;
 }
 
 function readCache(key) {
@@ -26,23 +27,32 @@ function writeCache(key, text) {
     }
 }
 
-function getCooldownRemaining(cached) {
+function getCooldownRemaining(cached, cooldownMs) {
     if (!cached) return 0;
     const elapsed = Date.now() - cached.timestamp;
-    return Math.max(0, COOLDOWN_MS - elapsed);
+    return Math.max(0, cooldownMs - elapsed);
 }
 
-export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' } = {}) {
+export function useAnalyzeTeam({
+    leagueId,
+    userId,
+    week,
+    analysisType = 'roster',
+    cooldownMs = DEFAULT_COOLDOWN_MS,
+} = {}) {
     const [analysis, setAnalysis] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [remaining, setRemaining] = useState(null);
     const [cachedAt, setCachedAt] = useState(null);
     const [cooldownRemaining, setCooldownRemaining] = useState(0);
+    const [activeConstraint, setActiveConstraint] = useState(null);
     const abortRef = useRef(null);
     const timerRef = useRef(null);
 
-    const cacheKey = leagueId && userId && week ? getCacheKey(leagueId, userId, week, analysisType) : null;
+    const cacheKey = leagueId && userId && week
+        ? getCacheKey(leagueId, userId, week, analysisType, activeConstraint)
+        : null;
 
     // Load cached result when params change
     useEffect(() => {
@@ -51,14 +61,14 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
         if (cached) {
             setAnalysis(cached.text);
             setCachedAt(cached.timestamp);
-            setCooldownRemaining(getCooldownRemaining(cached));
+            setCooldownRemaining(getCooldownRemaining(cached, cooldownMs));
         } else {
             setAnalysis('');
             setCachedAt(null);
             setCooldownRemaining(0);
         }
         setError(null);
-    }, [cacheKey]);
+    }, [cacheKey, cooldownMs]);
 
     // Cooldown countdown timer
     useEffect(() => {
@@ -68,29 +78,32 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
         timerRef.current = setInterval(() => {
             if (!cacheKey) return;
             const cached = readCache(cacheKey);
-            const rem = getCooldownRemaining(cached);
+            const rem = getCooldownRemaining(cached, cooldownMs);
             setCooldownRemaining(rem);
             if (rem <= 0) clearInterval(timerRef.current);
         }, 30000);
 
         return () => clearInterval(timerRef.current);
-    }, [cooldownRemaining, cacheKey]);
+    }, [cooldownRemaining, cacheKey, cooldownMs]);
 
-    const analyze = useCallback(async ({ force = false } = {}) => {
+    const analyze = useCallback(async ({ force = false, constraint = null } = {}) => {
         if (!leagueId || !userId || !week) return;
 
-        if (!force && cacheKey) {
-            const cached = readCache(cacheKey);
-            const rem = getCooldownRemaining(cached);
-            if (rem > 0) {
+        const effectiveCacheKey = getCacheKey(leagueId, userId, week, analysisType, constraint);
+        setActiveConstraint(constraint);
+
+        if (!force) {
+            const cached = readCache(effectiveCacheKey);
+            const rem = getCooldownRemaining(cached, cooldownMs);
+            if (cached && rem > 0) {
+                setAnalysis(cached.text);
+                setCachedAt(cached.timestamp);
                 setCooldownRemaining(rem);
-                setError(`Analysis cached. Re-analyze available in ${Math.ceil(rem / 60000)} minutes.`);
+                setError(null);
                 return;
             }
-        }
-
-        if (force && cacheKey) {
-            try { localStorage.removeItem(cacheKey); } catch {}
+        } else {
+            try { localStorage.removeItem(effectiveCacheKey); } catch {}
         }
 
         if (abortRef.current) abortRef.current.abort();
@@ -105,17 +118,27 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType }),
+                body: JSON.stringify({ leagueId, userId, week, analysisType, constraint }),
                 signal: controller.signal,
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                if (response.status === 429) {
-                    setRemaining(errorData.remaining ?? 0);
-                    throw new Error(errorData.error || 'Rate limit exceeded');
+                let serverMessage = '';
+                try {
+                    const errorData = await response.json();
+                    serverMessage = errorData?.error || '';
+                    if (response.status === 429) {
+                        setRemaining(errorData.remaining ?? 0);
+                    }
+                } catch {
+                    // body wasn't JSON
                 }
-                throw new Error(errorData.error || `Request failed (${response.status})`);
+                if (!serverMessage) {
+                    if (response.status === 429) serverMessage = 'Rate limit reached. Try again later.';
+                    else if (response.status === 500) serverMessage = 'AI service error. Check that GEMINI_API_KEY is set in Vercel.';
+                    else serverMessage = `Request failed (${response.status}).`;
+                }
+                throw new Error(serverMessage);
             }
 
             const remainingHeader = response.headers.get('X-Remaining');
@@ -125,6 +148,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
             const decoder = new TextDecoder();
             let buffer = '';
             let fullText = '';
+            let streamError = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -139,21 +163,26 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
                     try {
                         const data = JSON.parse(line.slice(6));
                         if (data.done) break;
-                        if (data.error) throw new Error(data.error);
+                        if (data.error) { streamError = data.error; break; }
                         if (data.text) {
                             fullText += data.text;
                             setAnalysis(fullText);
                         }
-                    } catch (parseErr) {
+                    } catch {
                         // Skip parse errors on chunks
                     }
                 }
+                if (streamError) break;
             }
 
-            if (fullText && cacheKey) {
-                writeCache(cacheKey, fullText);
+            if (streamError) throw new Error(streamError);
+
+            if (fullText) {
+                writeCache(effectiveCacheKey, fullText);
                 setCachedAt(Date.now());
-                setCooldownRemaining(COOLDOWN_MS);
+                setCooldownRemaining(cooldownMs);
+            } else {
+                throw new Error('No response from AI service. Check that GEMINI_API_KEY is configured.');
             }
 
         } catch (err) {
@@ -163,7 +192,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
             setLoading(false);
             abortRef.current = null;
         }
-    }, [leagueId, userId, week, analysisType, cacheKey]);
+    }, [leagueId, userId, week, analysisType, cooldownMs]);
 
     const cancel = useCallback(() => {
         if (abortRef.current) {
@@ -176,6 +205,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
     const clear = useCallback(() => {
         setAnalysis('');
         setError(null);
+        setActiveConstraint(null);
     }, []);
 
     const isOnCooldown = cooldownRemaining > 0 && !loading;
@@ -184,6 +214,7 @@ export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'full' }
     return {
         analysis, loading, error, remaining,
         cachedAt, isOnCooldown, cooldownMinutes,
+        activeConstraint,
         analyze, cancel, clear
     };
 }
