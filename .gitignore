@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# External design package downloaded from Claude Design — kept locally as
+# a read-only reference; not part of source control.
+/league-analysis-ui-overhaul/
+/*.zip

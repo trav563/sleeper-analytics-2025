@@ -1,3 +1,234 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Note on token naming:
+   - The shadcn-style HSL tokens (--background, --card, --accent (gray),
+     --primary, etc.) below are consumed by every existing src/components/ui/
+     primitive. Do NOT remove or rewire them.
+   - The Broadcast Scoreboard tokens (--bg, --bg-1..3, --signal, --signal-2,
+     --good, --bad, --warn, --live, etc.) are the new design system.
+     Note: handoff/components.md and handoff/tokens.css call the gold accent
+     "accent" — we renamed it to "signal" here to avoid colliding with
+     shadcn's gray --accent. When following a handoff recipe, translate
+     `accent` -> `signal` and `accent-2` -> `signal-2` at point of use.
+   ============================================================ */
+
+@layer base {
+    :root {
+        /* ---------- Existing shadcn HSL tokens (do not remove) ---------- */
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+
+        --radius: 0.5rem;
+
+        /* ---------- Broadcast Scoreboard tokens (dark mode default) ---------- */
+
+        /* Surfaces */
+        --bg:        #07080A;
+        --bg-1:      #0F1115;
+        --bg-2:      #161920;
+        --bg-3:      #1E222B;
+
+        /* Foreground */
+        --text:      #F5F6F8;
+        --text-dim:  #9097A3;
+        --text-mute: #5A6170;
+
+        /* Lines */
+        --line:        rgba(255, 255, 255, 0.06);
+        --line-strong: rgba(255, 255, 255, 0.12);
+
+        /* Brand / Signal (renamed from --accent / --accent-2 to avoid shadcn collision) */
+        --signal:    #F5B301;
+        --signal-2:  #FF5A36;
+
+        /* Always-dark ink for use on gold/light surfaces (CTA button text, AI badges).
+           Stays #0B0C10 in light mode too — it's "ink", not a theme color. */
+        --ink:       #0B0C10;
+
+        /* Semantic */
+        --good:      #4ADE80;
+        --bad:       #F87171;
+        --warn:      #FBBF24;
+        --live:      #22E07A;
+
+        /* Type stack */
+        --font-sans:    "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        --font-display: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+        --font-mono:    "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+        /* Type scale */
+        --text-2xs: 10px;
+        --text-xs:  11px;
+        --text-sm:  12px;
+        --text-base:13px;
+        --text-md:  14px;
+        --text-lg:  16px;
+        --text-xl:  20px;
+        --text-2xl: 26px;
+        --text-3xl: 34px;
+        --text-4xl: 44px;
+        --text-5xl: 76px;
+
+        /* Letter spacing */
+        --tracking-tight: -0.03em;
+        --tracking-snug:  -0.02em;
+        --tracking-wide:  0.08em;
+        --tracking-wider: 0.14em;
+
+        /* Spacing (4px base) */
+        --space-0:  0px;
+        --space-1:  4px;
+        --space-2:  8px;
+        --space-3:  12px;
+        --space-4:  16px;
+        --space-5:  20px;
+        --space-6:  24px;
+        --space-8:  32px;
+        --space-10: 40px;
+        --space-12: 48px;
+
+        /* Radii */
+        --radius-sm:   4px;
+        --radius-md:   8px;
+        --radius-lg:   12px;
+        --radius-xl:   16px;
+        --radius-2xl:  20px;
+        --radius-full: 9999px;
+
+        /* Shadows / Glows */
+        --shadow-card:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+        --shadow-pop:   0 12px 40px rgba(0, 0, 0, 0.5);
+        --glow-signal:  0 0 24px rgba(245, 179, 1, 0.35);
+        --glow-live:    0 0 10px rgba(255, 90, 54, 0.6);
+
+        /* Motion */
+        --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+        --dur-fast:    120ms;
+        --dur-base:    200ms;
+        --dur-slow:    400ms;
+    }
+
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+    }
+
+    /* Broadcast Scoreboard light-mode override (plumbing only, no toggle yet) */
+    [data-theme="light"] {
+        --bg:        #FAFAF7;
+        --bg-1:      #FFFFFF;
+        --bg-2:      #F3F3EE;
+        --bg-3:      #E9E9E2;
+        --text:      #0B0C10;
+        --text-dim:  #4B5260;
+        --text-mute: #8A91A0;
+        --line:        rgba(0, 0, 0, 0.06);
+        --line-strong: rgba(0, 0, 0, 0.12);
+        --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.05);
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+    }
+}
+
+/* ---------- Broadcast Scoreboard utilities ---------- */
+.tnum     { font-variant-numeric: tabular-nums; }
+.live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--signal-2);
+    box-shadow: var(--glow-live);
+    animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+/* Team color helper — call with CSS custom property --h (hue) */
+.team-tint {
+    background: oklch(62% 0.18 var(--h));
+}
+.team-tint-soft {
+    background: oklch(62% 0.18 var(--h) / 0.18);
+}
+
+/* Striped placeholder for player headshots / images we don't have. */
+.striped-placeholder {
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.04) 6px,
+        rgba(255, 255, 255, 0.08) 6px,
+        rgba(255, 255, 255, 0.08) 12px
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .live-dot { animation: none; }
+}
