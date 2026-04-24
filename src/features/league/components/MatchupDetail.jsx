@@ -228,9 +228,6 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
         const myPoints = myMatchup.starters_points || [];
         const oppPoints = oppMatchup?.starters_points || [];
 
-        // Treat any week before the live one as fully concluded (no live data).
-        const isHistorical = currentNFLWeek != null && week < currentNFLWeek;
-
         const myFullProj = sumProjFromAvg(myStarters, playerAvg);
         const oppFullProj = sumProjFromAvg(oppStarters, playerAvg);
 
@@ -242,16 +239,6 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             oppProjRemaining: oppFullProj,
         });
         const checkpoints = [{ label: 'Pregame', myWP: pregameWP }];
-
-        if (isHistorical) {
-            // Past-season match: jump straight to the final state from actual scores.
-            checkpoints.push({
-                label: 'Final',
-                myWP: (myMatchup.points || 0) > (oppMatchup?.points || 0) ? 1
-                    : (myMatchup.points || 0) < (oppMatchup?.points || 0) ? 0 : 0.5,
-            });
-            return checkpoints;
-        }
 
         // Map each starter to its NFL game (gameId, kickoff). Group by game so a
         // game's completion advances both teams' starters in that game at once.
@@ -280,7 +267,42 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             .map(([gameId]) => gameId);
 
         if (completedGames.length === 0) {
-            return checkpoints; // pregame only
+            // No ESPN game-grouping available (true past-season case where ESPN
+            // returns the wrong year's data). Fall back to per-starter
+            // checkpoints using starters_points as proxy for "completed".
+            const allStarters = [
+                ...myStarters.map((pid, i) => ({ side: 'me', pid, pts: myPoints[i] || 0 })),
+                ...oppStarters.map((pid, i) => ({ side: 'opp', pid, pts: oppPoints[i] || 0 })),
+            ];
+            const anyScored = allStarters.some((s) => s.pts > 0);
+            if (!anyScored) return checkpoints; // truly no data — pregame only
+
+            const finishedPids = new Set();
+            allStarters.forEach((s) => {
+                finishedPids.add(s.pid);
+                let myActual = 0;
+                let oppActual = 0;
+                const myRemaining = [];
+                const oppRemaining = [];
+                myStarters.forEach((pid, i) => {
+                    if (finishedPids.has(pid)) myActual += myPoints[i] || 0;
+                    else myRemaining.push(pid);
+                });
+                oppStarters.forEach((pid, i) => {
+                    if (finishedPids.has(pid)) oppActual += oppPoints[i] || 0;
+                    else oppRemaining.push(pid);
+                });
+                const myProjRemaining = sumProjFromAvg(myRemaining, playerAvg);
+                const oppProjRemaining = sumProjFromAvg(oppRemaining, playerAvg);
+                const myWP = computeWinProbability({
+                    myCurrent: myActual,
+                    oppCurrent: oppActual,
+                    myProjRemaining,
+                    oppProjRemaining,
+                });
+                checkpoints.push({ label: `+${finishedPids.size}`, myWP });
+            });
+            return checkpoints;
         }
 
         const finishedGameIds = new Set();

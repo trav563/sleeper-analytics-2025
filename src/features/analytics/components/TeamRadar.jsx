@@ -4,7 +4,7 @@ import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName } from '../../../utils/nflData';
 import { theme } from '../../../lib/theme';
 
-const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users, opponentRosterId, opponentTeamName }) => {
+const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users, opponentRosterId, opponentTeamName, headerExtras }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
 
     const selectedTeamName = useMemo(() => {
@@ -81,6 +81,11 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-0.5">
                     Avg starter points by position
                 </p>
+                {headerExtras && (
+                    <div className="mt-3 pt-3 border-t border-line">
+                        {headerExtras}
+                    </div>
+                )}
             </header>
             {children}
         </section>
