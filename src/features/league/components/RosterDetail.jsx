@@ -171,7 +171,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
         leagueId: league?.league_id,
         userId: roster?.owner_id,
         week,
-        analysisType: 'full',
+        analysisType: 'roster',
     });
 
     /* Hero-strip stats. */

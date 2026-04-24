@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
-import { fetchSeasonStats } from '../../../utils/sleeper';
+import { fetchSeasonStats, getRookieLockState } from '../../../utils/sleeper';
 import { playerHeadshotUrl } from '../../../utils/nflData';
 import { Loader2, AlertTriangle, TrendingUp, ShieldCheck, Skull } from 'lucide-react';
 
@@ -29,10 +29,15 @@ const PlayerInfo = ({ player, ppg }) => {
     );
 };
 
-const RosterClogger = ({ rosters, players, league }) => {
+const RosterClogger = ({ rosters, players, league, drafts }) => {
     const { user } = useSleeper();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const { rookiesLocked, nextDraftStartTime, label: lockLabel } = useMemo(
+        () => getRookieLockState(league, drafts),
+        [league, drafts]
+    );
 
     useEffect(() => {
         const loadStats = async () => {
@@ -73,7 +78,10 @@ const RosterClogger = ({ rosters, players, league }) => {
                 p.search_rank < 1000 &&
                 ['QB', 'RB', 'WR', 'TE'].includes(p.position) &&
                 p.team &&
-                (p.status === 'Active' || !p.status)
+                (p.status === 'Active' || !p.status) &&
+                // Rookies (years_exp = 0 / null pre-draft prospects) are locked
+                // until the league's rookie draft completes.
+                (!rookiesLocked || (p.years_exp != null && p.years_exp > 0))
             )
             .sort((a, b) => (a.search_rank || 9999) - (b.search_rank || 9999))
             .slice(0, 50);
@@ -141,7 +149,7 @@ const RosterClogger = ({ rosters, players, league }) => {
         });
 
         return results.sort((a, b) => (a.player.search_rank || 9999) - (b.player.search_rank || 9999));
-    }, [rosters, players, stats, user, league]);
+    }, [rosters, players, stats, user, league, rookiesLocked]);
 
     if (loading) {
         return (
@@ -183,6 +191,21 @@ const RosterClogger = ({ rosters, players, league }) => {
                 <h3 className="mt-1 font-display text-lg font-semibold text-text">Bench Drop Candidates</h3>
                 <p className="text-xs text-text-dim mt-1">Identifying low-upside bench players you can safely drop.</p>
             </header>
+
+            {rookiesLocked && (
+                <div className="mx-4 mt-4 flex items-start gap-2 p-3 rounded-md bg-warn/10 border border-warn/30 text-warn">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                    <div className="text-xs">
+                        <span className="font-mono text-2xs uppercase tracking-wider font-bold mr-2">{lockLabel}</span>
+                        <span className="text-text">
+                            Rookies are not yet available to add
+                            {nextDraftStartTime
+                                ? ` — your league's rookie draft is scheduled for ${new Date(nextDraftStartTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}.`
+                                : '.'}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             <div className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

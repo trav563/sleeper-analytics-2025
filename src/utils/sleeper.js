@@ -93,11 +93,52 @@ export const fetchLeague = async (leagueId) => {
 
 /**
  * Fetch draft picks for a specific draft
- * @param {string} draftId 
+ * @param {string} draftId
  */
 export const fetchDraftPicks = async (draftId) => {
     const timestamp = Date.now();
     return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
+};
+
+/**
+ * Fetch all drafts attached to a league (startup, rookie, supplemental).
+ * @param {string} leagueId
+ */
+export const fetchLeagueDrafts = async (leagueId) => {
+    return fetchSleeper(`/league/${leagueId}/drafts`);
+};
+
+/**
+ * Derive whether rookies are currently locked (un-pickable from waivers).
+ * Dynasty/keeper leagues with a pending current-season draft block rookie
+ * pickups in Sleeper itself; we mirror that rule so suggestions don't
+ * surface unattainable players.
+ *
+ * @param {object} league   league object from /league/{id}
+ * @param {array}  drafts   array from /league/{id}/drafts
+ * @returns {{ rookiesLocked: boolean, nextDraftStartTime: number|null, label: string }}
+ */
+export const getRookieLockState = (league, drafts) => {
+    const out = { rookiesLocked: false, nextDraftStartTime: null, label: '' };
+    if (!league || !Array.isArray(drafts)) return out;
+    const type = league.settings?.type;
+    // Dynasty (2) and keeper (1) leagues lock rookies before their rookie draft.
+    if (type !== 1 && type !== 2) return out;
+    const season = String(league.season || '');
+    const pending = drafts.filter(
+        (d) => String(d?.season || '') === season &&
+            (d?.status === 'pre_draft' || d?.status === 'drafting')
+    );
+    if (pending.length === 0) return out;
+    const drafting = pending.find((d) => d.status === 'drafting');
+    out.rookiesLocked = true;
+    out.label = drafting ? 'Rookie draft live' : 'Rookie draft pending';
+    const soonest = pending
+        .map((d) => Number(d?.start_time) || 0)
+        .filter((t) => t > 0)
+        .sort((a, b) => a - b)[0];
+    out.nextDraftStartTime = soonest || null;
+    return out;
 };
 
 /**

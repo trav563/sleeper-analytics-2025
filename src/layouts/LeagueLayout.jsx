@@ -25,7 +25,7 @@ const LeagueLayout = () => {
     const { leagueId } = useParams();
     const location = useLocation();
     const { user, loadHistory, findChainContaining, selectActiveChain } = useSleeper();
-    const { league, rosters, users, players, state, matchups, tradedPicks, loading, error } = useLeagueData(leagueId);
+    const { league, rosters, users, players, state, matchups, tradedPicks, drafts, loading, error } = useLeagueData(leagueId);
     const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
@@ -107,6 +107,7 @@ const LeagueLayout = () => {
                         matchups,
                         transactions,
                         tradedPicks,
+                        drafts,
                         loading,
                         error
                     }} />

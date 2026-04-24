@@ -7,7 +7,8 @@ import {
     fetchLeagueMatchups,
     fetchNFLPlayers,
     fetchLeague,
-    fetchTradedPicks
+    fetchTradedPicks,
+    fetchLeagueDrafts
 } from '../../../utils/sleeper';
 
 export function useLeagueData(leagueId) {
@@ -57,6 +58,13 @@ export function useLeagueData(leagueId) {
         staleTime: 60 * 60 * 1000, // 1 hour
     });
 
+    const { data: drafts } = useQuery({
+        queryKey: ['leagueDrafts', leagueId],
+        queryFn: () => fetchLeagueDrafts(leagueId),
+        enabled: !!leagueId,
+        staleTime: 60 * 60 * 1000, // 1 hour — drafts rarely change
+    });
+
     // 4. Matchups (Dynamic Cache)
     // If it's the current live week, cache for 60s. If past week, cache for 24h.
     // Note: state.week is usually the live week. display_week might be same.
@@ -93,8 +101,9 @@ export function useLeagueData(leagueId) {
         players,
         league,
         tradedPicks,
+        drafts,
         loading,
-        error: error ? { message: 'Failed to load data' } : null, // Simplify error object 
+        error: error ? { message: 'Failed to load data' } : null, // Simplify error object
         refresh
     };
 }

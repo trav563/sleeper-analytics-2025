@@ -4,8 +4,8 @@ const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 
 // ── Rate Limiting (in-memory, per serverless instance) ──
 const rateLimitMap = new Map();
-const RATE_LIMIT_PER_DAY = 10;
-const RATE_LIMIT_PER_HOUR = 3;
+const RATE_LIMIT_PER_DAY = 30;
+const RATE_LIMIT_PER_HOUR = 10;
 
 function checkRateLimit(userId) {
     const now = Date.now();
@@ -15,9 +15,9 @@ function checkRateLimit(userId) {
     entry.hourly = entry.hourly.filter(t => t > now - 3600000);
     entry.daily = entry.daily.filter(t => t > now - 86400000);
     if (entry.daily.length >= RATE_LIMIT_PER_DAY)
-        return { allowed: false, reason: 'Daily limit reached (10/day). Try again tomorrow.', remaining: 0 };
+        return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day). Try again tomorrow.`, remaining: 0 };
     if (entry.hourly.length >= RATE_LIMIT_PER_HOUR)
-        return { allowed: false, reason: 'Hourly limit reached (3/hour). Try again shortly.', remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
+        return { allowed: false, reason: `Hourly limit reached (${RATE_LIMIT_PER_HOUR}/hour). Try again shortly.`, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
     entry.hourly.push(now);
     entry.daily.push(now);
     return { allowed: true, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
@@ -82,6 +82,26 @@ function pName(p) {
     return `${p.first_name || ''} ${p.last_name || ''}`.trim();
 }
 
+// Server-side mirror of getRookieLockState in src/utils/sleeper.js. Kept inline
+// because there's no shared module between client and server.
+function getRookieLockState(league, drafts) {
+    const out = { rookiesLocked: false, nextDraftStartTime: null };
+    if (!league || !Array.isArray(drafts)) return out;
+    const type = league.settings?.type;
+    if (type !== 1 && type !== 2) return out;
+    const season = String(league.season || '');
+    const pending = drafts.filter(
+        (d) => String(d?.season || '') === season &&
+            (d?.status === 'pre_draft' || d?.status === 'drafting')
+    );
+    if (pending.length === 0) return out;
+    out.rookiesLocked = true;
+    const soonest = pending.map((d) => Number(d?.start_time) || 0)
+        .filter((t) => t > 0).sort((a, b) => a - b)[0];
+    out.nextDraftStartTime = soonest || null;
+    return out;
+}
+
 function getStatsPPG(stats, pprField) {
     if (!stats) return null;
     const gp = stats.gp || 0;
@@ -90,7 +110,87 @@ function getStatsPPG(stats, pprField) {
     return { pts, gp, ppg: (pts / gp).toFixed(1) };
 }
 
-function playerLine(pid, players, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear) {
+// ── Quick-wins data (weather, opponent matchups) ──
+
+const ESPN_SCOREBOARD = (week) => `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}`;
+
+const INDOOR_TEAMS = new Set(['ATL', 'NO', 'DET', 'MIN', 'IND', 'HOU', 'DAL', 'LAR', 'LV', 'ARI', 'LAC']);
+
+function normAbbr(a) { return a === 'WSH' ? 'WAS' : a; }
+
+/**
+ * Returns { [teamAbbr]: { opponent, isHome, weather: { temp, condition, isAdverse } } }
+ * for the given NFL week. Cached for 30 min in-memory.
+ */
+async function fetchWeekContext(week) {
+    const cacheKey = `espn-context-${week}`;
+    const cached = dataCache.get(cacheKey);
+    if (cached && Date.now() - cached.time < CACHE_TTL) return cached.data;
+    const out = {};
+    try {
+        const data = await fetchJSON(ESPN_SCOREBOARD(week));
+        (data.events || []).forEach((event) => {
+            const competition = event.competitions?.[0];
+            if (!competition) return;
+            const competitors = competition.competitors || [];
+            const weather = event.weather;
+
+            competitors.forEach((c) => {
+                const abbr = normAbbr(c.team?.abbreviation);
+                if (!abbr) return;
+                const oppC = competitors.find((o) => o !== c);
+                const oppAbbr = oppC ? normAbbr(oppC.team?.abbreviation) : null;
+                const isHome = c.homeAway === 'home';
+
+                let weatherBlock = null;
+                if (weather && !INDOOR_TEAMS.has(abbr)) {
+                    const temp = weather.temperature ? parseInt(weather.temperature) : null;
+                    const condition = weather.displayValue || '';
+                    const lower = condition.toLowerCase();
+                    const isAdverse = (temp !== null && temp < 35)
+                        || lower.includes('rain') || lower.includes('snow')
+                        || lower.includes('storm') || lower.includes('wind');
+                    weatherBlock = { temp, condition, isAdverse };
+                }
+                out[abbr] = { opponent: oppAbbr, isHome, weather: weatherBlock };
+            });
+        });
+    } catch {
+        // ignore — fall through to empty map
+    }
+    dataCache.set(cacheKey, { data: out, time: Date.now() });
+    return out;
+}
+
+function snapPctLine(stats) {
+    if (!stats) return null;
+    const snaps = stats.off_snp || stats.def_snp || 0;
+    const teamSnaps = stats.tm_off_snp || stats.tm_def_snp || 0;
+    if (!snaps || !teamSnaps) return null;
+    const pct = Math.round((snaps / teamSnaps) * 100);
+    return `${pct}% snap rate`;
+}
+
+function playerContextLine(pid, players, weekContext, currentStats) {
+    const p = players[pid];
+    if (!p) return '';
+    const team = p.team;
+    const ctx = team ? weekContext[team] : null;
+    const parts = [];
+    if (ctx?.opponent) parts.push(`vs ${ctx.opponent}${ctx.isHome ? ' (home)' : ' (away)'}`);
+    if (ctx?.weather?.isAdverse) {
+        const w = ctx.weather;
+        const bits = [];
+        if (w.temp !== null) bits.push(`${w.temp}°F`);
+        if (w.condition) bits.push(w.condition);
+        parts.push(`weather: ${bits.join(', ')} (adverse)`);
+    }
+    const snap = snapPctLine(currentStats?.[pid]);
+    if (snap) parts.push(snap);
+    return parts.length ? ` [${parts.join(' · ')}]` : '';
+}
+
+function playerLine(pid, players, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear, weekContext) {
     const p = players[pid];
     if (!p) return null;
     const name = pName(p);
@@ -115,17 +215,18 @@ function playerLine(pid, players, primaryStats, secondaryStats, weekProjections,
     }
 
     const statsLine = [priStr, secStr, projStr].filter(Boolean).join(' | ');
-    return { pid, name, pos, team, age, injury, statsLine };
+    const ctxLine = weekContext ? playerContextLine(pid, players, weekContext, primaryStats) : '';
+    return { pid, name, pos, team, age, injury, statsLine: statsLine + ctxLine };
 }
 
 // ── Prompt Builder ──
 
-function buildPrompt(data, analysisType) {
+function buildPrompt(data, analysisType, constraint) {
     const {
         league, userRoster, opponentRoster, players, users, rosters,
         freeAgents, matchups, transactions, week,
         currentStats, prevStats, weekProjections, allMatchupHistory, pprField,
-        playerNews
+        playerNews, weekContext, lockState
     } = data;
 
     const settings = league.settings || {};
@@ -184,7 +285,7 @@ function buildPrompt(data, analysisType) {
         ? [currentStats, prevStats, leagueSeason, leaguePrevSeason]
         : [prevStats, currentStats, leaguePrevSeason, leagueSeason];
 
-    const makeRow = (pid) => playerLine(pid, players, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear);
+    const makeRow = (pid) => playerLine(pid, players, primaryStats, secondaryStats, weekProjections, pprField, primaryYear, secondaryYear, weekContext);
 
     const starterLines = [];
     rosterPositions.forEach((slot, idx) => {
@@ -308,57 +409,37 @@ ${oppLines.join('\n')}`;
 
     // ── Instructions per analysis type ──
     const typeInstructions = {
-        full: `You MUST use EXACTLY these sections and formats. Do not deviate. Do NOT use markdown tables. Use the bullet formats shown.
-
-## Roster Grade
-Use this EXACT bullet format, one bullet per position:
-- **QB · [A+ to F]** — [Names] · [1 sentence using their stats/projections]
-- **RB · [A+ to F]** — [Names] · [1 sentence]
-- **WR · [A+ to F]** — [Names] · [1 sentence]
-- **TE · [A+ to F]** — [Names] · [1 sentence]
-- **K · [A+ to F]** — [Name] · [1 sentence]
-- **DEF · [A+ to F]** — [Name] · [1 sentence]
-- **Overall · [Grade]** — [1 sentence summary]
-
-## This Week: Start/Sit
-Use this EXACT bullet format for the optimal lineup, one bullet per starting slot:
-- **[Slot]:** [Player] — [Proj Pts] proj · [1 sentence why]
-(Fill EVERY starting slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Maximize projected points.)
-
-**On the Bench:**
-- [Player] (Pos) — [Brief reason they're sitting]
-(List each bench player)
-
-## Waiver Wire Targets
-Players on my BENCH (listed above) are ALREADY ON MY ROSTER — never suggest adding them.
-Use this EXACT numbered format for each target (3-5 targets from the FREE AGENTS list only):
-1. **[Player Name]** ([Pos], [Team], Age [X]) — [Stats line] | Drop: [Player to drop] | [1 sentence why]
-2. ...
-
-## Outlook
-${gp === 0 ? `This is PRESEASON — no games have been played yet. Use this format:
-- **Roster assessment:** [Overall roster strength and readiness for the season]
-- **Offseason priorities:** [1-2 moves to make before Week 1]
-- **Ceiling/Floor:** [Best and worst case scenarios for this roster]` : `Use this EXACT bullet format:
-- **Playoff picture:** [Current standing and what's needed]
-- **Key weeks:** [Identify 2-3 critical upcoming matchups]
-- **Strategy:** [1-2 sentences on compete now vs build for future]`}`,
-
-        startsit: `You MUST use EXACTLY these sections and formats. Do NOT use markdown tables.
+        lineup: `You MUST use EXACTLY these sections and formats. Do NOT use markdown tables.
 
 ## Optimal Lineup
 Use this EXACT bullet format, one bullet per starting slot:
-- **[Slot]:** [Player] — [Proj Pts] proj · [1 sentence why]
-(Fill EVERY slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Use projections as primary factor.)
+- **[Slot]:** [Player] — [Proj Pts] proj · [1 sentence why, referencing their opponent/snap rate/weather if relevant]
+(Fill EVERY slot: ${startingSlotsDesc}. FLEX=RB/WR/TE. SUPER_FLEX=QB/RB/WR/TE. Maximize projected points.)
 
 **On the Bench:**
 - [Player] (Pos) — [Why they're sitting]
 
 ## Key Decisions
-Use bullet format for each close call:
-- **[Player A] over [Player B] at [Slot]:** [Reasoning with projected points comparison]`,
+List 2-3 close calls (where two players are within ~3 projected points). Bullet format:
+- **[Player A] over [Player B] at [Slot]:** [Reasoning citing projection, matchup, or weather]`,
 
-        waivers: `You MUST use EXACTLY this format.
+        roster: `You MUST use EXACTLY these sections and formats. Do NOT use markdown tables.
+
+## Roster Grade
+One bullet per position group:
+- **QB · [A+ to F]** — [Names] · [1 sentence citing PPG, projection, or supporting cast]
+- **RB · [A+ to F]** — [Names] · [1 sentence]
+- **WR · [A+ to F]** — [Names] · [1 sentence]
+- **TE · [A+ to F]** — [Names] · [1 sentence]
+- **K · [A+ to F]** — [Name] · [1 sentence]
+- **DEF · [A+ to F]** — [Name] · [1 sentence]
+- **Overall · [Grade]** — [1 sentence summary tying it together]
+
+## Strengths & Weaknesses
+- **Strengths:** [1-2 sentences on what this roster does well]
+- **Weaknesses:** [1-2 sentences on what's vulnerable]`,
+
+        waivers: `You MUST use EXACTLY this format. Do NOT use markdown tables.
 Players on my BENCH (listed above) are ALREADY ON MY ROSTER — never suggest adding them.
 
 ## Waiver Wire Targets
@@ -405,7 +486,24 @@ Use bullet format:
 - **Moves to make:** [1-2 specific actionable recommendations]`
     };
 
-    const instructions = typeInstructions[analysisType] || typeInstructions.full;
+    // Default unknown analysisType to 'roster' (defensive — never 400-fail).
+    const instructions = typeInstructions[analysisType] || typeInstructions.roster;
+
+    // Constraint-specific extra instruction appended at the end.
+    const constraintInstructions = {
+        ceiling: 'CONSTRAINT: Prioritize CEILING over floor. Recommend the lineup with maximum upside even if variance is high.',
+        floor: 'CONSTRAINT: Prioritize FLOOR over ceiling. Recommend the safest lineup — minimize variance, accept lower upside.',
+        stack: 'CONSTRAINT: Recommend a lineup that STACKS at least one of my QB\'s pass-catchers (WR or TE on the same NFL team).',
+        'trade-up': 'CONSTRAINT: Suggest 2-3 specific TRADE-UP packages where I send 2 depth players to upgrade one starting spot. Be concrete about which player on which team.',
+        'sell-high': 'CONSTRAINT: Identify 2-3 players on MY ROSTER whose value is currently at a peak and who I should consider trading away while their stock is high.',
+        'low-rostered': 'CONSTRAINT: Only recommend waiver targets with LOW expected rostered % (under 25% of leagues). Pure speculative ceiling adds, not consensus picks.',
+        streamers: 'CONSTRAINT: Only recommend DEF and K waiver targets — strictly streaming options for this week\'s matchup.',
+        compete: 'CONSTRAINT: Frame all advice assuming I am COMPETING for a championship THIS year. Recommend short-term moves only; do not suggest selling for picks.',
+        build: 'CONSTRAINT: Frame all advice assuming I am REBUILDING for next year. Recommend long-term moves; trade veterans for picks/youth.',
+    };
+    const constraintTail = constraint && constraintInstructions[constraint]
+        ? `\n\n${constraintInstructions[constraint]}`
+        : '';
 
     return `You are an expert fantasy football analyst. You have REAL DATA below — stats and projections from this season. Use this data to make your analysis. Do NOT rely on prior assumptions about player quality — use the stats and projections provided.
 
@@ -467,7 +565,7 @@ OTHER TEAMS IN LEAGUE:
 ${leagueRostersText}
 
 ═══════════════════════════════════════
-FREE AGENTS (unowned, available to add):
+${lockState?.rookiesLocked ? 'IMPORTANT: This league has not yet held its rookie draft, so rookies are locked from waiver pickups. The free agents list below has been pre-filtered to exclude rookies. Do not suggest any rookie players as waiver targets.\n\n' : ''}FREE AGENTS (unowned, available to add):
 | Pos | Player | Team | Age | Stats & Projection |
 |-----|--------|------|-----|---------------------|
 ${topFA.join('\n')}
@@ -476,7 +574,7 @@ RECENT TRANSACTIONS:
 ${recentTx.length > 0 ? recentTx.join('\n') : 'None.'}
 
 ═══════════════════════════════════════
-${instructions}`;
+${instructions}${constraintTail}`;
 }
 
 // ── Handler ──
@@ -487,7 +585,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-    const { leagueId, userId, week, analysisType = 'full' } = req.body;
+    const { leagueId, userId, week, analysisType = 'roster', constraint = null } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
     const rateCheck = checkRateLimit(userId);
@@ -502,8 +600,8 @@ export default async function handler(req, res) {
         const leagueSeason = league.season || '2025';
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
-        // Fetch all data in parallel
-        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections] = await Promise.all([
+        // Fetch all data in parallel (Sleeper + ESPN week context for opponent/weather/snaps).
+        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections, weekContext, drafts] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
@@ -511,7 +609,12 @@ export default async function handler(req, res) {
             fetchCached(`stats-${leagueSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leagueSeason}`).catch(() => ({})),
             fetchCached(`stats-${leaguePrevSeason}`, `${SLEEPER_BASE}/stats/nfl/regular/${leaguePrevSeason}`).catch(() => ({})),
             fetchCached(`proj-${leagueSeason}-${week}`, `${SLEEPER_BASE}/projections/nfl/regular/${leagueSeason}/${week}`).catch(() => ({})),
+            fetchWeekContext(week).catch(() => ({})),
+            fetchCached(`drafts-${leagueId}`, `${SLEEPER_BASE}/league/${leagueId}/drafts`).catch(() => []),
         ]);
+
+        // Lock rookies in dynasty/keeper leagues with a pending current-season draft.
+        const lockState = getRookieLockState(league, drafts);
 
         // Transactions
         let transactions = [];
@@ -569,8 +672,12 @@ export default async function handler(req, res) {
         const freeAgents = Object.keys(nflPlayers)
             .filter(pid => {
                 const p = nflPlayers[pid];
-                return !rosteredIds.has(pid) && p.active &&
-                    ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position) && p.team;
+                if (!p || rosteredIds.has(pid) || !p.active) return false;
+                if (!['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position)) return false;
+                if (!p.team) return false;
+                // Rookies aren't pickable until the league's rookie draft completes.
+                if (lockState.rookiesLocked && (p.years_exp == null || p.years_exp === 0)) return false;
+                return true;
             })
             .sort((a, b) => {
                 const projA = weekProjections?.[a]?.[pprField] ?? weekProjections?.[a]?.pts_ppr ?? 0;
@@ -591,8 +698,8 @@ export default async function handler(req, res) {
             freeAgents, matchups, transactions, week,
             currentStats, prevStats,
             weekProjections, allMatchupHistory, pprField,
-            playerNews
-        }, analysisType);
+            playerNews, weekContext, lockState
+        }, analysisType, constraint);
 
         // Stream from Gemini
         const genAI = new GoogleGenerativeAI(apiKey);
