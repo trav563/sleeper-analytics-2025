@@ -198,7 +198,7 @@ export function useAnalyzeTeam({
                 setCachedAt(Date.now());
                 setCooldownRemaining(cooldownMs);
             } else {
-                throw new Error('No response from AI service. Check that GEMINI_API_KEY is configured.');
+                throw new Error('No response from AI service. Check that AI_GATEWAY_API_KEY is configured in Vercel.');
             }
 
         } catch (err) {
