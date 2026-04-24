@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Switch } from '../../../components/ui/Switch';
-import { fetchLeagueRosters, fetchLeagueMatchups } from '../../../utils/sleeper';
+import { fetchLeagueRosters } from '../../../utils/sleeper';
 import { Globe } from 'lucide-react';
 import { theme } from '../../../lib/theme';
 import { useSleeper } from '../../../context/SleeperContext';
@@ -15,13 +15,12 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
     const [usingPrevSeason, setUsingPrevSeason] = useState(false);
 
-    // Trail state — multi-season per-week trajectory for one selected team.
+    // Trail state — one (avgAge, PPG) point per (season, team) computed
+    // synchronously from leagueChains. No extra fetches.
     const [showTrail, setShowTrail] = useState(false);
     const [selectedTrailRosterId, setSelectedTrailRosterId] = useState(null);
-    const [trailByOwner, setTrailByOwner] = useState(null);
-    const [trailLoading, setTrailLoading] = useState(false);
 
-    // Find the chain that contains this league (for past-season rosters + league_ids).
+    // Find the chain that contains this league (for past-season rosters).
     const activeChain = useMemo(() => {
         if (!leagueChains || !league?.league_id) return null;
         for (const chain of Object.values(leagueChains)) {
@@ -39,75 +38,48 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         setSelectedTrailRosterId((mine || rosters[0])?.roster_id ?? null);
     }, [rosters, user, selectedTrailRosterId]);
 
-    // Lazy-load all chain seasons' weekly matchups when the user toggles the trail.
-    useEffect(() => {
-        if (!showTrail || trailByOwner || trailLoading) return;
-        if (!activeChain || activeChain.length === 0 || !players) return;
-
+    // Per-season aggregate trail. Each chain entry's roster already includes
+    // settings.fpts/wins/losses/ties + players[] — no API fetches needed.
+    const trailByOwner = useMemo(() => {
+        if (!activeChain || activeChain.length < 2 || !players) return null;
         const currentSeason = Number(state?.season) || new Date().getFullYear();
-        let cancelled = false;
-        setTrailLoading(true);
+        const out = {};
+        activeChain.forEach((entry) => {
+            const yearsAgo = Math.max(0, currentSeason - Number(entry.season));
+            Object.values(entry.rosters || {}).forEach((seasonRoster) => {
+                const ownerId = seasonRoster?.owner_id;
+                if (!ownerId) return;
 
-        (async () => {
-            try {
-                const seasonResults = await Promise.all(activeChain.map(async (entry) => {
-                    const weeks = await Promise.all(
-                        Array.from({ length: 18 }, (_, i) =>
-                            fetchLeagueMatchups(entry.league_id, i + 1).catch(() => null)
-                        )
-                    );
-                    return { season: entry.season, rosters: entry.rosters, weeks };
-                }));
-                if (cancelled) return;
+                const settings = seasonRoster.settings || {};
+                const wins = settings.wins || 0;
+                const losses = settings.losses || 0;
+                const ties = settings.ties || 0;
+                const games = wins + losses + ties;
+                if (games === 0) return; // skip preseason / no completed games
 
-                const byOwner = {};
-                seasonResults.forEach(({ season, rosters: seasonRosters, weeks }) => {
-                    const yearsAgo = Math.max(0, currentSeason - Number(season));
-                    Object.values(seasonRosters || {}).forEach((seasonRoster) => {
-                        const ownerId = seasonRoster?.owner_id;
-                        if (!ownerId) return;
+                const fpts = (settings.fpts || 0) + ((settings.fpts_decimal || 0) / 100);
+                const ppg = parseFloat((fpts / games).toFixed(1));
 
-                        const skillAges = (seasonRoster.players || [])
-                            .map((pid) => players[pid])
-                            .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age)
-                            .map((p) => Math.max(20, p.age - yearsAgo));
-                        if (skillAges.length === 0) return;
-                        const avgAge = parseFloat(
-                            (skillAges.reduce((s, a) => s + a, 0) / skillAges.length).toFixed(1)
-                        );
+                const skillAges = (seasonRoster.players || [])
+                    .map((pid) => players[pid])
+                    .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age)
+                    .map((p) => Math.max(20, p.age - yearsAgo));
+                if (skillAges.length === 0) return;
+                const avgAge = parseFloat(
+                    (skillAges.reduce((s, a) => s + a, 0) / skillAges.length).toFixed(1)
+                );
 
-                        let cumulPoints = 0;
-                        let cumulGames = 0;
-                        weeks.forEach((wkData, idx) => {
-                            if (!Array.isArray(wkData)) return;
-                            const m = wkData.find((x) => x.roster_id === seasonRoster.roster_id);
-                            if (!m || !((m.points || 0) > 0)) return;
-                            cumulPoints += m.points;
-                            cumulGames += 1;
-                            const ppg = cumulPoints / cumulGames;
-                            if (!byOwner[ownerId]) byOwner[ownerId] = [];
-                            byOwner[ownerId].push({
-                                season: Number(season),
-                                week: idx + 1,
-                                age: avgAge,
-                                production: parseFloat(ppg.toFixed(1)),
-                            });
-                        });
-                    });
+                if (!out[ownerId]) out[ownerId] = [];
+                out[ownerId].push({
+                    season: Number(entry.season),
+                    age: avgAge,
+                    production: ppg,
                 });
-                Object.keys(byOwner).forEach((k) => {
-                    byOwner[k].sort((a, b) => (a.season - b.season) || (a.week - b.week));
-                });
-                if (!cancelled) setTrailByOwner(byOwner);
-            } catch (err) {
-                console.warn('Failed to build dynasty trail', err);
-            } finally {
-                if (!cancelled) setTrailLoading(false);
-            }
-        })();
-
-        return () => { cancelled = true; };
-    }, [showTrail, activeChain, players, state?.season, trailByOwner, trailLoading]);
+            });
+        });
+        Object.keys(out).forEach((k) => out[k].sort((a, b) => a.season - b.season));
+        return out;
+    }, [activeChain, players, state?.season]);
 
     const hasCurrentSeasonData = useMemo(() => {
         if (!rosters) return false;
@@ -434,17 +406,13 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
 
                 {showTrail && (
                     <div className="mt-2 px-2 sm:px-0 font-mono text-2xs uppercase tracking-wider">
-                        {trailLoading ? (
-                            <span className="text-text-mute">Loading multi-season trail…</span>
-                        ) : selectedTrail.length === 0 ? (
+                        {selectedTrail.length === 0 ? (
                             <span className="text-warn">
-                                No trail data found for this team. Either no scoring weeks were
-                                recorded across the available seasons, or the league chain only
-                                has the current season.
+                                No completed seasons found in this league's history.
                             </span>
                         ) : (
                             <span className="text-text-dim">
-                                Trail · <span className="tnum">{selectedTrail.length}</span> snapshots across <span className="tnum">{new Set(selectedTrail.map(p => p.season)).size}</span> seasons
+                                Trail · <span className="tnum">{selectedTrail.length}</span> {selectedTrail.length === 1 ? 'season' : 'seasons'}
                             </span>
                         )}
                     </div>
