@@ -5,10 +5,11 @@ import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups
 const TeamPage = () => {
     const { rosterId } = useParams();
     const ctx = useOutletContext();
-    const { league, rosters, users, players, state, matchups: currentWeekMatchups } = ctx || {};
+    const { league, rosters, users, players, state, matchups: currentWeekMatchups, currentWeek } = ctx || {};
     const numericId = Number(rosterId);
     const roster = rosters?.find((r) => r.roster_id === numericId) || null;
-    const { seasonMatchups } = useSeasonMatchups(league?.league_id, state?.display_week || state?.week);
+    const week = currentWeek || state?.display_week || state?.week || 1;
+    const { seasonMatchups } = useSeasonMatchups(league?.league_id, week);
 
     return (
         <RosterDetail

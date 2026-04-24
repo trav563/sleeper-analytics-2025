@@ -1,11 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl, BYE_MAP_2025 } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
-import { LiveDot } from '../../../components/ui/LiveDot';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
-import { useAnalyzeTeam } from '../../dashboard/hooks/useAnalyzeTeam';
 
 const POSITION_GROUPS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 const ROSTER_HUE = (rosterId) => (Number(rosterId) * 47) % 360;
@@ -166,13 +164,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
             .slice(0, 3);
     }, [roster, players, week]);
 
-    /* AI roster analysis (reuses existing Gemini infrastructure). */
-    const { analysis: aiAnalysis, loading: aiLoading, analyze, isOnCooldown, remaining } = useAnalyzeTeam({
-        leagueId: league?.league_id,
-        userId: roster?.owner_id,
-        week,
-        analysisType: 'roster',
-    });
+    // (AI Roster Analysis removed — covered by the dashboard's "Rate My Roster" card.)
 
     /* Hero-strip stats. */
     const wins = roster?.settings?.wins ?? 0;
@@ -333,48 +325,6 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                                     </li>
                                 ))}
                             </ul>
-                        )}
-                    </SectionShell>
-
-                    <SectionShell
-                        title="AI Roster Analysis"
-                        eyebrow="AI"
-                        action={
-                            !aiLoading && !isOnCooldown ? (
-                                <button
-                                    type="button"
-                                    onClick={() => analyze({ force: false })}
-                                    className="inline-flex items-center gap-1 font-mono text-2xs uppercase tracking-wider font-bold text-signal hover:text-signal/80 transition-colors duration-fast"
-                                >
-                                    <Sparkles className="w-3 h-3" /> Generate
-                                </button>
-                            ) : null
-                        }
-                    >
-                        {aiLoading ? (
-                            <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                <LiveDot label="Generating" />
-                                Analyzing roster…
-                            </div>
-                        ) : aiAnalysis ? (
-                            <div className="text-sm text-text-dim leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
-                                {aiAnalysis.split('\n').slice(0, 12).join('\n')}
-                                {aiAnalysis.split('\n').length > 12 && (
-                                    <span className="block mt-2 font-mono text-2xs text-text-mute uppercase tracking-wider">
-                                        … truncated · view full on Dashboard
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-text-dim leading-relaxed">
-                                Tap <span className="font-mono text-2xs uppercase tracking-wider text-signal">Generate</span> to get an
-                                AI-written roster breakdown — surplus positions, needs, and lineup recommendations.
-                                {remaining != null && remaining < 999 && (
-                                    <span className="block mt-1 font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                        <span className="tnum">{remaining}</span> left today
-                                    </span>
-                                )}
-                            </p>
                         )}
                     </SectionShell>
 

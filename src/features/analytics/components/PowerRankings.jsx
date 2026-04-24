@@ -219,6 +219,21 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
                     Composite · Win% · PPG · All-Play% · SoS
                 </p>
+                <details className="mt-2 group">
+                    <summary className="cursor-pointer font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast list-none inline-flex items-center gap-1 select-none">
+                        <span className="group-open:rotate-90 transition-transform duration-fast inline-block">›</span>
+                        How is this calculated?
+                    </summary>
+                    <div className="mt-3 p-3 rounded-md bg-bg-2 border border-line text-xs text-text-dim leading-relaxed space-y-1.5">
+                        <p>Power score is a 0–100 composite of four equally-weighted components, normalized across all teams in the league.</p>
+                        <ul className="space-y-1 mt-1">
+                            <li>• <span className="text-text font-semibold">Win %</span> — regular-season win percentage</li>
+                            <li>• <span className="text-text font-semibold">PPG</span> — average points per game</li>
+                            <li>• <span className="text-text font-semibold">All-Play %</span> — % of weekly matchups you'd win against any opponent that week</li>
+                            <li>• <span className="text-text font-semibold">SoS</span> — strength of schedule (avg opponent points per game)</li>
+                        </ul>
+                    </div>
+                </details>
             </header>
 
             <div className="overflow-x-auto">
