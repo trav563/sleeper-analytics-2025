@@ -82,14 +82,11 @@ const Insights = ({ leagueId, userId, week }) => {
                     ))}
                 </div>
             ) : (
-                <div
-                    className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1"
-                    style={{ scrollbarWidth: 'none' }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {cards.map((c, i) => (
                         <article
                             key={i}
-                            className="shrink-0 w-[260px] rounded-md p-3 bg-bg-2 border border-line"
+                            className="rounded-md p-3 bg-bg-2 border border-line"
                         >
                             <div className="font-mono text-2xs font-bold uppercase tracking-wider text-signal mb-1.5">
                                 {c.tag}

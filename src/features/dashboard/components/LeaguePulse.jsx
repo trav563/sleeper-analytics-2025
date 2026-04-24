@@ -65,18 +65,15 @@ const LeaguePulse = ({ league, week, viewMatchups, rosters, users, players }) =>
                 </button>
             </header>
 
-            <div
-                className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
-                style={{ scrollbarWidth: 'none' }}
-            >
-                {pairs.map((p, i) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pairs.slice(0, 6).map((p, i) => {
                     const aWin = (p.a.points || 0) > (p.b.points || 0);
                     return (
                         <button
                             key={i}
                             type="button"
                             onClick={() => navigate(`/league/${league?.league_id}/matchup`)}
-                            className={`shrink-0 min-w-[210px] rounded-md p-2.5 text-left border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
+                            className={`rounded-md p-2.5 text-left border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
                                 p.isClose
                                     ? 'bg-signal/5 border-signal/40'
                                     : 'bg-bg-2 border-line hover:border-line-strong'

@@ -9,9 +9,9 @@ import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
 const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
 
 /**
- * Hero matchup card for the dashboard. Pulls the user's matchup pair
- * out of the week's matchups, computes win prob from current + projected,
- * mirrors the dir-a.jsx MyMatchupHero composition.
+ * Hero matchup card for the dashboard. Mirrors the design's
+ * dir-a.jsx MyMatchupHero composition (large pip, full team name,
+ * 72px score with glow, PROJ · CEILING sub, win-prob bar at bottom).
  */
 const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, seasonMatchups, selectedUserId }) => {
     const navigate = useNavigate();
@@ -40,6 +40,26 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     const myHue = ROSTER_HUE(myRoster?.roster_id);
     const oppHue = ROSTER_HUE(oppRoster?.roster_id) || 180;
 
+    /* Per-player season aggregates: avg + max single-week score (for CEILING). */
+    const playerStats = useMemo(() => {
+        const out = {};
+        if (!seasonMatchups) return out;
+        Object.values(seasonMatchups).forEach((ms) => {
+            if (!Array.isArray(ms)) return;
+            ms.forEach((m) => {
+                Object.entries(m.players_points || {}).forEach(([pid, pts]) => {
+                    if (!out[pid]) out[pid] = { sum: 0, n: 0, max: 0 };
+                    if (pts > 0) {
+                        out[pid].sum += pts;
+                        out[pid].n += 1;
+                        if (pts > out[pid].max) out[pid].max = pts;
+                    }
+                });
+            });
+        });
+        return out;
+    }, [seasonMatchups]);
+
     if (!myMatchup) {
         return (
             <section
@@ -53,40 +73,43 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
         );
     }
 
-    /* Projected REMAINING for live-aware win prob. */
-    const seasonAvg = (pid) => {
-        if (!pid || pid === '0' || !seasonMatchups) return 0;
-        let sum = 0, n = 0;
-        Object.values(seasonMatchups).forEach((ms) => {
-            if (!Array.isArray(ms)) return;
-            ms.forEach((m) => {
-                const pts = m.players_points?.[pid];
-                if (pts != null && pts > 0) { sum += pts; n += 1; }
-            });
-        });
-        return n > 0 ? sum / n : 0;
-    };
-    const projRemaining = (m) => {
-        if (!m) return 0;
-        return (m.starters || []).reduce((acc, pid) => {
+    /* Score bookkeeping. */
+    const myScore = myMatchup.points || 0;
+    const oppScore = oppMatchup?.points || 0;
+    const winning = myScore > oppScore;
+
+    /* Projected REMAINING + CEILING REMAINING per side. */
+    const computeProj = (m) => {
+        if (!m) return { proj: 0, ceiling: 0 };
+        let proj = 0;
+        let ceiling = 0;
+        (m.starters || []).forEach((pid) => {
+            if (!pid || pid === '0') return;
             const team = players?.[pid]?.team;
             const status = team ? liveDetails?.[team]?.statusName : null;
             const isDone = status === 'STATUS_FINAL';
-            return acc + (isDone ? 0 : seasonAvg(pid));
-        }, 0);
+            if (isDone) return;
+            const stats = playerStats[pid];
+            if (!stats || stats.n === 0) return;
+            proj += stats.sum / stats.n;
+            ceiling += stats.max;
+        });
+        return { proj, ceiling };
     };
-    const myProjRem = projRemaining(myMatchup);
-    const oppProjRem = projRemaining(oppMatchup);
-    const myScore = myMatchup.points || 0;
-    const oppScore = oppMatchup?.points || 0;
+    const myProj = computeProj(myMatchup);
+    const oppProj = computeProj(oppMatchup);
+    const myProjFinal = myScore + myProj.proj;
+    const oppProjFinal = oppScore + oppProj.proj;
+    const myCeilFinal = myScore + myProj.ceiling;
+    const oppCeilFinal = oppScore + oppProj.ceiling;
     const winProb = computeWinProbability({
         myCurrent: myScore,
         oppCurrent: oppScore,
-        myProjRemaining: myProjRem,
-        oppProjRemaining: oppProjRem,
+        myProjRemaining: myProj.proj,
+        oppProjRemaining: oppProj.proj,
     });
-    const winning = myScore > oppScore;
 
+    /* Live eyebrow. */
     const anyLive = (myMatchup.starters || []).some((pid) => {
         const team = players?.[pid]?.team;
         const status = team ? liveDetails?.[team]?.statusName : null;
@@ -95,8 +118,58 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     const remainingMine = (myMatchup.starters || []).filter((pid) => {
         const team = players?.[pid]?.team;
         const status = team ? liveDetails?.[team]?.statusName : null;
-        return status !== 'STATUS_FINAL';
+        return status !== 'STATUS_FINAL' && status !== null;
     }).length;
+    /* Pull the most-active starter's clock for the eyebrow Q+time (best heuristic). */
+    const liveTime = (myMatchup.starters || []).reduce((acc, pid) => {
+        if (acc) return acc;
+        const team = players?.[pid]?.team;
+        const d = team ? liveDetails?.[team] : null;
+        if (d && (d.statusName === 'STATUS_IN_PROGRESS' || d.statusName === 'STATUS_HALFTIME') && d.displayClock) {
+            return `Q${d.period} ${d.displayClock}`;
+        }
+        return acc;
+    }, '');
+
+    /* Renders one side of the hero (mirror = right side). */
+    const TeamSide = ({ user, roster, score, projFinal, ceilFinal, isWinning, mirror = false }) => {
+        const recordLabel = roster
+            ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
+            : (mirror ? 'Opp' : 'You');
+        return (
+            <div className={`flex items-center gap-3 md:gap-5 min-w-0 ${mirror ? 'flex-row-reverse text-right' : ''}`}>
+                {user?.avatar ? (
+                    <img
+                        src={avatarUrl(user.avatar)}
+                        alt=""
+                        className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line shrink-0"
+                    />
+                ) : (
+                    <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={56} />
+                )}
+                <div className="min-w-0">
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim font-bold">
+                        {recordLabel}
+                    </div>
+                    <div className="font-display text-md md:text-xl font-bold tracking-snug text-text truncate max-w-[180px] md:max-w-[280px]">
+                        {displayTeamName(user)}
+                    </div>
+                    <div
+                        className={`tnum font-display text-5xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
+                        style={isWinning ? { textShadow: '0 0 28px rgba(245,179,1,0.33)' } : undefined}
+                    >
+                        {score.toFixed(1)}
+                    </div>
+                    <div className="font-mono text-2xs text-text-dim mt-1">
+                        Proj <span className="tnum text-text-dim">{projFinal.toFixed(1)}</span>
+                        {ceilFinal > projFinal && (
+                            <> · Ceiling <span className="tnum text-text-dim">{ceilFinal.toFixed(1)}</span></>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <button
@@ -111,13 +184,14 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                 `,
             }}
         >
-            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            {/* Eyebrow */}
+            <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
                 <div className="flex items-center gap-2">
                     {anyLive ? (
                         <>
                             <LiveDot />
                             <span className="font-mono text-2xs uppercase tracking-wider font-bold text-signal-2">
-                                Live · Week <span className="tnum">{week}</span>
+                                Live · Week <span className="tnum">{week}</span> Matchup
                             </span>
                         </>
                     ) : (
@@ -127,67 +201,49 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     )}
                 </div>
                 <span className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                    <span className="tnum">{remainingMine}</span> left
+                    {liveTime && <><span className="text-text-dim tnum">{liveTime}</span> · </>}
+                    <span className="tnum">{remainingMine}</span> players left
                 </span>
             </div>
 
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-3 md:gap-6 items-center">
-                {/* My side */}
-                <div className="text-center flex flex-col items-center gap-2">
-                    {myUser?.avatar ? (
-                        <img src={avatarUrl(myUser.avatar)} alt="" className="w-12 h-12 md:w-14 md:h-14 rounded-full ring-1 ring-line" />
-                    ) : (
-                        <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={48} />
-                    )}
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">You</div>
-                    <div
-                        className={`tnum font-display text-4xl md:text-5xl font-extrabold tracking-tight leading-none ${winning ? 'text-signal' : 'text-text'}`}
-                        style={winning ? { textShadow: '0 0 24px rgba(245,179,1,0.33)' } : undefined}
-                    >
-                        {myScore.toFixed(1)}
-                    </div>
-                    <div className="font-mono text-2xs text-text-mute">
-                        Proj <span className="tnum">{(myScore + myProjRem).toFixed(1)}</span>
-                    </div>
-                </div>
+            {/* Teams + center pod */}
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-4 md:gap-6 items-center">
+                <TeamSide
+                    user={myUser}
+                    roster={myRoster}
+                    score={myScore}
+                    projFinal={myProjFinal}
+                    ceilFinal={myCeilFinal}
+                    isWinning={winning && myScore > 0}
+                />
 
-                {/* Center pod */}
-                <div className="flex flex-col items-center gap-1 shrink-0">
+                <div className="flex flex-col items-center gap-2 shrink-0">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">
                         VS
                     </div>
-                    <div className="text-center mt-1">
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">Win</div>
-                        <div className="font-display tnum text-md font-extrabold text-good">
+                    <div className="px-3 py-1.5 rounded-md bg-bg-3 border border-line text-center min-w-[88px]">
+                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
+                            Win Prob
+                        </div>
+                        <div className="font-display tnum text-xl font-extrabold text-good leading-none mt-0.5">
                             {formatWinProbabilityPercent(winProb)}
                         </div>
                     </div>
                 </div>
 
-                {/* Opp side */}
-                <div className="text-center flex flex-col items-center gap-2">
-                    {oppUser?.avatar ? (
-                        <img src={avatarUrl(oppUser.avatar)} alt="" className="w-12 h-12 md:w-14 md:h-14 rounded-full ring-1 ring-line" />
-                    ) : (
-                        <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={48} />
-                    )}
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim truncate max-w-[120px]">
-                        {oppUser ? displayTeamName(oppUser).split(' ')[0] : 'Opp'}
-                    </div>
-                    <div
-                        className={`tnum font-display text-4xl md:text-5xl font-extrabold tracking-tight leading-none ${!winning && oppScore > 0 ? 'text-signal' : 'text-text'}`}
-                        style={!winning && oppScore > 0 ? { textShadow: '0 0 24px rgba(245,179,1,0.33)' } : undefined}
-                    >
-                        {oppScore.toFixed(1)}
-                    </div>
-                    <div className="font-mono text-2xs text-text-mute">
-                        Proj <span className="tnum">{(oppScore + oppProjRem).toFixed(1)}</span>
-                    </div>
-                </div>
+                <TeamSide
+                    user={oppUser}
+                    roster={oppRoster}
+                    score={oppScore}
+                    projFinal={oppProjFinal}
+                    ceilFinal={oppCeilFinal}
+                    isWinning={!winning && oppScore > 0}
+                    mirror
+                />
             </div>
 
             {/* Win-prob bar */}
-            <div className="mt-4 h-1 rounded-full overflow-hidden bg-bg-3">
+            <div className="mt-5 h-1.5 rounded-full overflow-hidden bg-bg-3">
                 <div
                     className="h-full transition-[width] duration-base"
                     style={{

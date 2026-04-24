@@ -6,7 +6,8 @@ import LeaguePulse from '../features/dashboard/components/LeaguePulse';
 import LineupToday from '../features/dashboard/components/LineupToday';
 import Insights from '../features/dashboard/components/Insights';
 import StandingsStrip from '../features/dashboard/components/StandingsStrip';
-import WidgetQuickStats from '../features/dashboard/components/WidgetQuickStats';
+import QuickStats4 from '../features/dashboard/components/QuickStats4';
+import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 import { fetchLeagueMatchups } from '../utils/sleeper';
 
@@ -115,58 +116,57 @@ const DashboardPage = () => {
                 </div>
             </header>
 
-            {/* Hero matchup */}
-            <MyMatchupHero
-                league={league}
-                week={selectedWeek}
-                viewMatchups={viewMatchups}
-                rosters={rosters}
-                users={users}
-                players={players}
-                seasonMatchups={seasonMatchups}
-                selectedUserId={selectedUserId}
-            />
-
-            {/* Quick stats row (uses existing WidgetQuickStats) */}
-            <WidgetQuickStats
-                rosters={rosters}
-                selectedUserId={selectedUserId}
-                league={league}
-                currentWeek={selectedWeek}
-                seasonMatchups={seasonMatchups}
-                state={state}
-            />
-
-            {/* League pulse — horizontal scroll all matchups */}
-            <div className={loadingMatchups ? 'opacity-60 pointer-events-none' : ''}>
-                <LeaguePulse
-                    league={league}
-                    week={selectedWeek}
-                    viewMatchups={viewMatchups}
-                    rosters={rosters}
-                    users={users}
-                    players={players}
-                />
-            </div>
-
-            {/* Two-column body: lineup + insights | standings strip */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="space-y-5">
-                    <LineupToday
+            {/* Two-column body matching design composition */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
+                {/* LEFT column: Hero → LeaguePulse → LineupToday (mobile) → Insights */}
+                <div className={`flex flex-col gap-4 min-w-0 ${loadingMatchups ? 'opacity-90' : ''}`}>
+                    <MyMatchupHero
                         league={league}
                         week={selectedWeek}
-                        roster={myRoster}
-                        players={players}
                         viewMatchups={viewMatchups}
-                        slotLabels={league?.roster_positions || []}
+                        rosters={rosters}
+                        users={users}
+                        players={players}
+                        seasonMatchups={seasonMatchups}
+                        selectedUserId={selectedUserId}
                     />
+                    <LeaguePulse
+                        league={league}
+                        week={selectedWeek}
+                        viewMatchups={viewMatchups}
+                        rosters={rosters}
+                        users={users}
+                        players={players}
+                    />
+                    {/* Mobile-only: full lineup. Hidden ≥ lg per design composition. */}
+                    <div className="lg:hidden">
+                        <LineupToday
+                            league={league}
+                            week={selectedWeek}
+                            roster={myRoster}
+                            players={players}
+                            viewMatchups={viewMatchups}
+                            slotLabels={league?.roster_positions || []}
+                        />
+                    </div>
                     <Insights
                         leagueId={league?.league_id}
                         userId={selectedUserId}
                         week={selectedWeek}
                     />
                 </div>
-                <div className="space-y-5">
+
+                {/* RIGHT rail: 4 stats → Standings → Roster News */}
+                <div className="flex flex-col gap-4 min-w-0">
+                    <QuickStats4
+                        rosters={rosters}
+                        users={users}
+                        selectedUserId={selectedUserId}
+                        league={league}
+                        currentWeek={selectedWeek}
+                        seasonMatchups={seasonMatchups}
+                        state={state}
+                    />
                     <StandingsStrip
                         league={league}
                         rosters={rosters}
@@ -174,6 +174,7 @@ const DashboardPage = () => {
                         seasonMatchups={seasonMatchups}
                         currentUserId={selectedUserId}
                     />
+                    <RosterNews roster={myRoster} players={players} />
                 </div>
             </div>
         </div>
