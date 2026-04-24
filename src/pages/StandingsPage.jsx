@@ -11,6 +11,10 @@ const StandingsPage = () => {
 
     useEffect(() => { setSelectedWeek(anchorWeek); }, [anchorWeek]);
 
+    const isHistoricalSeason = league?.season && state?.season &&
+        Number(league.season) < Number(state.season);
+    const anchorLabel = isHistoricalSeason ? '(Final)' : '(Current)';
+
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, selectedWeek);
     const weekOptions = Array.from({ length: 18 }, (_, i) => i + 1);
 
@@ -26,7 +30,7 @@ const StandingsPage = () => {
                     >
                         {weekOptions.map((w) => (
                             <option key={w} value={w}>
-                                {w}{w === anchorWeek ? ' (Current)' : ''}
+                                {w}{w === anchorWeek ? ` ${anchorLabel}` : ''}
                             </option>
                         ))}
                     </select>

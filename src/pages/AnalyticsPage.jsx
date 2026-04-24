@@ -34,39 +34,43 @@ const AnalyticsPage = () => {
     const selectedUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === selectedRosterId)?.owner_id);
     const opponentUser = users?.find(u => u.user_id === rosters?.find(r => r.roster_id === opponentRosterId)?.owner_id);
 
-    return (
-        <div className="space-y-6">
-            <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-bg-1 p-4 rounded-xl border border-line shadow-card">
-                <div>
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                        Team Analysis
-                    </div>
-                    <h2 className="mt-1 font-display text-lg font-semibold text-text">
-                        Positional Strength
-                    </h2>
-                    <p className="text-xs text-text-dim mt-1">
-                        Select a team to view its positional strength
-                    </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-                    <SegmentedTabs
-                        tabs={[
-                            { value: 'league', label: 'vs League' },
-                            { value: 'h2h', label: 'Head-to-Head' },
-                        ]}
-                        value={comparisonMode}
-                        onChange={setComparisonMode}
-                        className="self-start sm:self-end"
-                    />
-
-                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
+    const positionalControls = (
+        <div className="flex flex-col gap-2">
+            <SegmentedTabs
+                tabs={[
+                    { value: 'league', label: 'vs League' },
+                    { value: 'h2h', label: 'Head-to-Head' },
+                ]}
+                value={comparisonMode}
+                onChange={setComparisonMode}
+            />
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+                <select
+                    className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full transition-colors duration-fast"
+                    value={selectedRosterId || ''}
+                    onChange={handleTeamChange}
+                    aria-label="Select team"
+                >
+                    {rosters?.map(roster => {
+                        const rosterUser = users?.find(u => u.user_id === roster.owner_id);
+                        return (
+                            <option key={roster.roster_id} value={roster.roster_id}>
+                                {displayTeamName(rosterUser)}
+                            </option>
+                        );
+                    })}
+                </select>
+                {comparisonMode === 'h2h' && (
+                    <>
+                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute self-center px-1">VS</span>
                         <select
-                            className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full sm:w-48 transition-colors duration-fast"
-                            value={selectedRosterId || ''}
-                            onChange={handleTeamChange}
+                            className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full transition-colors duration-fast"
+                            value={opponentRosterId || ''}
+                            onChange={handleOpponentChange}
+                            aria-label="Select opponent"
                         >
-                            {rosters?.map(roster => {
+                            <option value="" disabled>Select opponent</option>
+                            {rosters?.filter(r => r.roster_id !== selectedRosterId).map(roster => {
                                 const rosterUser = users?.find(u => u.user_id === roster.owner_id);
                                 return (
                                     <option key={roster.roster_id} value={roster.roster_id}>
@@ -75,31 +79,14 @@ const AnalyticsPage = () => {
                                 );
                             })}
                         </select>
+                    </>
+                )}
+            </div>
+        </div>
+    );
 
-                        {comparisonMode === 'h2h' && (
-                            <>
-                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute self-center px-1">VS</span>
-                                <select
-                                    className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal block w-full sm:w-48 transition-colors duration-fast"
-                                    value={opponentRosterId || ''}
-                                    onChange={handleOpponentChange}
-                                >
-                                    <option value="" disabled>Select opponent</option>
-                                    {rosters?.filter(r => r.roster_id !== selectedRosterId).map(roster => {
-                                        const rosterUser = users?.find(u => u.user_id === roster.owner_id);
-                                        return (
-                                            <option key={roster.roster_id} value={roster.roster_id}>
-                                                {displayTeamName(rosterUser)}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </section>
-
+    return (
+        <div className="space-y-6">
             <PowerRankings
                 leagueId={leagueId}
                 currentWeek={currentWeek}
@@ -123,6 +110,7 @@ const AnalyticsPage = () => {
                     opponentRosterId={comparisonMode === 'h2h' ? opponentRosterId : null}
                     opponentTeamName={comparisonMode === 'h2h' ? displayTeamName(opponentUser) : null}
                     users={users}
+                    headerExtras={positionalControls}
                 />
             </div>
 

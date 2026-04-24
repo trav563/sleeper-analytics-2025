@@ -3,11 +3,10 @@ import { Pip } from '../../../components/ui/Pip';
 import { Trend } from '../../../components/ui/Trend';
 import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
 
-/** Top-5 standings preview with deep-link to full Standings page. */
+/** Full standings preview with deep-link to power rankings page. */
 const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId }) => {
     const navigate = useNavigate();
     const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
-    const top5 = rankings.slice(0, 5);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
@@ -22,12 +21,12 @@ const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId 
                 </button>
             </header>
 
-            {top5.length === 0 ? (
+            {rankings.length === 0 ? (
                 <div className="font-mono text-2xs uppercase tracking-wider text-text-mute py-6 text-center">
                     Standings appear once games are played.
                 </div>
             ) : (
-                top5.map((row, i) => {
+                rankings.map((row, i) => {
                     const isMe = row.ownerId === currentUserId;
                     return (
                         <button
