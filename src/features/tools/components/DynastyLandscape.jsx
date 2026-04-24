@@ -243,11 +243,13 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         const d = payload[0].payload;
 
         // Trail dots have no tooltip — Recharts can't reliably distinguish a
-        // 3px trail dot from an overlapping 40px snapshot avatar, and showing
-        // the wrong team's tooltip is worse than no tooltip. The trail's
-        // selected team + season count is shown in a static line under the
-        // chart instead.
+        // 3px trail dot from an overlapping 40px snapshot avatar.
         if (d.isTrail) return null;
+
+        // When trail is on, only the SELECTED team's avatar produces a
+        // tooltip. Hovering near a trail dot otherwise picks up the nearest
+        // dimmed avatar's payload and labels the wrong team — confusing.
+        if (showTrail && d.rosterId !== selectedTrailRosterId) return null;
 
         let classification = '';
         if (d.production >= averages.production && d.age <= averages.age) classification = 'Dynasty Elite';
@@ -291,10 +293,17 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     // here; min/max guards below handle that.
     const ages = enrichedData?.map(d => d.age) || [];
     const prods = enrichedData?.map(d => d.production) || [];
+    // Padded display bounds — keep axis labels looking nice.
     const minAge = ages.length ? Math.floor(Math.min(...ages) - 0.5) : 0;
     const maxAge = ages.length ? Math.ceil(Math.max(...ages) + 0.5) : 1;
     const minProd = prods.length ? Math.floor(Math.min(...prods) * 0.95) : 0;
     const maxProd = prods.length ? Math.ceil(Math.max(...prods) * 1.05) : 1;
+    // Tight unpadded bounds — used to filter trail so it stays inside the
+    // band where snapshot teams actually exist (not the padding area).
+    const actualMinAge = ages.length ? Math.min(...ages) : 0;
+    const actualMaxAge = ages.length ? Math.max(...ages) : 1;
+    const actualMinProd = prods.length ? Math.min(...prods) : 0;
+    const actualMaxProd = prods.length ? Math.max(...prods) : 1;
 
     // Selected team's trail. Replace the chain's anchor-season entry with the
     // snapshot's exact (age, production) so the line tail lands on the bright
@@ -319,9 +328,10 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             ].sort((a, b) => a.season - b.season)
             : baseTrail;
         return replaced.filter(
-            (p) => p.age >= minAge && p.age <= maxAge && p.production >= minProd && p.production <= maxProd
+            (p) => p.age >= actualMinAge && p.age <= actualMaxAge &&
+                   p.production >= actualMinProd && p.production <= actualMaxProd
         );
-    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters, enrichedData, anchorSeason, minAge, maxAge, minProd, maxProd]);
+    }, [showTrail, trailByOwner, selectedTrailRosterId, rosters, enrichedData, anchorSeason, actualMinAge, actualMaxAge, actualMinProd, actualMaxProd]);
 
     const selectedTeamName = useMemo(() => {
         if (!selectedTrailRosterId) return '';
