@@ -2,6 +2,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
+// Module-level scheduler: serialize outgoing AI requests to one per ~1.5s so a
+// burst of card-Generate clicks doesn't trip Gemini's free-tier RPM cap (15/min).
+const MIN_GAP_MS = 1500;
+let lastFireTime = 0;
+async function scheduleFire() {
+    const now = Date.now();
+    const target = Math.max(now, lastFireTime + MIN_GAP_MS);
+    lastFireTime = target;
+    const wait = target - now;
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+}
+
 function getCacheKey(leagueId, userId, week, analysisType, constraint) {
     const c = constraint ? `:${constraint}` : '';
     return `ai_analysis:${leagueId}:${userId}:${week}:${analysisType}${c}`;
@@ -115,6 +127,10 @@ export function useAnalyzeTeam({
         setAnalysis('');
 
         try {
+            // Stagger cluster requests to avoid Gemini free-tier RPM rate limit.
+            await scheduleFire();
+            if (controller.signal.aborted) return;
+
             const response = await fetch('/api/analyze-team', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
