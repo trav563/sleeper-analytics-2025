@@ -175,8 +175,6 @@ export const usePowerRankings = (seasonMatchups, rosters, users) => {
 
         const rankings = Object.values(finalScores).map((t) => {
             const gp = t.gamesPlayed || 1;
-            const totalGames = t.wins + t.losses || 1;
-            const winPct = t.wins / totalGames;
             const ppg = t.totalPoints / gp;
             const apTotal = t.allPlayWins + t.allPlayLosses || 1;
             const apWinPct = t.allPlayWins / apTotal;

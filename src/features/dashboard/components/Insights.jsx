@@ -30,7 +30,7 @@ const parseSections = (md, max = 3) => {
 
 /** Coach's Take strip — horizontal AI insight cards. */
 const Insights = ({ leagueId, userId, week }) => {
-    const { analysis, loading, analyze, isOnCooldown, remaining, cachedAt } = useAnalyzeTeam({
+    const { analysis, loading, analyze, isOnCooldown, remaining } = useAnalyzeTeam({
         leagueId,
         userId,
         week,

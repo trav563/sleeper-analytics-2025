@@ -153,6 +153,55 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
         [seriesHistory, h2hHistory, week]
     );
 
+    /* Slot labels (memoized so positionRows useMemo below has a stable dep). */
+    const slotLabels = useMemo(() => league?.roster_positions || [], [league?.roster_positions]);
+
+    /* Build position-by-position rows. Computed unconditionally so we don't
+       trip rules-of-hooks; the early-return below skips the render. */
+    const positionRows = useMemo(() => {
+        if (!myMatchup) return [];
+        const myStarters = myMatchup.starters || [];
+        const oppStarters = oppMatchup?.starters || [];
+        const myPoints = myMatchup.starters_points || [];
+        const oppPoints = oppMatchup?.starters_points || [];
+        const len = Math.max(myStarters.length, oppStarters.length, slotLabels.length);
+        const rows = [];
+        for (let i = 0; i < len; i++) {
+            const slot = slotLabels[i] || '?';
+            if (slot === 'BN' || slot === 'TAXI' || slot === 'IR') continue;
+            const myPid = myStarters[i];
+            const oppPid = oppStarters[i];
+            const my = players?.[myPid];
+            const opp = players?.[oppPid];
+            const myStatus = bucketStarter(myMatchup, i, players, gameStatuses);
+            const oppStatus = bucketStarter(oppMatchup, i, players, gameStatuses);
+            rows.push({
+                slot,
+                me: my ? {
+                    name: `${my.first_name} ${my.last_name}`,
+                    team: my.team,
+                    pts: myPoints[i] || 0,
+                    status: myStatus.status,
+                    live: myStatus.live,
+                    pid: myPid,
+                } : null,
+                opp: opp ? {
+                    name: `${opp.first_name} ${opp.last_name}`,
+                    team: opp.team,
+                    pts: oppPoints[i] || 0,
+                    status: oppStatus.status,
+                    live: oppStatus.live,
+                    pid: oppPid,
+                } : null,
+            });
+        }
+        return rows.sort((a, b) => {
+            const ai = orderedPositions.indexOf(a.slot);
+            const bi = orderedPositions.indexOf(b.slot);
+            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        });
+    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels]);
+
     /* No matchup found */
     if (!myMatchup) {
         return (
@@ -206,53 +255,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, viewMatchups, se
         return b.status === 'LIVE';
     });
 
-    /* Slot labels — derive from league.roster_positions if available. */
-    const slotLabels = league?.roster_positions || [];
-
-    /* Build position-by-position rows. */
-    const positionRows = useMemo(() => {
-        const myStarters = myMatchup.starters || [];
-        const oppStarters = oppMatchup?.starters || [];
-        const myPoints = myMatchup.starters_points || [];
-        const oppPoints = oppMatchup?.starters_points || [];
-        const len = Math.max(myStarters.length, oppStarters.length, slotLabels.length);
-        const rows = [];
-        for (let i = 0; i < len; i++) {
-            const slot = slotLabels[i] || '?';
-            if (slot === 'BN' || slot === 'TAXI' || slot === 'IR') continue;
-            const myPid = myStarters[i];
-            const oppPid = oppStarters[i];
-            const my = players?.[myPid];
-            const opp = players?.[oppPid];
-            const myStatus = bucketStarter(myMatchup, i, players, gameStatuses);
-            const oppStatus = bucketStarter(oppMatchup, i, players, gameStatuses);
-            rows.push({
-                slot,
-                me: my ? {
-                    name: `${my.first_name} ${my.last_name}`,
-                    team: my.team,
-                    pts: myPoints[i] || 0,
-                    status: myStatus.status,
-                    live: myStatus.live,
-                    pid: myPid,
-                } : null,
-                opp: opp ? {
-                    name: `${opp.first_name} ${opp.last_name}`,
-                    team: opp.team,
-                    pts: oppPoints[i] || 0,
-                    status: oppStatus.status,
-                    live: oppStatus.live,
-                    pid: oppPid,
-                } : null,
-            });
-        }
-        // Sort by canonical position order
-        return rows.sort((a, b) => {
-            const ai = orderedPositions.indexOf(a.slot);
-            const bi = orderedPositions.indexOf(b.slot);
-            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-        });
-    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels]);
+    // (slotLabels + positionRows now computed above the early return)
 
     const myHue = myRoster ? Number(myRoster.roster_id) * 47 % 360 : 0;
     const oppHue = oppRoster ? Number(oppRoster.roster_id) * 47 % 360 : 180;

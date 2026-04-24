@@ -255,8 +255,16 @@ const PlayerDetail = ({ player, league, rosters, users, state }) => {
                             {oppTeam
                                 ? <>{live?.isHome ? 'vs' : '@'} {oppTeam}{live?.displayClock ? <> · <span className="tnum text-signal-2">{live.statusName === 'STATUS_FINAL' ? 'Final' : `Q${live.period} ${live.displayClock}`}</span></> : ''}</>
                                 : <span>{seasonType === 'pre' ? 'Preseason' : `Week ${week}`}</span>}
-                            {ownerUser && (
-                                <> · Rostered by <span className="text-text-dim">{displayTeamName(ownerUser)}</span></>
+                            {ownerUser && ownerRoster && (
+                                <> · Rostered by{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/league/${leagueId}/team/${ownerRoster.roster_id}`)}
+                                        className="text-text-dim hover:text-signal underline-offset-2 hover:underline transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal rounded-sm"
+                                    >
+                                        {displayTeamName(ownerUser)}
+                                    </button>
+                                </>
                             )}
                         </div>
 

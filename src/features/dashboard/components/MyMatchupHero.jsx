@@ -68,7 +68,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     };
     const projRemaining = (m) => {
         if (!m) return 0;
-        return (m.starters || []).reduce((acc, pid, i) => {
+        return (m.starters || []).reduce((acc, pid) => {
             const team = players?.[pid]?.team;
             const status = team ? liveDetails?.[team]?.statusName : null;
             const isDone = status === 'STATUS_FINAL';
