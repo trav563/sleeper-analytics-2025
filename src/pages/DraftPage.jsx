@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Calendar } from 'lucide-react';
@@ -10,11 +10,14 @@ import { useDraftQueue } from '../features/draft/hooks/useDraftQueue';
 import { useMarketValues } from '../features/draft/hooks/useMarketValues';
 import { useBestAvailable } from '../features/draft/hooks/useBestAvailable';
 import { useSniperAlerts } from '../features/draft/hooks/useSniperAlerts';
+import { useTeamNeeds } from '../features/draft/hooks/useTeamNeeds';
+import { useTrendingAdds } from '../features/draft/hooks/useTrendingAdds';
 import { detectDraftType, draftTypeLabel } from '../features/draft/utils/draftTypeDetect';
 import PreDraftView from '../features/draft/components/PreDraftView';
 import LiveDraftView from '../features/draft/components/LiveDraftView';
 import PostDraftView from '../features/draft/components/PostDraftView';
 import SniperToastHost from '../features/draft/components/SniperToastHost';
+import PlayerDetailDialog from '../features/draft/components/PlayerDetailDialog';
 
 export default function DraftPage() {
     const { league, rosters, users, players, user } = useOutletContext();
@@ -35,8 +38,20 @@ export default function DraftPage() {
 
     const queueState = useDraftQueue(draftId);
     const marketValues = useMarketValues({ league, players });
+    const { idMap: trendingMap } = useTrendingAdds();
+
+    const userRoster = useMemo(
+        () => rosters?.find((r) => r.owner_id === userId) || null,
+        [rosters, userId]
+    );
+    const teamNeeds = useTeamNeeds({ league, userRoster, players });
 
     const [positionFilter, setPositionFilter] = useState('ALL');
+    const [bestMode, setBestMode] = useState('bpa');
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
+
+    const onPlayerClick = useCallback((p) => setSelectedPlayer(p), []);
+    const onClosePlayer = useCallback(() => setSelectedPlayer(null), []);
 
     const availablePlayers = useBestAvailable({
         players,
@@ -46,6 +61,8 @@ export default function DraftPage() {
         draftType,
         positionFilter,
         limit: 200,
+        teamWeights: teamNeeds?.weights,
+        mode: bestMode,
     });
 
     // Full ranked pool (for scarcity heatmap baseline)
@@ -66,15 +83,15 @@ export default function DraftPage() {
     });
 
     if (!leagueId) {
-        return <p className="text-muted-foreground">Load a league to use the Draft Assistant.</p>;
+        return <p className="text-text-mute">Load a league to use the Draft Assistant.</p>;
     }
 
     if (!draftId && !draftLoading) {
         return (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center">
-                <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <h2 className="text-xl font-semibold mb-1">No draft scheduled</h2>
-                <p className="text-sm text-muted-foreground">
+            <div className="rounded-xl border border-line bg-bg-1 p-8 text-center">
+                <Calendar className="w-10 h-10 text-text-mute mx-auto mb-3" />
+                <h2 className="text-xl font-semibold mb-1 text-text">No draft scheduled</h2>
+                <p className="text-sm text-text-mute">
                     This league doesn't have an active draft right now.
                 </p>
             </div>
@@ -83,7 +100,7 @@ export default function DraftPage() {
 
     if (draftLoading || !draft) {
         return (
-            <div className="flex justify-center items-center py-20 text-muted-foreground animate-pulse">
+            <div className="flex justify-center items-center py-20 text-text-mute animate-pulse">
                 Loading draft…
             </div>
         );
@@ -91,7 +108,7 @@ export default function DraftPage() {
 
     if (draftError) {
         return (
-            <div className="text-rose-400 p-4">
+            <div className="text-bad p-4">
                 Failed to load draft: {String(draftError.message || draftError)}
             </div>
         );
@@ -99,14 +116,23 @@ export default function DraftPage() {
 
     if (draft.type === 'auction') {
         return (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center">
-                <h2 className="text-xl font-semibold mb-1">Auction drafts coming soon</h2>
-                <p className="text-sm text-muted-foreground">
+            <div className="rounded-xl border border-line bg-bg-1 p-8 text-center">
+                <h2 className="text-xl font-semibold mb-1 text-text">Auction drafts coming soon</h2>
+                <p className="text-sm text-text-mute">
                     The Live Draft Assistant currently supports snake and linear drafts.
                 </p>
             </div>
         );
     }
+
+    const sharedProps = {
+        draft, league, picks, players, rosters, users, userId, draftType,
+        availablePlayers, queueState, positionFilter,
+        onPositionFilter: setPositionFilter,
+        teamNeeds, trendingMap,
+        bestMode, onBestModeChange: setBestMode,
+        onPlayerClick,
+    };
 
     return (
         <>
@@ -116,55 +142,36 @@ export default function DraftPage() {
 
             <SniperToastHost alerts={alerts} onDismiss={dismiss} />
 
+            <PlayerDetailDialog
+                selected={selectedPlayer}
+                players={players}
+                onClose={onClosePlayer}
+                onToggleQueue={queueState.toggle}
+                isQueued={queueState.isQueued}
+            />
+
             {mode === 'scheduled' && (
-                <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-8 text-center">
-                    <Calendar className="w-10 h-10 text-amber-400 mx-auto mb-3" />
-                    <h2 className="text-2xl font-semibold mb-2">Draft scheduled</h2>
-                    <p className="text-sm text-muted-foreground mb-1">
+                <div className="rounded-2xl border border-line bg-bg-1 p-8 text-center">
+                    <Calendar className="w-10 h-10 text-signal mx-auto mb-3" />
+                    <h2 className="text-2xl font-semibold mb-2 text-text">Draft scheduled</h2>
+                    <p className="text-sm text-text-mute mb-1">
                         {draftTypeLabel(draftType)} starts {new Date(Number(draft.start_time)).toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground/80">
+                    <p className="text-xs text-text-mute/80">
                         The Live Draft Assistant unlocks 24 hours before the draft.
                     </p>
                 </div>
             )}
 
-            {mode === 'pre' && (
-                <PreDraftView
-                    draft={draft}
-                    league={league}
-                    picks={picks}
-                    players={players}
-                    rosters={rosters}
-                    users={users}
-                    userId={userId}
-                    draftType={draftType}
-                    availablePlayers={availablePlayers}
-                    fullRanked={fullRanked}
-                    queueState={queueState}
-                    positionFilter={positionFilter}
-                    onPositionFilter={setPositionFilter}
-                />
-            )}
+            {mode === 'pre' && <PreDraftView {...sharedProps} />}
 
             {mode === 'live' && (
                 <LiveDraftView
-                    draft={draft}
+                    {...sharedProps}
                     draftId={draftId}
-                    league={league}
                     leagueId={leagueId}
-                    picks={picks}
-                    players={players}
-                    rosters={rosters}
-                    users={users}
-                    userId={userId}
-                    draftType={draftType}
                     clock={clock}
-                    availablePlayers={availablePlayers}
                     fullRanked={fullRanked}
-                    queueState={queueState}
-                    positionFilter={positionFilter}
-                    onPositionFilter={setPositionFilter}
                 />
             )}
 
@@ -177,11 +184,12 @@ export default function DraftPage() {
                     users={users}
                     userId={userId}
                     draftType={draftType}
+                    onPlayerClick={onPlayerClick}
                 />
             )}
 
             {mode === 'unknown' && (
-                <p className="text-muted-foreground">Unknown draft state.</p>
+                <p className="text-text-mute">Unknown draft state.</p>
             )}
         </>
     );

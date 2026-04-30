@@ -14,7 +14,7 @@ const POSITION_COLOR = {
  * Shows the picks the logged-in user has made in this draft, in pick order.
  * For rookie drafts: usually 3 cards. For startups: many.
  */
-export default function MyDraftRoster({ picks, players, userSlot, draftType }) {
+export default function MyDraftRoster({ picks, players, userSlot, draftType, onPlayerClick }) {
     const myPicks = (picks || [])
         .filter((p) => p.draft_slot === userSlot)
         .sort((a, b) => a.pick_no - b.pick_no);
@@ -49,18 +49,23 @@ export default function MyDraftRoster({ picks, players, userSlot, draftType }) {
                             )}
                         >
                             <div className="w-10 text-center">
-                                <p className="text-[10px] text-text-mute">Pick</p>
-                                <p className="font-mono font-bold text-sm">{pick.pick_no}</p>
+                                <p className="text-2xs text-text-mute">Pick</p>
+                                <p className="font-mono font-bold text-sm tnum">{pick.pick_no}</p>
                             </div>
                             <Badge variant="outline" className="font-mono w-12 justify-center">
                                 {pos}
                             </Badge>
-                            <div className="flex-1 min-w-0">
+                            <button
+                                type="button"
+                                onClick={() => onPlayerClick?.({ id: pick.player_id, name, pos, team })}
+                                className="flex-1 min-w-0 text-left hover:text-signal transition-colors"
+                                disabled={!pick.player_id || !onPlayerClick}
+                            >
                                 <p className="font-medium truncate">{name}</p>
                                 <p className="text-xs text-text-mute">
                                     {team} · R{pick.round}
                                 </p>
-                            </div>
+                            </button>
                         </div>
                     );
                 })}

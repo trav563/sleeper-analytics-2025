@@ -4,7 +4,7 @@ import { displayTeamName } from '../../../utils/nflData';
 /**
  * Reverse-chronological feed of the most recent N picks.
  */
-export default function RecentPicksFeed({ picks, players, rosters, users, limit = 10, userSlot }) {
+export default function RecentPicksFeed({ picks, players, rosters, users, limit = 10, userSlot, onPlayerClick }) {
     const recent = (picks || []).slice(-limit).reverse();
 
     return (
@@ -44,12 +44,17 @@ export default function RecentPicksFeed({ picks, players, rosters, users, limit 
                             <Badge variant="outline" className="font-mono w-12 justify-center text-[10px]">
                                 {pos}
                             </Badge>
-                            <div className="flex-1 min-w-0">
+                            <button
+                                type="button"
+                                onClick={() => onPlayerClick?.({ id: pick.player_id, name, pos, team })}
+                                className="flex-1 min-w-0 text-left hover:text-signal transition-colors"
+                                disabled={!pick.player_id || !onPlayerClick}
+                            >
                                 <p className="font-medium truncate text-sm">{name}</p>
-                                <p className="text-[11px] text-text-mute truncate">
+                                <p className="text-2xs text-text-mute truncate">
                                     {team} → {ownerName}
                                 </p>
-                            </div>
+                            </button>
                         </div>
                     );
                 })}

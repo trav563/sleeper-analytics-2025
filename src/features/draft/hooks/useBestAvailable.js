@@ -17,6 +17,8 @@ export function useBestAvailable({
     draftType,
     positionFilter = 'ALL',
     limit = 200,
+    teamWeights = null,
+    mode = 'bpa',
 }) {
     return useMemo(() => {
         if (!players) return [];
@@ -42,6 +44,10 @@ export function useBestAvailable({
 
             const value = marketValues?.[pid] ?? 0;
 
+            const searchRank = p.search_rank ?? 9999;
+            const valueSignal = value > 0 ? value : (10000 - Math.min(searchRank, 10000)) / 10;
+            const weight = teamWeights?.[pos] ?? 1.0;
+
             out.push({
                 id: pid,
                 name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid,
@@ -51,17 +57,27 @@ export function useBestAvailable({
                 yearsExp: p.years_exp ?? null,
                 injury: p.injury_status || null,
                 value,
-                searchRank: p.search_rank ?? 9999,
+                searchRank,
+                needWeight: weight,
+                fitScore: weight * valueSignal,
             });
         }
 
-        // Sort: FC value desc → search_rank asc → name. Ensures players with
-        // a real signal float to the top regardless of which source has them.
-        out.sort((a, b) => {
-            if (b.value !== a.value) return b.value - a.value;
-            if (a.searchRank !== b.searchRank) return a.searchRank - b.searchRank;
-            return a.name.localeCompare(b.name);
-        });
+        // Two sort modes:
+        //  - 'bpa'   → FC value desc → search_rank asc → name (default)
+        //  - 'forMe' → fitScore desc (need-weighted)
+        if (mode === 'forMe' && teamWeights) {
+            out.sort((a, b) => {
+                if (b.fitScore !== a.fitScore) return b.fitScore - a.fitScore;
+                return a.name.localeCompare(b.name);
+            });
+        } else {
+            out.sort((a, b) => {
+                if (b.value !== a.value) return b.value - a.value;
+                if (a.searchRank !== b.searchRank) return a.searchRank - b.searchRank;
+                return a.name.localeCompare(b.name);
+            });
+        }
         return out.slice(0, limit);
-    }, [players, picks, marketValues, rosters, draftType, positionFilter, limit]);
+    }, [players, picks, marketValues, rosters, draftType, positionFilter, limit, teamWeights, mode]);
 }

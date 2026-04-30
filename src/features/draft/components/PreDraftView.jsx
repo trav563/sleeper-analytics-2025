@@ -4,6 +4,7 @@ import { Badge } from '../../../components/ui/Badge';
 import DraftOrderGrid from './DraftOrderGrid';
 import BestAvailableList from './BestAvailableList';
 import QueueManager from './QueueManager';
+import TeamNeeds from './TeamNeeds';
 import { draftTypeLabel } from '../utils/draftTypeDetect';
 
 function formatCountdown(ms) {
@@ -31,6 +32,9 @@ export default function PreDraftView({
     draft, picks, players, rosters, users, userId,
     draftType, availablePlayers, queueState,
     positionFilter, onPositionFilter,
+    teamNeeds, trendingMap,
+    bestMode, onBestModeChange,
+    onPlayerClick,
 }) {
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
@@ -85,27 +89,35 @@ export default function PreDraftView({
                         onPositionFilter={onPositionFilter}
                         isQueued={queueState.isQueued}
                         onToggleQueue={queueState.toggle}
+                        onPlayerClick={onPlayerClick}
                         showRookieOnlyHint={draftType === 'rookie'}
+                        mode={bestMode}
+                        onModeChange={onBestModeChange}
+                        trendingMap={trendingMap}
+                        teamWeights={teamNeeds?.weights}
                     />
                 </div>
                 <div className="space-y-6">
+                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={!!teamNeeds && teamNeeds.positions.some(p => p.ownedCount > 0)} />
                     <QueueManager
                         queue={queueState.queue}
                         players={players}
                         picks={picks}
                         onToggle={queueState.toggle}
                         onClear={queueState.clear}
+                        onPlayerClick={onPlayerClick}
                     />
                     <div className="rounded-xl border border-line bg-bg-1 p-4">
-                        <h3 className="text-base font-semibold flex items-center gap-2 mb-2">
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-2 text-text">
                             <Clock className="w-4 h-4" />
                             Pre-Draft Tips
                         </h3>
                         <ul className="text-sm text-text-mute space-y-1.5 list-disc list-inside">
-                            <li>Star players in the Best Available list to build a queue.</li>
-                            <li>The dashboard switches to live mode automatically when the draft starts.</li>
-                            <li>AI recommendations auto-fire when it's your turn.</li>
-                            <li>Closing this tab is fine — your queue is saved per-draft.</li>
+                            <li>Star players in Best Available to build a queue.</li>
+                            <li>Click a player's name to see news and stats.</li>
+                            <li>Toggle "Best for My Team" to weight by your roster needs.</li>
+                            <li>The dashboard auto-switches to live mode when the draft starts.</li>
+                            <li>Your queue is saved per-draft.</li>
                         </ul>
                     </div>
                 </div>

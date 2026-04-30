@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/Button';
  * Compact list of starred players. Shows queued players that haven't been
  * drafted yet. Click ★ to remove.
  */
-export default function QueueManager({ queue, players, picks, onToggle, onClear }) {
+export default function QueueManager({ queue, players, picks, onToggle, onClear, onPlayerClick }) {
     const draftedIds = new Set((picks || []).map((p) => p.player_id).filter(Boolean));
     const items = [...queue]
         .filter((id) => !draftedIds.has(id))
@@ -61,10 +61,15 @@ export default function QueueManager({ queue, players, picks, onToggle, onClear 
                         <Badge variant="outline" className="font-mono text-[10px] w-10 justify-center">
                             {p.pos}
                         </Badge>
-                        <div className="flex-1 min-w-0">
+                        <button
+                            type="button"
+                            onClick={() => onPlayerClick?.(p)}
+                            className="flex-1 min-w-0 text-left hover:text-signal transition-colors"
+                            disabled={!onPlayerClick}
+                        >
                             <p className="text-sm font-medium truncate">{p.name}</p>
-                            <p className="text-[10px] text-text-mute">{p.team}</p>
-                        </div>
+                            <p className="text-2xs text-text-mute">{p.team}</p>
+                        </button>
                     </div>
                 ))}
             </div>

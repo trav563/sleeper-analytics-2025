@@ -6,18 +6,24 @@ import PositionScarcityHeatmap from './PositionScarcityHeatmap';
 import QueueManager from './QueueManager';
 import AIRecommender from './AIRecommender';
 import DraftOrderGrid from './DraftOrderGrid';
+import TeamNeeds from './TeamNeeds';
 
 export default function LiveDraftView({
     draft, draftId, leagueId, picks, players, rosters, users, userId,
     draftType, clock, availablePlayers, fullRanked, queueState,
     positionFilter, onPositionFilter,
+    teamNeeds, trendingMap,
+    bestMode, onBestModeChange,
+    onPlayerClick,
 }) {
+    const hasRoster = !!teamNeeds && teamNeeds.positions.some(p => p.ownedCount > 0);
+
     return (
         <div className="space-y-6">
-            <OnTheClockBanner clock={clock} draft={draft} rosters={rosters} users={users} />
+            <OnTheClockBanner clock={clock} rosters={rosters} users={users} />
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                {/* Left: AI + my picks + queue */}
+                {/* Left: AI + Team Needs + my picks + queue */}
                 <div className="xl:col-span-3 space-y-6">
                     <AIRecommender
                         draftId={draftId}
@@ -28,11 +34,13 @@ export default function LiveDraftView({
                         draftType={draftType}
                         picksUntilMine={clock?.picksUntilMine}
                     />
+                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={hasRoster} />
                     <MyDraftRoster
                         picks={picks}
                         players={players}
                         userSlot={clock?.userSlot}
                         draftType={draftType}
+                        onPlayerClick={onPlayerClick}
                     />
                     <QueueManager
                         queue={queueState.queue}
@@ -40,6 +48,7 @@ export default function LiveDraftView({
                         picks={picks}
                         onToggle={queueState.toggle}
                         onClear={queueState.clear}
+                        onPlayerClick={onPlayerClick}
                     />
                 </div>
 
@@ -51,7 +60,12 @@ export default function LiveDraftView({
                         onPositionFilter={onPositionFilter}
                         isQueued={queueState.isQueued}
                         onToggleQueue={queueState.toggle}
+                        onPlayerClick={onPlayerClick}
                         showRookieOnlyHint={draftType === 'rookie'}
+                        mode={bestMode}
+                        onModeChange={onBestModeChange}
+                        trendingMap={trendingMap}
+                        teamWeights={teamNeeds?.weights}
                     />
                 </div>
 
@@ -67,6 +81,7 @@ export default function LiveDraftView({
                         rosters={rosters}
                         users={users}
                         userSlot={clock?.userSlot}
+                        onPlayerClick={onPlayerClick}
                     />
                 </div>
             </div>

@@ -6,7 +6,7 @@ import MyDraftRoster from './MyDraftRoster';
 import { Badge } from '../../../components/ui/Badge';
 import { draftTypeLabel } from '../utils/draftTypeDetect';
 
-export default function PostDraftView({ draft, picks, players, rosters, users, userId, draftType }) {
+export default function PostDraftView({ draft, picks, players, rosters, users, userId, draftType, onPlayerClick }) {
     const { leagueId } = useParams();
     const userSlot = userId ? draft?.draft_order?.[userId] : null;
     const totalPicks = picks?.length || 0;
@@ -41,6 +41,7 @@ export default function PostDraftView({ draft, picks, players, rosters, users, u
                         players={players}
                         userSlot={userSlot}
                         draftType={draftType}
+                        onPlayerClick={onPlayerClick}
                     />
                 </div>
                 <div className="xl:col-span-2">
