@@ -1,0 +1,94 @@
+import { Clock, Trophy, Pause } from 'lucide-react';
+import { cn } from '../../../lib/utils';
+import { displayTeamName } from '../../../utils/nflData';
+
+function formatTimer(msLeft) {
+    if (msLeft == null) return '—';
+    const s = Math.ceil(msLeft / 1000);
+    if (s <= 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${String(r).padStart(2, '0')}`;
+}
+
+export default function OnTheClockBanner({ clock, rosters, users }) {
+    if (!clock) return null;
+    if (clock.isComplete) {
+        return (
+            <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-900/40 to-emerald-700/20 p-6 flex items-center gap-4">
+                <Trophy className="w-10 h-10 text-emerald-400" />
+                <div>
+                    <h2 className="text-2xl font-bold text-emerald-300">Draft Complete</h2>
+                    <p className="text-sm text-emerald-200/70">All picks are in.</p>
+                </div>
+            </div>
+        );
+    }
+
+    const roster = rosters?.find((r) => r.roster_id === clock.currentRosterId);
+    const owner = roster ? users?.find((u) => u.user_id === roster.owner_id) : null;
+    const ownerName = owner ? displayTeamName(owner) : `Team ${clock.currentRosterId ?? '?'}`;
+
+    const isLow = clock.msLeft != null && clock.msLeft < 15_000;
+    const isWarn = !isLow && clock.msLeft != null && clock.msLeft < 30_000;
+
+    return (
+        <div
+            className={cn(
+                'rounded-2xl border p-6 transition-colors',
+                clock.isMyTurn
+                    ? 'border-amber-400 bg-gradient-to-r from-amber-900/50 to-amber-600/30 animate-pulse'
+                    : 'border-slate-700 bg-slate-900/60'
+            )}
+        >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div
+                        className={cn(
+                            'h-14 w-14 rounded-xl flex items-center justify-center text-xl font-bold',
+                            clock.isMyTurn
+                                ? 'bg-amber-500 text-amber-950'
+                                : 'bg-slate-700 text-slate-100'
+                        )}
+                    >
+                        {clock.pickNo}
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Round {clock.round} · Pick {clock.posInRound} of {clock.numTeams}
+                        </p>
+                        <h2 className="text-2xl font-bold">
+                            {clock.isMyTurn ? 'You are on the clock' : `${ownerName} on the clock`}
+                        </h2>
+                        {!clock.isMyTurn && clock.myNextPick && (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                Your next pick: #{clock.myNextPick} ({clock.picksUntilMine} away)
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="text-right">
+                    {clock.isPaused ? (
+                        <div className="flex items-center gap-2 text-yellow-400">
+                            <Pause className="w-5 h-5" />
+                            <span className="font-semibold">Paused</span>
+                        </div>
+                    ) : clock.pickTimerSec === 0 ? (
+                        <div className="text-sm text-muted-foreground">No pick timer</div>
+                    ) : (
+                        <div
+                            className={cn(
+                                'flex items-center gap-2 font-mono text-3xl tabular-nums',
+                                isLow ? 'text-red-400' : isWarn ? 'text-amber-400' : 'text-foreground'
+                            )}
+                        >
+                            <Clock className="w-6 h-6" />
+                            {formatTimer(clock.msLeft)}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

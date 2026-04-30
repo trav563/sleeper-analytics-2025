@@ -101,6 +101,15 @@ export const fetchDraftPicks = async (draftId) => {
 };
 
 /**
+ * Fetch draft metadata (status, start_time, settings, draft_order, etc.)
+ * @param {string} draftId
+ */
+export const fetchDraft = async (draftId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/draft/${draftId}?_=${timestamp}`);
+};
+
+/**
  * Fetch all drafts attached to a league (startup, rookie, supplemental).
  * @param {string} leagueId
  */
