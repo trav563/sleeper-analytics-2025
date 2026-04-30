@@ -8,13 +8,13 @@ export default function RecentPicksFeed({ picks, players, rosters, users, limit 
     const recent = (picks || []).slice(-limit).reverse();
 
     return (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/40">
-            <div className="p-4 border-b border-slate-800">
+        <div className="rounded-xl border border-line bg-bg-1">
+            <div className="p-4 border-b border-line">
                 <h3 className="text-base font-semibold">Recent Picks</h3>
             </div>
             <div className="p-4 space-y-2 max-h-[600px] overflow-y-auto">
                 {recent.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-6">
+                    <p className="text-sm text-text-mute text-center py-6">
                         No picks yet.
                     </p>
                 )}
@@ -34,11 +34,11 @@ export default function RecentPicksFeed({ picks, players, rosters, users, limit 
                         <div
                             key={pick.pick_no}
                             className={`flex items-center gap-3 p-2 rounded-lg ${
-                                isMine ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-slate-800/40'
+                                isMine ? 'bg-signal/10 border border-signal/30' : 'bg-bg-2'
                             }`}
                         >
                             <div className="w-10 text-center">
-                                <p className="text-[10px] text-muted-foreground">#</p>
+                                <p className="text-[10px] text-text-mute">#</p>
                                 <p className="font-mono font-bold text-sm">{pick.pick_no}</p>
                             </div>
                             <Badge variant="outline" className="font-mono w-12 justify-center text-[10px]">
@@ -46,7 +46,7 @@ export default function RecentPicksFeed({ picks, players, rosters, users, limit 
                             </Badge>
                             <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate text-sm">{name}</p>
-                                <p className="text-[11px] text-muted-foreground truncate">
+                                <p className="text-[11px] text-text-mute truncate">
                                     {team} → {ownerName}
                                 </p>
                             </div>

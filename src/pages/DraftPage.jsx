@@ -34,7 +34,7 @@ export default function DraftPage() {
     const clock = useOnTheClock({ draft, picks, userId });
 
     const queueState = useDraftQueue(draftId);
-    const marketValues = useMarketValues({ league });
+    const marketValues = useMarketValues({ league, players });
 
     const [positionFilter, setPositionFilter] = useState('ALL');
 

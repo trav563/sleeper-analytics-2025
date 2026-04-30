@@ -21,10 +21,10 @@ export default function QueueManager({ queue, players, picks, onToggle, onClear 
         });
 
     return (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/40">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="rounded-xl border border-line bg-bg-1">
+            <div className="p-4 border-b border-line flex items-center justify-between">
                 <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Star className="w-4 h-4 text-amber-400" fill="currentColor" />
+                    <Star className="w-4 h-4 text-signal" fill="currentColor" />
                     My Queue
                     <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
                 </h3>
@@ -33,7 +33,7 @@ export default function QueueManager({ queue, players, picks, onToggle, onClear 
                         variant="ghost"
                         size="sm"
                         onClick={onClear}
-                        className="text-muted-foreground hover:text-rose-400 h-7 px-2"
+                        className="text-text-mute hover:text-bad h-7 px-2"
                     >
                         <Trash2 className="w-3 h-3 mr-1" />
                         Clear
@@ -42,18 +42,18 @@ export default function QueueManager({ queue, players, picks, onToggle, onClear 
             </div>
             <div className="p-4 space-y-1.5 max-h-[400px] overflow-y-auto">
                 {items.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-sm text-text-mute text-center py-4">
                         Star players in the Best Available list to queue them.
                     </p>
                 )}
                 {items.map((p) => (
                     <div
                         key={p.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-bg-2 hover:bg-bg-3 transition-colors"
                     >
                         <button
                             onClick={() => onToggle(p.id)}
-                            className="text-amber-400 hover:text-amber-200"
+                            className="text-signal hover:text-signal/90"
                             aria-label="Unstar"
                         >
                             <Star className="w-4 h-4" fill="currentColor" />
@@ -63,7 +63,7 @@ export default function QueueManager({ queue, players, picks, onToggle, onClear 
                         </Badge>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{p.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{p.team}</p>
+                            <p className="text-[10px] text-text-mute">{p.team}</p>
                         </div>
                     </div>
                 ))}

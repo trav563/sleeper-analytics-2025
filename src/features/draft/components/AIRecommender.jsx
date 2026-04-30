@@ -125,10 +125,10 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
     };
 
     return (
-        <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-slate-900/40">
-            <div className="p-4 border-b border-amber-500/30 flex items-center justify-between">
+        <div className="rounded-xl border border-signal/40 bg-gradient-to-br from-signal/30 to-bg-1/40">
+            <div className="p-4 border-b border-signal/30 flex items-center justify-between">
                 <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <Sparkles className="w-4 h-4 text-signal" />
                     AI Pick Recommender
                 </h3>
                 {(text || error) && (
@@ -140,7 +140,7 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
             </div>
             <div className="p-4">
                 {!isMyTurn && !text && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-sm text-text-mute text-center py-4">
                         {picksUntilMine != null
                             ? `Recommendations will appear when you're on the clock (${picksUntilMine} ${picksUntilMine === 1 ? 'pick' : 'picks'} away).`
                             : 'Recommendations will appear when you are on the clock.'}
@@ -148,14 +148,14 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
                 )}
 
                 {loading && !text && (
-                    <div className="flex items-center gap-2 text-amber-300 text-sm py-2">
-                        <div className="w-4 h-4 border-2 border-amber-300 border-t-transparent rounded-full animate-spin" />
+                    <div className="flex items-center gap-2 text-signal/80 text-sm py-2">
+                        <div className="w-4 h-4 border-2 border-signal/80 border-t-transparent rounded-full animate-spin" />
                         Analyzing the board…
                     </div>
                 )}
 
                 {error && (
-                    <div className="text-sm text-rose-300 py-2">
+                    <div className="text-sm text-bad py-2">
                         Error: {error}
                     </div>
                 )}

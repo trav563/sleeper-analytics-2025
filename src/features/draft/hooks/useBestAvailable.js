@@ -36,8 +36,9 @@ export function useBestAvailable({
             if (positionFilter !== 'ALL' && pos !== positionFilter) continue;
             if (!p.active && pos !== 'DEF') continue;
 
-            // Rookie-only filter for rookie drafts
-            if (draftType === 'rookie' && (p.years_exp ?? null) !== 0) continue;
+            // Rookie-only filter: keep years_exp === 0 AND pre-draft prospects
+            // (years_exp == null) — see RosterClogger.jsx:82-84 for that nuance.
+            if (draftType === 'rookie' && p.years_exp != null && p.years_exp !== 0) continue;
 
             const value = marketValues?.[pid] ?? 0;
 
@@ -50,10 +51,17 @@ export function useBestAvailable({
                 yearsExp: p.years_exp ?? null,
                 injury: p.injury_status || null,
                 value,
+                searchRank: p.search_rank ?? 9999,
             });
         }
 
-        out.sort((a, b) => b.value - a.value);
+        // Sort: FC value desc → search_rank asc → name. Ensures players with
+        // a real signal float to the top regardless of which source has them.
+        out.sort((a, b) => {
+            if (b.value !== a.value) return b.value - a.value;
+            if (a.searchRank !== b.searchRank) return a.searchRank - b.searchRank;
+            return a.name.localeCompare(b.name);
+        });
         return out.slice(0, limit);
     }, [players, picks, marketValues, rosters, draftType, positionFilter, limit]);
 }

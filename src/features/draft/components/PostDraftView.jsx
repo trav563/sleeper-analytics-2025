@@ -13,15 +13,15 @@ export default function PostDraftView({ draft, picks, players, rosters, users, u
 
     return (
         <div className="space-y-6">
-            <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-900/40 to-slate-900/40 p-6">
+            <div className="rounded-2xl border border-good/40 bg-gradient-to-r from-good/30 to-bg-1/40 p-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <Badge variant="outline" className="mb-2">{draftTypeLabel(draftType)}</Badge>
                         <h2 className="text-2xl font-bold flex items-center gap-2">
-                            <Trophy className="w-6 h-6 text-emerald-400" />
+                            <Trophy className="w-6 h-6 text-good" />
                             Draft Complete
                         </h2>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-text-mute mt-1">
                             {totalPicks} total picks · Your slot: #{userSlot ?? '—'}
                         </p>
                     </div>
