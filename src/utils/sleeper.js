@@ -93,11 +93,29 @@ export const fetchLeague = async (leagueId) => {
 
 /**
  * Fetch draft picks for a specific draft
- * @param {string} draftId 
+ * @param {string} draftId
  */
 export const fetchDraftPicks = async (draftId) => {
     const timestamp = Date.now();
     return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
+};
+
+/**
+ * Fetch draft metadata (status, start_time, settings, draft_order, etc.)
+ * @param {string} draftId
+ */
+export const fetchDraft = async (draftId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/draft/${draftId}?_=${timestamp}`);
+};
+
+/**
+ * Fetch all drafts for a league (sorted newest first by Sleeper)
+ * @param {string} leagueId
+ */
+export const fetchLeagueDrafts = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/drafts?_=${timestamp}`);
 };
 
 /**

@@ -17,6 +17,9 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 // Recap Feature
 const RecapPage = lazy(() => import('./pages/RecapPage').catch(() => ({ default: () => <div>Page Not Found</div> })));
 
+// Draft Assistant
+const DraftPage = lazy(() => import('./pages/DraftPage'));
+
 // Loading fallback
 const PageLoader = () => (
   <div className="flex h-[50vh] w-full items-center justify-center">
@@ -42,6 +45,7 @@ const App = () => {
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="tools" element={<ToolsPage />} />
                 <Route path="recap" element={<RecapPage />} />
+                <Route path="draft" element={<DraftPage />} />
               </Route>
 
               {/* Fallback for any unmatched routes */}
