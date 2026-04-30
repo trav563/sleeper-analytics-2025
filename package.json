@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@tanstack/react-query": "^5.90.12",
     "@vercel/analytics": "^1.6.0",
+    "ai": "^6.0.170",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
     "html-to-image": "^1.11.13",

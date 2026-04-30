@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { streamText } from 'ai';
 
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 
@@ -491,8 +491,10 @@ ${instructions}`;
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
+    const apiKey = process.env.AI_GATEWAY_API_KEY;
+    if (!apiKey && !process.env.VERCEL) {
+        return res.status(500).json({ error: 'AI service not configured (set AI_GATEWAY_API_KEY)' });
+    }
 
     const { leagueId, userId, week, analysisType = 'full' } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
@@ -601,18 +603,18 @@ export default async function handler(req, res) {
             playerNews
         }, analysisType);
 
-        // Stream from Gemini
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-        const result = await model.generateContentStream(prompt);
+        // Stream from Gemini via Vercel AI Gateway
+        const result = streamText({
+            model: 'google/gemini-2.0-flash',
+            prompt,
+        });
 
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Remaining', String(rateCheck.remaining));
 
-        for await (const chunk of result.stream) {
-            const text = chunk.text();
+        for await (const text of result.textStream) {
             if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
         }
 
