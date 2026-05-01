@@ -126,7 +126,7 @@ export default function DraftPage() {
     }
 
     const sharedProps = {
-        draft, league, picks, players, rosters, users, userId, draftType,
+        draft, league, picks, players, rosters, users, userId, userRoster, draftType,
         availablePlayers, queueState, positionFilter,
         onPositionFilter: setPositionFilter,
         teamNeeds, trendingMap,

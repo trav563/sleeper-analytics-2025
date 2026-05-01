@@ -9,14 +9,14 @@ import DraftOrderGrid from './DraftOrderGrid';
 import TeamNeeds from './TeamNeeds';
 
 export default function LiveDraftView({
-    draft, draftId, leagueId, picks, players, rosters, users, userId,
+    draft, draftId, leagueId, picks, players, rosters, users, userId, userRoster,
     draftType, clock, availablePlayers, fullRanked, queueState,
     positionFilter, onPositionFilter,
     teamNeeds, trendingMap,
     bestMode, onBestModeChange,
     onPlayerClick,
 }) {
-    const hasRoster = !!teamNeeds && teamNeeds.positions.some(p => p.userStrength > 0);
+    const hasRoster = !!userRoster && (userRoster.players?.length || 0) > 0;
 
     return (
         <div className="space-y-6">
@@ -34,7 +34,12 @@ export default function LiveDraftView({
                         draftType={draftType}
                         picksUntilMine={clock?.picksUntilMine}
                     />
-                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={hasRoster} />
+                    <TeamNeeds
+                        teamNeeds={teamNeeds}
+                        hasRoster={hasRoster}
+                        availablePlayers={availablePlayers}
+                        onPlayerClick={onPlayerClick}
+                    />
                     <MyDraftRoster
                         picks={picks}
                         players={players}

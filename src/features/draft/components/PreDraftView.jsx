@@ -29,7 +29,7 @@ function formatLocal(ts) {
 }
 
 export default function PreDraftView({
-    draft, picks, players, rosters, users, userId,
+    draft, picks, players, rosters, users, userId, userRoster,
     draftType, availablePlayers, queueState,
     positionFilter, onPositionFilter,
     teamNeeds, trendingMap,
@@ -98,7 +98,12 @@ export default function PreDraftView({
                     />
                 </div>
                 <div className="space-y-6">
-                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={!!teamNeeds && teamNeeds.positions.some(p => p.userStrength > 0)} />
+                    <TeamNeeds
+                        teamNeeds={teamNeeds}
+                        hasRoster={!!userRoster && (userRoster.players?.length || 0) > 0}
+                        availablePlayers={availablePlayers}
+                        onPlayerClick={onPlayerClick}
+                    />
                     <QueueManager
                         queue={queueState.queue}
                         players={players}

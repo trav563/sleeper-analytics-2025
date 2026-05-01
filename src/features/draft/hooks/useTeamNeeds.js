@@ -42,7 +42,13 @@ function computePositionStrength(roster, players, marketValues, position, requir
         .map((pid) => {
             const p = players?.[pid];
             if (!p || p.position !== position) return null;
-            return marketValues?.[pid] ?? 0;
+            const fc = marketValues?.[pid] ?? 0;
+            if (fc > 0) return fc;
+            // Sleeper-native fallback: lower search_rank = better. Same formula
+            // as useBestAvailable so the panel still produces meaningful
+            // strength scores when FantasyCalc returns empty.
+            const searchRank = p.search_rank ?? 9999;
+            return Math.max(0, (10000 - Math.min(searchRank, 10000)) / 10);
         })
         .filter((v) => v != null)
         .sort((a, b) => b - a); // best players first

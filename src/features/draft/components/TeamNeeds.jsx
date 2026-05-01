@@ -22,9 +22,11 @@ const POSITION_COLOR = {
 /**
  * Quality-vs-league rendering. Each row shows a position with the user's
  * rank in the league plus an urgency band and a percentile bar so the
- * relative-to-field signal is obvious at a glance.
+ * relative-to-field signal is obvious at a glance. Critical/Below rows
+ * also list the top 2 available players at that position so the user can
+ * jump straight from "you're weak at RB" to "draft this RB."
  */
-export default function TeamNeeds({ teamNeeds, hasRoster }) {
+export default function TeamNeeds({ teamNeeds, hasRoster, availablePlayers, onPlayerClick }) {
     if (!hasRoster) {
         return (
             <SectionCard title="Team Needs" eyebrow="Roster Strength">
@@ -50,51 +52,87 @@ export default function TeamNeeds({ teamNeeds, hasRoster }) {
                     const style = URGENCY_STYLE[row.urgency];
                     const pctWidth = Math.max(4, Math.round((row.percentile || 0) * 100));
                     const showDelta = row.valueVsMedian !== 0 && row.userStrength > 0;
+                    const isWeak = row.urgency === 'critical' || row.urgency === 'below';
+                    const targets = isWeak && availablePlayers
+                        ? availablePlayers.filter((p) => p.pos === row.pos).slice(0, 2)
+                        : [];
                     return (
-                        <div
-                            key={row.pos}
-                            className={cn(
-                                'flex items-center justify-between gap-3 p-2.5 rounded-md border',
-                                style.row
-                            )}
-                        >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <Badge
-                                    variant="outline"
-                                    className={cn('font-mono w-10 justify-center shrink-0', POSITION_COLOR[row.pos])}
-                                >
-                                    {row.pos}
-                                </Badge>
-                                <div className="min-w-0">
-                                    <div className={cn('text-sm font-semibold leading-tight', style.text)}>
-                                        {style.label}
-                                    </div>
-                                    <div className="text-2xs text-text-mute font-mono mt-0.5">
-                                        #{row.rank} of {row.leagueSize}
-                                        {showDelta && (
-                                            <span
-                                                className={cn(
-                                                    'ml-1.5',
-                                                    row.valueVsMedian < 0 ? 'text-bad' : 'text-good'
-                                                )}
-                                            >
-                                                {row.valueVsMedian > 0 ? '+' : ''}
-                                                {Math.round(row.valueVsMedian)}
-                                            </span>
-                                        )}
+                        <div key={row.pos} className="space-y-1">
+                            <div
+                                className={cn(
+                                    'flex items-center justify-between gap-3 p-2.5 rounded-md border',
+                                    style.row
+                                )}
+                            >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <Badge
+                                        variant="outline"
+                                        className={cn('font-mono w-10 justify-center shrink-0', POSITION_COLOR[row.pos])}
+                                    >
+                                        {row.pos}
+                                    </Badge>
+                                    <div className="min-w-0">
+                                        <div className={cn('text-sm font-semibold leading-tight', style.text)}>
+                                            {style.label}
+                                        </div>
+                                        <div className="text-2xs text-text-mute font-mono mt-0.5">
+                                            #{row.rank} of {row.leagueSize}
+                                            {showDelta && (
+                                                <span
+                                                    className={cn(
+                                                        'ml-1.5',
+                                                        row.valueVsMedian < 0 ? 'text-bad' : 'text-good'
+                                                    )}
+                                                >
+                                                    {row.valueVsMedian > 0 ? '+' : ''}
+                                                    {Math.round(row.valueVsMedian)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            {/* Percentile bar */}
-                            <div
-                                className="w-16 h-1.5 bg-bg-3 rounded-full overflow-hidden shrink-0"
-                                title={`${Math.round((row.percentile || 0) * 100)}th percentile`}
-                            >
+                                {/* Percentile bar */}
                                 <div
-                                    className={cn('h-full transition-all', style.bar)}
-                                    style={{ width: `${pctWidth}%` }}
-                                />
+                                    className="w-16 h-1.5 bg-bg-3 rounded-full overflow-hidden shrink-0"
+                                    title={`${Math.round((row.percentile || 0) * 100)}th percentile`}
+                                >
+                                    <div
+                                        className={cn('h-full transition-all', style.bar)}
+                                        style={{ width: `${pctWidth}%` }}
+                                    />
+                                </div>
                             </div>
+                            {isWeak && (
+                                <div className="ml-12 mt-0.5">
+                                    {targets.length > 0 ? (
+                                        targets.map((p) => (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => onPlayerClick?.(p)}
+                                                className="flex items-center justify-between w-full text-left px-2 py-0.5 rounded hover:bg-bg-2 group"
+                                            >
+                                                <span className="text-xs truncate">
+                                                    <span className="text-text group-hover:text-signal transition-colors">
+                                                        → {p.name}
+                                                    </span>
+                                                    <span className="text-text-mute font-mono ml-1.5">
+                                                        {p.team}
+                                                        {p.age != null && ` · ${p.age}y`}
+                                                    </span>
+                                                </span>
+                                                <span className="text-2xs text-text-mute font-mono tnum shrink-0 ml-2">
+                                                    {p.value > 0 ? `FC ${p.value}` : p.searchRank < 9999 ? `#${p.searchRank}` : '—'}
+                                                </span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <p className="px-2 text-2xs text-text-mute italic">
+                                            No available targets at {row.pos}.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
