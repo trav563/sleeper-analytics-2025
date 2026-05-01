@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { displayTeamName } from '../utils/nflData';
 import MyMatchupHero from '../features/dashboard/components/MyMatchupHero';
 import LeaguePulse from '../features/dashboard/components/LeaguePulse';
@@ -9,7 +10,10 @@ import StandingsStrip from '../features/dashboard/components/StandingsStrip';
 import QuickStats4 from '../features/dashboard/components/QuickStats4';
 import RosterNews from '../features/dashboard/components/RosterNews';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
-import { fetchLeagueMatchups } from '../utils/sleeper';
+import { useLeagueDraftStatus } from '../features/draft/hooks/useLeagueDraftStatus';
+import { fetchLeagueMatchups, fetchDraftPicks } from '../utils/sleeper';
+import { LiveDot } from '../components/ui/LiveDot';
+import { Button } from '../components/ui/Button';
 
 const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, loading, error, user, league } = useOutletContext();
@@ -44,6 +48,17 @@ const DashboardPage = () => {
 
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
 
+    // Live draft signal — banner only renders when status is drafting/paused.
+    const { isLive: draftIsLive, draftId, totalPicks } = useLeagueDraftStatus(league?.league_id);
+    const { data: livePicks } = useQuery({
+        queryKey: ['draftPicks', draftId],
+        queryFn: () => fetchDraftPicks(draftId),
+        enabled: !!draftId && draftIsLive,
+        staleTime: 5 * 1000,
+        refetchInterval: 15 * 1000,
+    });
+    const livePickNo = (livePicks?.length || 0) + 1;
+
     useEffect(() => {
         if (users && users.length > 0 && !selectedUserId) {
             setSelectedUserId(user?.user_id || users[0].user_id);
@@ -75,6 +90,24 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-5">
+            {draftIsLive && league?.league_id && (
+                <div className="rounded-2xl border border-bad/40 bg-gradient-to-r from-bad/30 to-bg-1/40 p-4 flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <LiveDot label="Draft is live" className="!w-2.5 !h-2.5" />
+                        <div className="min-w-0">
+                            <h3 className="font-semibold text-text leading-tight">Draft is live</h3>
+                            <p className="text-xs text-text-mute font-mono mt-0.5 tnum">
+                                Pick #{livePickNo}
+                                {totalPicks ? ` of ${totalPicks}` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <Link to={`/league/${league.league_id}/draft`}>
+                        <Button>Open Draft</Button>
+                    </Link>
+                </div>
+            )}
+
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-line pb-5">
                 <div>

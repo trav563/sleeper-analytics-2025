@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
 import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown, ClipboardList } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { LiveDot } from '../ui/LiveDot';
+import { useLeagueDraftStatus } from '../../features/draft/hooks/useLeagueDraftStatus';
 import { cn } from '../../lib/utils';
 
 const Navbar = () => {
@@ -14,6 +16,9 @@ const Navbar = () => {
     // Robustly extract leagueId from URL regardless of route nesting
     const leagueIdMatch = location.pathname.match(/\/league\/(\d+)/);
     const leagueId = leagueIdMatch ? leagueIdMatch[1] : null;
+
+    // LIVE indicator on the Draft tab when the league's draft is in progress.
+    const { isLive: draftIsLive } = useLeagueDraftStatus(leagueId);
 
     const hasHistory = Array.isArray(leagueHistory) && leagueHistory.length > 1;
     const currentSeasonLeagueId = hasHistory ? leagueHistory[0]?.league_id : null;
@@ -85,13 +90,14 @@ const Navbar = () => {
                             <div className="hidden md:flex items-center gap-0.5">
                                 {navItems.map((item) => {
                                     const active = isActive(item.exact ? '' : item.href.split('/').pop());
+                                    const showLive = item.label === 'Draft' && draftIsLive;
                                     return (
                                         <Link
                                             key={item.href}
                                             to={item.href}
                                             className={cn(
                                                 "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold ring-offset-bg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
-                                                "h-9 px-2.5",
+                                                "h-9 px-2.5 gap-1.5",
                                                 active
                                                     ? "bg-bg-3 text-signal"
                                                     : "text-text-dim hover:bg-bg-2 hover:text-text"
@@ -99,6 +105,7 @@ const Navbar = () => {
                                             aria-current={active ? "page" : undefined}
                                         >
                                             {item.label}
+                                            {showLive && <LiveDot label="Draft is live" />}
                                         </Link>
                                     );
                                 })}
@@ -198,6 +205,7 @@ const Navbar = () => {
                 <div className="md:hidden border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1 animate-accordion-down">
                     {leagueId && navItems.map((item) => {
                         const active = isActive(item.exact ? '' : item.href.split('/').pop());
+                        const showLive = item.label === 'Draft' && draftIsLive;
                         return (
                             <Link
                                 key={item.href}
@@ -213,6 +221,7 @@ const Navbar = () => {
                             >
                                 <item.icon className="w-5 h-5" />
                                 {item.label}
+                                {showLive && <LiveDot label="Draft is live" className="ml-auto" />}
                             </Link>
                         );
                     })}

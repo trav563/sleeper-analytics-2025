@@ -4,11 +4,14 @@ import { displayTeamName } from '../../../utils/nflData';
 
 function formatTimer(msLeft) {
     if (msLeft == null) return '—';
-    const s = Math.ceil(msLeft / 1000);
-    if (s <= 0) return '0:00';
-    const m = Math.floor(s / 60);
-    const r = s % 60;
-    return `${m}:${String(r).padStart(2, '0')}`;
+    const totalSec = Math.max(0, Math.ceil(msLeft / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) {
+        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export default function OnTheClockBanner({ clock, rosters, users }) {
