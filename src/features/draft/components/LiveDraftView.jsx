@@ -9,7 +9,7 @@ import DraftOrderGrid from './DraftOrderGrid';
 import TeamNeeds from './TeamNeeds';
 
 export default function LiveDraftView({
-    draft, draftId, leagueId, picks, players, rosters, users, userId, userRoster,
+    draft, draftId, leagueId, picks, players, rosters, users, userId, userRoster, userRosterId, tradedPicks,
     draftType, clock, availablePlayers, fullRanked, queueState,
     positionFilter, onPositionFilter,
     teamNeeds, trendingMap,
@@ -44,7 +44,7 @@ export default function LiveDraftView({
                     <MyDraftRoster
                         picks={picks}
                         players={players}
-                        userSlot={clock?.userSlot}
+                        userRosterId={userRosterId}
                         draftType={draftType}
                         onPlayerClick={onPlayerClick}
                     />
@@ -100,6 +100,7 @@ export default function LiveDraftView({
                 users={users}
                 userId={userId}
                 currentPickNo={clock?.pickNo}
+                tradedPicks={tradedPicks}
             />
         </div>
     );

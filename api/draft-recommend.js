@@ -54,6 +54,50 @@ function pName(p) {
     return `${p.first_name || ''} ${p.last_name || ''}`.trim();
 }
 
+// Inlined copy of src/features/draft/utils/draftOwnership.js — Vercel
+// serverless functions don't bundle src/, so duplicate the small helper here.
+function buildOwnership({ draft, tradedPicks }) {
+    const slotToRoster = draft?.slot_to_roster_id || {};
+    const draftSeason = String(draft?.season || '');
+    const trades = (tradedPicks || []).filter((t) => String(t?.season || '') === draftSeason);
+    const overrides = {};
+    for (const t of trades) {
+        if (!overrides[t.round]) overrides[t.round] = {};
+        overrides[t.round][t.roster_id] = t.owner_id;
+    }
+    const numTeams = Number(draft?.settings?.teams || draft?.settings?.num_teams || 0);
+    const totalRounds = Number(draft?.settings?.rounds || 0);
+    const isSnake = draft?.type !== 'linear';
+
+    function originalOwnerForSlot(slot) { return slotToRoster[slot] ?? null; }
+    function currentOwnerForSlotRound(slot, round) {
+        const o = originalOwnerForSlot(slot);
+        if (o == null) return null;
+        return overrides[round]?.[o] ?? o;
+    }
+    function slotForPick(pickNo) {
+        if (!pickNo || !numTeams) return null;
+        const round = Math.ceil(pickNo / numTeams);
+        const posInRound = ((pickNo - 1) % numTeams) + 1;
+        return isSnake && round % 2 === 0 ? numTeams - posInRound + 1 : posInRound;
+    }
+    function currentOwnerForPickNo(pickNo) {
+        const slot = slotForPick(pickNo);
+        if (slot == null) return null;
+        return currentOwnerForSlotRound(slot, Math.ceil(pickNo / numTeams));
+    }
+    function pickNosOwnedBy(rosterId, fromPickNo = 1) {
+        const out = [];
+        if (!rosterId || !numTeams || !totalRounds) return out;
+        const total = numTeams * totalRounds;
+        for (let pn = fromPickNo; pn <= total; pn++) {
+            if (currentOwnerForPickNo(pn) === rosterId) out.push(pn);
+        }
+        return out;
+    }
+    return { originalOwnerForSlot, currentOwnerForSlotRound, currentOwnerForPickNo, pickNosOwnedBy, numTeams, totalRounds };
+}
+
 function buildPrompt(data) {
     const {
         draft, league, players,
@@ -173,6 +217,11 @@ export default async function handler(req, res) {
         ]);
 
         const rosters = await fetchCached(`rosters-${leagueId}`, `${SLEEPER_BASE}/league/${leagueId}/rosters`, SHORT_TTL);
+        const tradedPicks = await fetchCached(
+            `tradedPicks-${leagueId}`,
+            `${SLEEPER_BASE}/league/${leagueId}/traded_picks`,
+            SHORT_TTL
+        ).catch(() => []);
 
         // FantasyCalc values
         const isSuperflex = (league.roster_positions || []).includes('SUPER_FLEX');
@@ -185,17 +234,20 @@ export default async function handler(req, res) {
             (fc || []).forEach((p) => { if (p.sleeperId) marketValues[p.sleeperId] = p.value; });
         } catch { /* fall back to no values */ }
 
-        // Resolve user's roster + picks
+        // Resolve user's roster + picks (using actual drafter, not slot, so
+        // traded picks are attributed correctly).
         const userRoster = rosters.find((r) => r.owner_id === userId);
-        const userSlot = (draft.draft_order || {})[userId];
+        const userRosterId = userRoster?.roster_id ?? null;
         const myDraftedIds = (picks || [])
-            .filter((p) => p.draft_slot === userSlot)
+            .filter((p) => p.roster_id === userRosterId)
             .map((p) => p.player_id)
             .filter(Boolean);
         // For rookie/annual: include kept roster too
         const myRosterIds = draftType === 'rookie' || draftType === 'annual_redraft'
             ? [...new Set([...(userRoster?.players || []), ...myDraftedIds])]
             : myDraftedIds;
+
+        const ownership = buildOwnership({ draft, tradedPicks });
 
         // Best-available pool
         const draftedSet = new Set((picks || []).map((p) => p.player_id).filter(Boolean));
@@ -214,6 +266,9 @@ export default async function handler(req, res) {
             if (draftedSet.has(pid)) continue;
             const p = players[pid];
             if (!p || !fantasyPositions.has(p.position)) continue;
+            // Must be on an NFL team and active (excludes "Did Not Sign" rookies).
+            if (!p.team) continue;
+            if (p.status && p.status !== 'Active') continue;
             if (!p.active && p.position !== 'DEF') continue;
             if (draftType === 'rookie' && (p.years_exp ?? null) !== 0) continue;
             candidates.push({
@@ -230,18 +285,8 @@ export default async function handler(req, res) {
         candidates.sort((a, b) => b.value - a.value);
         const topAvailable = candidates.slice(0, 25);
 
-        // Compute upcoming picks for the user
-        const totalRounds = draft.settings?.rounds || 0;
-        const totalTeams = draft.settings?.teams || draft.settings?.num_teams || 12;
-        const myUpcomingPicks = [];
-        if (userSlot) {
-            const startRound = Math.ceil(pickNo / totalTeams);
-            for (let r = startRound; r <= totalRounds; r++) {
-                const slotInRound = r % 2 === 0 ? totalTeams - userSlot + 1 : userSlot;
-                const pn = (r - 1) * totalTeams + slotInRound;
-                if (pn >= pickNo) myUpcomingPicks.push(pn);
-            }
-        }
+        // Compute upcoming picks for the user (post-trade — uses ownership map).
+        const myUpcomingPicks = ownership.pickNosOwnedBy(userRosterId, pickNo);
 
         const prompt = buildPrompt({
             draft, league, players,

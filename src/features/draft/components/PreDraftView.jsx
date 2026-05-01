@@ -29,7 +29,7 @@ function formatLocal(ts) {
 }
 
 export default function PreDraftView({
-    draft, picks, players, rosters, users, userId, userRoster,
+    draft, picks, players, rosters, users, userId, userRoster, tradedPicks,
     draftType, availablePlayers, queueState,
     positionFilter, onPositionFilter,
     teamNeeds, trendingMap,
@@ -135,6 +135,7 @@ export default function PreDraftView({
                 users={users}
                 userId={userId}
                 currentPickNo={1}
+                tradedPicks={tradedPicks}
             />
         </div>
     );

@@ -38,6 +38,10 @@ export function useBestAvailable({
             const pos = p.position;
             if (!draftable.has(pos)) continue;
             if (positionFilter !== 'ALL' && pos !== positionFilter) continue;
+            // Must be on an NFL team (excludes free agents like "Did Not Sign" rookies).
+            // DEF position carries the team code as `team` so this also passes for DEF.
+            if (!p.team) continue;
+            if (p.status && p.status !== 'Active') continue;
             if (!p.active && pos !== 'DEF') continue;
 
             // Rookie-only filter: keep years_exp === 0 AND pre-draft prospects

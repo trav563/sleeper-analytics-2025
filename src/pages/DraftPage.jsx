@@ -20,7 +20,7 @@ import SniperToastHost from '../features/draft/components/SniperToastHost';
 import PlayerDetailDialog from '../features/draft/components/PlayerDetailDialog';
 
 export default function DraftPage() {
-    const { league, rosters, users, players, user } = useOutletContext();
+    const { league, rosters, users, players, user, tradedPicks } = useOutletContext();
     const userId = user?.user_id;
     const leagueId = league?.league_id;
 
@@ -33,17 +33,18 @@ export default function DraftPage() {
         [draft, league, rosters]
     );
 
-    const { mode } = useDraftMode(draft);
-    const clock = useOnTheClock({ draft, picks, userId });
-
-    const queueState = useDraftQueue(draftId);
-    const marketValues = useMarketValues({ league, players });
-    const { idMap: trendingMap } = useTrendingAdds();
-
     const userRoster = useMemo(
         () => rosters?.find((r) => r.owner_id === userId) || null,
         [rosters, userId]
     );
+    const userRosterId = userRoster?.roster_id ?? null;
+
+    const { mode } = useDraftMode(draft);
+    const clock = useOnTheClock({ draft, picks, userId, userRosterId, tradedPicks });
+
+    const queueState = useDraftQueue(draftId);
+    const marketValues = useMarketValues({ league, players });
+    const { idMap: trendingMap } = useTrendingAdds();
     const teamNeeds = useTeamNeeds({ league, userRoster, rosters, players, marketValues, draftType });
 
     const [positionFilter, setPositionFilter] = useState('ALL');
@@ -126,7 +127,8 @@ export default function DraftPage() {
     }
 
     const sharedProps = {
-        draft, league, picks, players, rosters, users, userId, userRoster, draftType,
+        draft, league, picks, players, rosters, users, userId, userRoster, userRosterId,
+        tradedPicks, draftType,
         availablePlayers, queueState, positionFilter,
         onPositionFilter: setPositionFilter,
         teamNeeds, trendingMap,
@@ -183,6 +185,8 @@ export default function DraftPage() {
                     rosters={rosters}
                     users={users}
                     userId={userId}
+                    userRosterId={userRosterId}
+                    tradedPicks={tradedPicks}
                     draftType={draftType}
                     onPlayerClick={onPlayerClick}
                 />

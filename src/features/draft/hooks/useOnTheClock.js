@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buildOwnership } from '../utils/draftOwnership';
 
 /**
  * For a given pick number on a snake draft, return the draft slot (1-indexed)
@@ -38,7 +39,7 @@ export function nextPickForSlot(slot, currentPickNo, numTeams, totalRounds) {
  * Live ticker for draft state — current pick #, round, whose turn it is,
  * time remaining, whether it's the logged-in user's turn.
  */
-export function useOnTheClock({ draft, picks, userId }) {
+export function useOnTheClock({ draft, picks, userId, userRosterId, tradedPicks }) {
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -49,11 +50,11 @@ export function useOnTheClock({ draft, picks, userId }) {
 
     if (!draft) return null;
 
-    const numTeams = draft.settings?.teams || draft.settings?.num_teams || 12;
-    const totalRounds = draft.settings?.rounds || 0;
+    const ownership = buildOwnership({ draft, tradedPicks });
+    const numTeams = ownership.numTeams || draft.settings?.teams || 12;
+    const totalRounds = ownership.totalRounds || draft.settings?.rounds || 0;
     const pickTimerSec = draft.settings?.pick_timer || 0;
     const draftOrder = draft.draft_order || {};         // user_id -> slot
-    const slotToRoster = draft.slot_to_roster_id || {}; // slot -> roster_id
 
     const picksMade = picks?.length || 0;
     const pickNo = picksMade + 1;
@@ -65,11 +66,14 @@ export function useOnTheClock({ draft, picks, userId }) {
         return { isComplete: true, pickNo: null, round: null, currentSlot: null };
     }
 
-    const currentSlot = slotForPick(pickNo, numTeams);
-    const currentRosterId = slotToRoster[currentSlot] || null;
+    const currentSlot = ownership.slotForPick(pickNo) || slotForPick(pickNo, numTeams);
+    // Effective owner of the pick currently on the clock (post-trade).
+    const currentRosterId = ownership.currentOwnerForPickNo(pickNo);
 
     const userSlot = userId ? draftOrder[userId] : null;
-    const isMyTurn = !!userSlot && userSlot === currentSlot;
+    // isMyTurn now respects traded picks: I might own a pick at someone
+    // else's original slot (or have traded mine away).
+    const isMyTurn = !!userRosterId && currentRosterId === userRosterId;
 
     // Time-on-clock math
     const lastPicked = Number(draft.last_picked) || 0;
@@ -81,10 +85,9 @@ export function useOnTheClock({ draft, picks, userId }) {
     const msLeft = expiresAt ? Math.max(0, expiresAt - now) : null;
     const isPaused = draft.status === 'paused';
 
-    // What's my next pick?
-    const myNextPick = userSlot
-        ? nextPickForSlot(userSlot, pickNo, numTeams, totalRounds)
-        : null;
+    // My upcoming picks, post-trade.
+    const myPickNos = userRosterId ? ownership.pickNosOwnedBy(userRosterId, pickNo) : [];
+    const myNextPick = myPickNos[0] ?? null;
     const picksUntilMine = myNextPick ? myNextPick - pickNo : null;
 
     return {
@@ -97,6 +100,7 @@ export function useOnTheClock({ draft, picks, userId }) {
         currentSlot,
         currentRosterId,
         userSlot,
+        userRosterId,
         isMyTurn,
         myNextPick,
         picksUntilMine,

@@ -14,9 +14,11 @@ const POSITION_COLOR = {
  * Shows the picks the logged-in user has made in this draft, in pick order.
  * For rookie drafts: usually 3 cards. For startups: many.
  */
-export default function MyDraftRoster({ picks, players, userSlot, draftType, onPlayerClick }) {
+export default function MyDraftRoster({ picks, players, userRosterId, draftType, onPlayerClick }) {
+    // Filter by actual drafter (post-trade), not by original slot. This
+    // captures traded-in picks and excludes picks the user traded away.
     const myPicks = (picks || [])
-        .filter((p) => p.draft_slot === userSlot)
+        .filter((p) => p.roster_id === userRosterId)
         .sort((a, b) => a.pick_no - b.pick_no);
 
     return (
