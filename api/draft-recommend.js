@@ -203,7 +203,12 @@ export default async function handler(req, res) {
             rosters.forEach((r) => (r.players || []).forEach((pid) => draftedSet.add(pid)));
         }
 
-        const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+        // Rookie drafts skip K/DEF — those slots are filled via waivers.
+        const fantasyPositions = new Set(
+            draftType === 'rookie'
+                ? ['QB', 'RB', 'WR', 'TE']
+                : ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
+        );
         const candidates = [];
         for (const pid of Object.keys(players)) {
             if (draftedSet.has(pid)) continue;

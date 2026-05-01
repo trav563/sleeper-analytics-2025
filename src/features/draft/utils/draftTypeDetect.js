@@ -29,3 +29,12 @@ export const draftTypeLabel = (type) => {
         default: return 'Draft';
     }
 };
+
+/**
+ * Positions actually drafted in this draft type. Rookie/keeper drafts
+ * skip K and DEF — those slots are filled via waivers, not the draft.
+ */
+export const getDraftablePositions = (draftType) => {
+    if (draftType === 'rookie') return ['QB', 'RB', 'WR', 'TE'];
+    return ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+};

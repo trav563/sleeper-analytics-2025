@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Sparkles, RotateCw } from 'lucide-react';
+import { Sparkles, RotateCw, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 
-const cacheKey = (draftId, pickNo, userId) => `draft_rec:${draftId}:${pickNo}:${userId}`;
+const TRIGGER_DISTANCE = 5; // start pre-computing this many picks before user's turn
+
+const cacheKey = (draftId, myNextPick, picksMadeCount, userId) =>
+    `draft_rec:${draftId}:${userId}:np${myNextPick}:p${picksMadeCount}`;
 
 function readCache(key) {
     try {
@@ -19,18 +22,34 @@ function writeCache(key, text) {
 }
 
 /**
- * Auto-fires when it's the user's turn (once per pick). Result is cached client-
- * and server-side keyed by (draftId, pickNo, userId), so reloads/back-button
- * don't burn extra calls.
+ * Always-on recommender. Pre-computes top picks for the user's *next* slot
+ * starting when they're within 5 picks of their turn, refreshing each pick
+ * thereafter. Lets the user have a recommendation already on screen when
+ * they go on the clock.
+ *
+ * Cache key includes `picksMadeCount` so each pick within the trigger window
+ * invalidates and refires.
  */
-export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyTurn, draftType, picksUntilMine }) {
+export default function AIRecommender({
+    draftId,
+    leagueId,
+    userId,
+    myNextPick,
+    isMyTurn,
+    draftType,
+    picksUntilMine,
+    picksMadeCount,
+}) {
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const abortRef = useRef(null);
     const lastFiredKey = useRef(null);
 
-    const key = pickNo && userId && draftId ? cacheKey(draftId, pickNo, userId) : null;
+    const isWithinWindow = picksUntilMine != null && picksUntilMine <= TRIGGER_DISTANCE;
+    const key = isWithinWindow && myNextPick && userId && draftId
+        ? cacheKey(draftId, myNextPick, picksMadeCount ?? 0, userId)
+        : null;
 
     // Hydrate from localStorage when key changes
     useEffect(() => {
@@ -39,18 +58,14 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
         if (cached) {
             setText(cached);
             setError(null);
-        } else {
-            setText('');
         }
     }, [key]);
 
     const run = useCallback(async () => {
         if (!key) return;
-        // Don't double-fire for the same key
         if (lastFiredKey.current === key) return;
         lastFiredKey.current = key;
 
-        // If we already have a cached result, skip the network entirely
         if (readCache(key)) return;
 
         if (abortRef.current) abortRef.current.abort();
@@ -59,13 +74,12 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
 
         setLoading(true);
         setError(null);
-        setText('');
 
         try {
             const response = await fetch('/api/draft-recommend', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ draftId, leagueId, userId, pickNo, draftType }),
+                body: JSON.stringify({ draftId, leagueId, userId, pickNo: myNextPick, draftType }),
                 signal: controller.signal,
             });
 
@@ -102,19 +116,19 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
         } catch (err) {
             if (err.name === 'AbortError') return;
             setError(err.message);
-            // Allow retry by clearing the fire-once guard on error
             lastFiredKey.current = null;
         } finally {
             setLoading(false);
             abortRef.current = null;
         }
-    }, [key, draftId, leagueId, userId, pickNo, draftType]);
+    }, [key, draftId, leagueId, userId, myNextPick, draftType]);
 
-    // Auto-fire when it's the user's turn
+    // Auto-fire when within the lookahead window. Each pick that lands
+    // within the window changes `picksMadeCount` → key → refire.
     useEffect(() => {
-        if (!isMyTurn || !key) return;
+        if (!key) return;
         run();
-    }, [isMyTurn, key, run]);
+    }, [key, run]);
 
     const onManualRetry = () => {
         if (key) {
@@ -124,27 +138,41 @@ export default function AIRecommender({ draftId, leagueId, userId, pickNo, isMyT
         run();
     };
 
+    const headerLabel = isMyTurn
+        ? 'Recommended for this pick'
+        : isWithinWindow
+            ? `Recommended for pick #${myNextPick} (${picksUntilMine} away)`
+            : myNextPick != null
+                ? `Pre-analysis starts ${TRIGGER_DISTANCE - (picksUntilMine ?? 0) > 0 ? 'soon' : `at ${TRIGGER_DISTANCE} picks away`}`
+                : 'AI Pick Recommender';
+
     return (
         <div className="rounded-xl border border-signal/40 bg-gradient-to-br from-signal/30 to-bg-1/40">
-            <div className="p-4 border-b border-signal/30 flex items-center justify-between">
-                <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-signal" />
-                    AI Pick Recommender
-                </h3>
+            <div className="p-4 border-b border-signal/30 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <h3 className="text-sm font-semibold flex items-center gap-2 text-text">
+                        <Sparkles className="w-4 h-4 text-signal" />
+                        AI Pick Recommender
+                    </h3>
+                    <p className="text-2xs text-text-mute mt-0.5 truncate">{headerLabel}</p>
+                </div>
                 {(text || error) && (
-                    <Button variant="ghost" size="sm" onClick={onManualRetry} className="h-7 px-2 text-xs">
+                    <Button variant="ghost" size="sm" onClick={onManualRetry} className="h-7 px-2 text-xs shrink-0">
                         <RotateCw className="w-3 h-3 mr-1" />
-                        Re-run
+                        Refresh
                     </Button>
                 )}
             </div>
             <div className="p-4">
-                {!isMyTurn && !text && (
-                    <p className="text-sm text-text-mute text-center py-4">
-                        {picksUntilMine != null
-                            ? `Recommendations will appear when you're on the clock (${picksUntilMine} ${picksUntilMine === 1 ? 'pick' : 'picks'} away).`
-                            : 'Recommendations will appear when you are on the clock.'}
-                    </p>
+                {!isWithinWindow && !text && (
+                    <div className="flex items-start gap-2 text-text-mute text-sm py-2">
+                        <Clock className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p>
+                            {picksUntilMine != null && myNextPick != null
+                                ? `Pre-analysis activates within ${TRIGGER_DISTANCE} picks of your turn — your next pick is #${myNextPick} (${picksUntilMine} away).`
+                                : 'Pre-analysis activates as your turn approaches.'}
+                        </p>
+                    </div>
                 )}
 
                 {loading && !text && (

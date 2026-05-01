@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-
-const FANTASY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+import { getDraftablePositions } from '../utils/draftTypeDetect';
 
 /**
  * Computes the available player pool, sorted by FantasyCalc value descending,
@@ -29,12 +28,15 @@ export function useBestAvailable({
             (rosters || []).forEach(r => (r.players || []).forEach(pid => draftedIds.add(pid)));
         }
 
+        // Exclude K/DEF from rookie drafts — those slots are filled via waivers.
+        const draftable = new Set(getDraftablePositions(draftType));
+
         const out = [];
         for (const pid of Object.keys(players)) {
             const p = players[pid];
             if (!p || draftedIds.has(pid)) continue;
             const pos = p.position;
-            if (!FANTASY_POSITIONS.includes(pos)) continue;
+            if (!draftable.has(pos)) continue;
             if (positionFilter !== 'ALL' && pos !== positionFilter) continue;
             if (!p.active && pos !== 'DEF') continue;
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { getDraftablePositions } from '../utils/draftTypeDetect';
 
 /**
  * Per-position percentile-ranked roster strength. Quality is measured by
@@ -57,7 +58,7 @@ function computePositionStrength(roster, players, marketValues, position, requir
         .reduce((sum, v) => sum + v, 0);
 }
 
-export function useTeamNeeds({ league, userRoster, rosters, players, marketValues }) {
+export function useTeamNeeds({ league, userRoster, rosters, players, marketValues, draftType }) {
     return useMemo(() => {
         if (!league || !userRoster || !rosters || !players) return null;
 
@@ -81,7 +82,9 @@ export function useTeamNeeds({ league, userRoster, rosters, players, marketValue
             }
         });
 
-        const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+        // Only show positions actually drafted in this draft type. Rookie
+        // drafts skip K/DEF entirely.
+        const positions = getDraftablePositions(draftType);
         const leagueSize = rosters.length;
 
         const rows = positions.map((pos) => {
@@ -137,5 +140,5 @@ export function useTeamNeeds({ league, userRoster, rosters, players, marketValue
         });
 
         return { positions: rows, weights };
-    }, [league, userRoster, rosters, players, marketValues]);
+    }, [league, userRoster, rosters, players, marketValues, draftType]);
 }

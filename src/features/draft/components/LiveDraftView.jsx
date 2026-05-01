@@ -29,10 +29,11 @@ export default function LiveDraftView({
                         draftId={draftId}
                         leagueId={leagueId}
                         userId={userId}
-                        pickNo={clock?.pickNo}
+                        myNextPick={clock?.myNextPick ?? clock?.pickNo}
                         isMyTurn={!!clock?.isMyTurn}
                         draftType={draftType}
                         picksUntilMine={clock?.picksUntilMine}
+                        picksMadeCount={picks?.length || 0}
                     />
                     <TeamNeeds
                         teamNeeds={teamNeeds}
@@ -79,6 +80,7 @@ export default function LiveDraftView({
                     <PositionScarcityHeatmap
                         availablePlayers={availablePlayers}
                         fullRanked={fullRanked}
+                        draftType={draftType}
                     />
                     <RecentPicksFeed
                         picks={picks}

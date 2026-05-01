@@ -17,12 +17,15 @@ export const fetchMarketValues = async (isSuperflex = true, numTeams = 12, ppr =
 
         const data = await response.json();
 
-        // Map to sleeper_id -> value (0-10000 approx scale)
+        // Map to sleeper_id -> value (0-10000 approx scale).
+        // Each FC entry wraps a player object: { player: { sleeperId, ... }, value, ... }.
+        // Reading entry.sleeperId (without nesting) returned undefined for everyone.
         const valueMap = {};
 
-        data.forEach(player => {
-            if (player.sleeperId) {
-                valueMap[player.sleeperId] = player.value;
+        data.forEach(entry => {
+            const sleeperId = entry?.player?.sleeperId;
+            if (sleeperId) {
+                valueMap[sleeperId] = entry.value;
             }
         });
 

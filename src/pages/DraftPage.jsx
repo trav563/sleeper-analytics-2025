@@ -44,7 +44,7 @@ export default function DraftPage() {
         () => rosters?.find((r) => r.owner_id === userId) || null,
         [rosters, userId]
     );
-    const teamNeeds = useTeamNeeds({ league, userRoster, rosters, players, marketValues });
+    const teamNeeds = useTeamNeeds({ league, userRoster, rosters, players, marketValues, draftType });
 
     const [positionFilter, setPositionFilter] = useState('ALL');
     const [bestMode, setBestMode] = useState('bpa');
