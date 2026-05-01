@@ -98,7 +98,7 @@ export default function PreDraftView({
                     />
                 </div>
                 <div className="space-y-6">
-                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={!!teamNeeds && teamNeeds.positions.some(p => p.ownedCount > 0)} />
+                    <TeamNeeds teamNeeds={teamNeeds} hasRoster={!!teamNeeds && teamNeeds.positions.some(p => p.userStrength > 0)} />
                     <QueueManager
                         queue={queueState.queue}
                         players={players}

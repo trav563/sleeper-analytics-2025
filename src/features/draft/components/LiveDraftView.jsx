@@ -16,7 +16,7 @@ export default function LiveDraftView({
     bestMode, onBestModeChange,
     onPlayerClick,
 }) {
-    const hasRoster = !!teamNeeds && teamNeeds.positions.some(p => p.ownedCount > 0);
+    const hasRoster = !!teamNeeds && teamNeeds.positions.some(p => p.userStrength > 0);
 
     return (
         <div className="space-y-6">

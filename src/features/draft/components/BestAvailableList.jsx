@@ -120,11 +120,16 @@ export default function BestAvailableList({
                             const queued = isQueued(p.id);
                             const trend = trendingMap?.[p.id];
                             const weight = teamWeights?.[p.pos] ?? 1.0;
-                            const fillsNeed = mode === 'forMe' && weight > 1.0;
+                            const fillsNeed = mode === 'forMe' && weight >= 1.7;
+                            const overInvested = mode === 'forMe' && weight < 0.8;
                             return (
                                 <div
                                     key={p.id}
-                                    className="flex items-center gap-3 px-4 py-2 border-b border-line/50 hover:bg-bg-2 transition-colors"
+                                    className={cn(
+                                        'flex items-center gap-3 px-4 py-2 border-b border-line/50 hover:bg-bg-2 transition-colors',
+                                        overInvested && 'opacity-60'
+                                    )}
+                                    title={overInvested ? 'You are already strong at this position' : undefined}
                                 >
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onToggleQueue(p.id); }}

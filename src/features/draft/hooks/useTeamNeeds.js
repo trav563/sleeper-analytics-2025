@@ -1,91 +1,135 @@
 import { useMemo } from 'react';
 
-// Dynasty consensus aging thresholds
-const AGING_BY_POS = { QB: 35, RB: 27, WR: 29, TE: 30 };
-
-// How deep we want to be at each position before declaring "good".
-// Includes starters + reasonable bench depth.
-const DEPTH_TARGETS = { QB: 2, RB: 5, WR: 5, TE: 2, K: 1, DEF: 1 };
-
-// Need-weight multipliers used by the "Best for My Team" sort.
-const URGENCY_WEIGHT = { critical: 2.0, aging: 1.5, depth: 1.2, good: 1.0 };
-
 /**
- * Computes positional roster gaps for the user's team:
+ * Per-position percentile-ranked roster strength. Quality is measured by
+ * summing the top-N starters' FantasyCalc dynasty values, then ranking the
+ * user against every other team in the league. Headcount-based logic was
+ * misleading in dynasty leagues where every roster has 25+ players.
  *
- *   { positions: [{ pos, required, ownedCount, agingCount, depthTarget,
- *                  urgency: 'critical' | 'aging' | 'depth' | 'good',
- *                  needWeight }],
- *     weights: { QB: 1.0, RB: 1.5, ... } }
- *
- * Required-by-position is derived from `league.roster_positions` with FLEX
- * and SUPER_FLEX distributed fractionally then ceiled. Aging applies the
- * AGING_BY_POS thresholds to the youngest N starters.
+ * Returns:
+ *   {
+ *     positions: [{
+ *       pos, required, userStrength, median, valueVsMedian,
+ *       rank, leagueSize, percentile,
+ *       urgency: 'critical' | 'below' | 'average' | 'strong' | 'unknown',
+ *       needWeight,
+ *     }],
+ *     weights: { QB: 0.6, RB: 2.5, ... }   // for Best-for-My-Team sort
+ *   }
  */
-export function useTeamNeeds({ league, userRoster, players }) {
-    return useMemo(() => {
-        if (!league || !userRoster || !players) return null;
 
-        // 1. Required starting slots by position
-        const startingSlots = (league.roster_positions || []).filter((s) => s !== 'BN' && s !== 'IR');
+const URGENCY_FROM_PERCENTILE = (p) => {
+    if (p == null) return 'unknown';
+    if (p < 0.25) return 'critical';
+    if (p < 0.50) return 'below';
+    if (p < 0.75) return 'average';
+    return 'strong';
+};
+
+// Wide spread so the Best-for-My-Team sort actually re-orders the list.
+// 4.16x ratio between strongest and weakest position weight.
+const URGENCY_WEIGHT = {
+    critical: 2.5,
+    below: 1.7,
+    average: 1.0,
+    strong: 0.6,
+    unknown: 1.0,
+};
+
+function computePositionStrength(roster, players, marketValues, position, requiredCount) {
+    const ids = roster?.players || [];
+    const valued = ids
+        .map((pid) => {
+            const p = players?.[pid];
+            if (!p || p.position !== position) return null;
+            return marketValues?.[pid] ?? 0;
+        })
+        .filter((v) => v != null)
+        .sort((a, b) => b - a); // best players first
+    return valued
+        .slice(0, Math.max(requiredCount, 1))
+        .reduce((sum, v) => sum + v, 0);
+}
+
+export function useTeamNeeds({ league, userRoster, rosters, players, marketValues }) {
+    return useMemo(() => {
+        if (!league || !userRoster || !rosters || !players) return null;
+
+        // Required starting slots by position.
+        // FLEX/SUPER_FLEX distributed fractionally then ceiled.
+        const startingSlots = (league.roster_positions || []).filter(
+            (s) => s !== 'BN' && s !== 'IR'
+        );
         const slotsByPos = {};
         startingSlots.forEach((s) => {
             if (s === 'FLEX') {
-                ['RB', 'WR', 'TE'].forEach((p) => { slotsByPos[p] = (slotsByPos[p] || 0) + 1 / 3; });
+                ['RB', 'WR', 'TE'].forEach((p) => {
+                    slotsByPos[p] = (slotsByPos[p] || 0) + 1 / 3;
+                });
             } else if (s === 'SUPER_FLEX') {
-                ['QB', 'RB', 'WR', 'TE'].forEach((p) => { slotsByPos[p] = (slotsByPos[p] || 0) + 1 / 4; });
+                ['QB', 'RB', 'WR', 'TE'].forEach((p) => {
+                    slotsByPos[p] = (slotsByPos[p] || 0) + 1 / 4;
+                });
             } else {
                 slotsByPos[s] = (slotsByPos[s] || 0) + 1;
             }
         });
 
-        // 2. Current roster grouped by position
-        const owned = (userRoster.players || [])
-            .map((pid) => players[pid])
-            .filter(Boolean);
-        const byPos = {};
-        for (const p of owned) {
-            const pos = p.position;
-            if (!byPos[pos]) byPos[pos] = [];
-            byPos[pos].push(p);
-        }
-
-        // 3. Per-position analysis
         const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+        const leagueSize = rosters.length;
+
         const rows = positions.map((pos) => {
-            const required = Math.ceil(slotsByPos[pos] || 0);
-            const players = byPos[pos] || [];
-            const ownedCount = players.length;
-            const depthTarget = DEPTH_TARGETS[pos] || 1;
+            const required = Math.max(1, Math.ceil(slotsByPos[pos] || 0));
 
-            // The youngest `required` players are presumed starters; check if they're aging.
-            const sortedByAge = [...players].sort((a, b) => (a.age ?? 99) - (b.age ?? 99));
-            const startersToCheck = sortedByAge.slice(0, required);
-            const agingThreshold = AGING_BY_POS[pos] ?? 99;
-            const agingCount = startersToCheck.filter(
-                (p) => p.age != null && p.age >= agingThreshold
-            ).length;
+            // Each team's starter quality at this position
+            const allStrengths = rosters.map((r) =>
+                computePositionStrength(r, players, marketValues, pos, required)
+            );
+            const userStrength = computePositionStrength(
+                userRoster,
+                players,
+                marketValues,
+                pos,
+                required
+            );
 
-            let urgency;
-            if (ownedCount < required) urgency = 'critical';
-            else if (agingCount > 0) urgency = 'aging';
-            else if (ownedCount < depthTarget) urgency = 'depth';
-            else urgency = 'good';
+            // Percentile rank (0 = worst, 1 = best).
+            // Use strict-less-than so ties don't inflate the user's percentile.
+            const sortedAsc = [...allStrengths].sort((a, b) => a - b);
+            const teamsBelow = sortedAsc.filter((v) => v < userStrength).length;
+            const percentile = leagueSize > 1 ? teamsBelow / (leagueSize - 1) : 0.5;
+
+            // Display rank: 1 = best, leagueSize = worst.
+            const sortedDesc = [...allStrengths].sort((a, b) => b - a);
+            const rank = sortedDesc.findIndex((v) => v <= userStrength) + 1 || leagueSize;
+
+            const median = sortedAsc[Math.floor(leagueSize / 2)] || 0;
+            const valueVsMedian = userStrength - median;
+
+            // Empty-league-at-position case (e.g. nobody owns a K yet in a startup).
+            // Don't misleadingly mark every position critical.
+            const allZero = sortedAsc.every((v) => v === 0);
+            const urgency = allZero ? 'average' : URGENCY_FROM_PERCENTILE(percentile);
 
             return {
                 pos,
                 required,
-                ownedCount,
-                agingCount,
-                depthTarget,
+                userStrength,
+                median,
+                valueVsMedian,
+                rank,
+                leagueSize,
+                percentile,
                 urgency,
                 needWeight: URGENCY_WEIGHT[urgency],
             };
         });
 
         const weights = {};
-        rows.forEach((r) => { weights[r.pos] = r.needWeight; });
+        rows.forEach((r) => {
+            weights[r.pos] = r.needWeight;
+        });
 
         return { positions: rows, weights };
-    }, [league, userRoster, players]);
+    }, [league, userRoster, rosters, players, marketValues]);
 }
