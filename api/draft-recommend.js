@@ -193,23 +193,29 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'AI service not configured (set AI_GATEWAY_API_KEY)' });
     }
 
-    const { draftId, leagueId, userId, pickNo, draftType } = req.body || {};
+    const { draftId, leagueId, userId, pickNo, draftType, bustCache } = req.body || {};
     if (!draftId || !leagueId || !userId || !pickNo) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Result cache by (draft, pick, user) — covers reload spam
+    // Result cache by (draft, pick, user) — covers reload spam.
+    // bustCache = true skips the lookup so the user can force a fresh
+    // recommendation via the Refresh button.
     const cacheKey = `${draftId}:${pickNo}:${userId}`;
-    const cached = recCache.get(cacheKey);
-    if (cached && Date.now() - cached.time < REC_TTL) {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('X-Cached', '1');
-        // Replay cached text as a single SSE chunk
-        res.write(`data: ${JSON.stringify({ text: cached.text })}\n\n`);
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-        return res.end();
+    if (!bustCache) {
+        const cached = recCache.get(cacheKey);
+        if (cached && Date.now() - cached.time < REC_TTL) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Cached', '1');
+            res.write(`data: ${JSON.stringify({ text: cached.text })}\n\n`);
+            res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+            return res.end();
+        }
+    } else {
+        // Drop the existing entry so the new one replaces it cleanly.
+        recCache.delete(cacheKey);
     }
 
     const rate = checkRateLimit(userId, draftId);

@@ -61,12 +61,12 @@ export default function AIRecommender({
         }
     }, [key]);
 
-    const run = useCallback(async () => {
+    const run = useCallback(async ({ force = false } = {}) => {
         if (!key) return;
-        if (lastFiredKey.current === key) return;
+        if (!force && lastFiredKey.current === key) return;
         lastFiredKey.current = key;
 
-        if (readCache(key)) return;
+        if (!force && readCache(key)) return;
 
         if (abortRef.current) abortRef.current.abort();
         const controller = new AbortController();
@@ -74,12 +74,17 @@ export default function AIRecommender({
 
         setLoading(true);
         setError(null);
+        if (force) setText('');  // make the loading spinner actually visible
 
         try {
             const response = await fetch('/api/draft-recommend', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ draftId, leagueId, userId, pickNo: myNextPick, draftType }),
+                body: JSON.stringify({
+                    draftId, leagueId, userId,
+                    pickNo: myNextPick, draftType,
+                    bustCache: !!force,
+                }),
                 signal: controller.signal,
             });
 
@@ -135,7 +140,7 @@ export default function AIRecommender({
             try { localStorage.removeItem(key); } catch { /* ignore */ }
         }
         lastFiredKey.current = null;
-        run();
+        run({ force: true });
     };
 
     const headerLabel = isMyTurn
