@@ -123,7 +123,14 @@ function buildPrompt(data) {
     const availableText = topAvailable.map((pl, idx) => {
         const inj = pl.injury ? ` [${pl.injury}]` : '';
         const exp = pl.yearsExp === 0 ? ', rookie' : pl.yearsExp != null ? `, ${pl.yearsExp}y exp` : '';
-        return `${idx + 1}. ${pl.name} (${pl.pos}, ${pl.team}, age ${pl.age ?? '?'}${exp})${inj} — value ${pl.value || '?'}`;
+        // Surface BOTH FantasyCalc value and Sleeper rank so the AI never
+        // sees a 0 with no context. Lower Sleeper rank = better.
+        const valueStr = pl.value > 0
+            ? `FC value ${pl.value}`
+            : pl.searchRank != null && pl.searchRank < 9999
+                ? `Sleeper rank #${pl.searchRank}`
+                : 'no rank';
+        return `${idx + 1}. ${pl.name} (${pl.pos}, ${pl.team}, age ${pl.age ?? '?'}${exp})${inj} — ${valueStr}`;
     }).join('\n');
 
     const recentText = (recentPicks || []).slice(-10).map((p) => {
@@ -157,7 +164,7 @@ ${myPlayersText}
 LAST PICKS:
 ${recentText}
 
-TOP 25 AVAILABLE (sorted by FantasyCalc dynasty value):
+TOP 25 AVAILABLE (sorted best-to-worst — FantasyCalc dynasty value when present, else Sleeper consensus rank):
 ${availableText}
 
 INSTRUCTIONS:
@@ -231,7 +238,12 @@ export default async function handler(req, res) {
         let marketValues = {};
         try {
             const fc = await fetchCached(`fc-${isSuperflex}-${numTeams}-${recPts}`, fcUrl, 4 * 60 * 60 * 1000);
-            (fc || []).forEach((p) => { if (p.sleeperId) marketValues[p.sleeperId] = p.value; });
+            // sleeperId is nested under entry.player, not at the top level.
+            // Same bug we fixed in src/utils/fantasyCalc.js.
+            (fc || []).forEach((entry) => {
+                const sleeperId = entry?.player?.sleeperId;
+                if (sleeperId) marketValues[sleeperId] = entry.value;
+            });
         } catch { /* fall back to no values */ }
 
         // Resolve user's roster + picks (using actual drafter, not slot, so
@@ -271,6 +283,13 @@ export default async function handler(req, res) {
             if (p.status && p.status !== 'Active') continue;
             if (!p.active && p.position !== 'DEF') continue;
             if (draftType === 'rookie' && (p.years_exp ?? null) !== 0) continue;
+            const fcValue = marketValues[pid] || 0;
+            const searchRank = p.search_rank ?? 9999;
+            // Fallback: when FC has no value, use Sleeper's native ranking
+            // converted to a comparable scale.
+            const sortValue = fcValue > 0
+                ? fcValue
+                : Math.max(0, (10000 - Math.min(searchRank, 10000)) / 10);
             candidates.push({
                 id: pid,
                 name: pName(p),
@@ -279,10 +298,14 @@ export default async function handler(req, res) {
                 age: p.age ?? null,
                 yearsExp: p.years_exp ?? null,
                 injury: p.injury_status || null,
-                value: marketValues[pid] || 0,
+                value: fcValue,
+                searchRank,
+                sortValue,
             });
         }
-        candidates.sort((a, b) => b.value - a.value);
+        // Sort by FC value when present, search_rank otherwise. Ensures the
+        // AI always sees a meaningfully-ordered top 25.
+        candidates.sort((a, b) => b.sortValue - a.sortValue);
         const topAvailable = candidates.slice(0, 25);
 
         // Compute upcoming picks for the user (post-trade — uses ownership map).
