@@ -74,7 +74,8 @@ export function useLeagueData(leagueId) {
 
     const { data: matchups, isLoading: loadingMatchups, error: errorMatchups } = useQuery({
         queryKey: ['leagueMatchups', leagueId, displayWeek],
-        queryFn: () => fetchLeagueMatchups(leagueId, displayWeek),
+        // fresh=true bypasses the CDN edge cache so live scores aren't stale
+        queryFn: () => fetchLeagueMatchups(leagueId, displayWeek, true),
         enabled: !!leagueId && !!displayWeek,
         staleTime: matchupsStaleTime,
     });

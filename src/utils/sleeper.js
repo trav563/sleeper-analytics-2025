@@ -1,3 +1,5 @@
+import { readPlayersCache, writePlayersCache } from './playersCache';
+
 const BASE_URL = 'https://api.sleeper.app/v1';
 
 /**
@@ -42,8 +44,7 @@ export const fetchUserLeagues = async (userId, season = '2025') => {
  * @param {string} leagueId 
  */
 export const fetchLeagueUsers = async (leagueId) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}/users?_=${timestamp}`);
+    return fetchSleeper(`/league/${leagueId}/users`);
 };
 
 /**
@@ -51,18 +52,19 @@ export const fetchLeagueUsers = async (leagueId) => {
  * @param {string} leagueId 
  */
 export const fetchLeagueRosters = async (leagueId) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}/rosters?_=${timestamp}`);
+    return fetchSleeper(`/league/${leagueId}/rosters`);
 };
 
 /**
  * Fetch matchups for a specific week
- * @param {string} leagueId 
- * @param {number|string} week 
+ * @param {string} leagueId
+ * @param {number|string} week
+ * @param {boolean} fresh - bypass the CDN edge cache (~60s TTL); use only for
+ *   the live week, where score freshness matters. Past weeks are immutable.
  */
-export const fetchLeagueMatchups = async (leagueId, week) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}/matchups/${week}?_=${timestamp}`);
+export const fetchLeagueMatchups = async (leagueId, week, fresh = false) => {
+    const bust = fresh ? `?_=${Date.now()}` : '';
+    return fetchSleeper(`/league/${leagueId}/matchups/${week}${bust}`);
 };
 
 /**
@@ -74,12 +76,15 @@ export const fetchNFLState = async () => {
 };
 
 /**
- * Fetch all NFL players (large payload, should be cached if possible)
+ * Fetch all NFL players (~5MB payload). Served from IndexedDB when a
+ * fresh-enough copy exists (24h TTL) so reloads don't re-download it.
  */
 export const fetchNFLPlayers = async () => {
-    const timestamp = Date.now();
-    // Note: This is a large request (~5MB+), consider caching strategies in production
-    return fetchSleeper(`/players/nfl?_=${timestamp}`);
+    const cached = await readPlayersCache();
+    if (cached) return cached;
+    const data = await fetchSleeper('/players/nfl');
+    writePlayersCache(data);
+    return data;
 };
 
 /**
@@ -87,8 +92,7 @@ export const fetchNFLPlayers = async () => {
  * @param {string} leagueId 
  */
 export const fetchLeague = async (leagueId) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}?_=${timestamp}`);
+    return fetchSleeper(`/league/${leagueId}`);
 };
 
 /**
@@ -96,8 +100,7 @@ export const fetchLeague = async (leagueId) => {
  * @param {string} draftId
  */
 export const fetchDraftPicks = async (draftId) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
+    return fetchSleeper(`/draft/${draftId}/picks`);
 };
 
 /**
@@ -147,8 +150,7 @@ export const getRookieLockState = (league, drafts) => {
  * @param {number} round 
  */
 export const fetchLeagueTransactions = async (leagueId, round) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}/transactions/${round}?_=${timestamp}`);
+    return fetchSleeper(`/league/${leagueId}/transactions/${round}`);
 };
 
 /**
@@ -156,8 +158,7 @@ export const fetchLeagueTransactions = async (leagueId, round) => {
  * @param {string} leagueId
  */
 export const fetchTradedPicks = async (leagueId) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/league/${leagueId}/traded_picks?_=${timestamp}`);
+    return fetchSleeper(`/league/${leagueId}/traded_picks`);
 };
 
 /**
@@ -165,8 +166,7 @@ export const fetchTradedPicks = async (leagueId) => {
  * @param {string} season - e.g., '2024'
  */
 export const fetchSeasonStats = async (season) => {
-    const timestamp = Date.now();
-    return fetchSleeper(`/stats/nfl/regular/${season}?_=${timestamp}`);
+    return fetchSleeper(`/stats/nfl/regular/${season}`);
 };
 
 /**
