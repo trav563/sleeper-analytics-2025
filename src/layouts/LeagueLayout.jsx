@@ -4,9 +4,10 @@ import { Outlet, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
-import { AlertTriangle } from 'lucide-react';
 import { fetchLeagueTransactions } from '../utils/sleeper';
 import PageTransition from '../components/PageTransition';
+import RouteErrorBoundary from '../components/RouteErrorBoundary';
+import ErrorState from '../components/ui/ErrorState';
 
 /** For past seasons anchor to end-of-regular-season; for the live season use NFL state. */
 function deriveCurrentWeek(league, state) {
@@ -25,7 +26,7 @@ const LeagueLayout = () => {
     const { leagueId } = useParams();
     const location = useLocation();
     const { user, loadHistory, findChainContaining, selectActiveChain } = useSleeper();
-    const { league, rosters, users, players, state, matchups, tradedPicks, drafts, loading, error } = useLeagueData(leagueId);
+    const { league, rosters, users, players, state, matchups, tradedPicks, drafts, loading, error, refresh } = useLeagueData(leagueId);
     const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
@@ -69,12 +70,11 @@ const LeagueLayout = () => {
 
     if (error) {
         return (
-            <div className="flex justify-center items-center h-[calc(100vh-4rem)] px-4">
-                <div className="max-w-md w-full p-4 rounded-md bg-bad/10 border border-bad/30 text-bad text-sm flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-                    <span>Error loading league data: {error.message}</span>
-                </div>
-            </div>
+            <ErrorState
+                className="h-[calc(100vh-4rem)]"
+                message={`Error loading league data: ${error.message}`}
+                onRetry={refresh}
+            />
         );
     }
 
@@ -96,6 +96,7 @@ const LeagueLayout = () => {
 
             <AnimatePresence mode="wait">
                 <PageTransition key={location.pathname} className="min-h-[50vh]">
+                    <RouteErrorBoundary key={location.pathname}>
                     <Outlet context={{
                         league,
                         rosters,
@@ -111,6 +112,7 @@ const LeagueLayout = () => {
                         loading,
                         error
                     }} />
+                    </RouteErrorBoundary>
                 </PageTransition>
             </AnimatePresence>
         </>

@@ -3,6 +3,7 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import MatchupDetail from '../features/league/components/MatchupDetail';
 import { fetchLeagueMatchups } from '../utils/sleeper';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
+import ErrorState from '../components/ui/ErrorState';
 
 const MatchupPage = () => {
     const { leagueId, week: weekParam } = useParams();
@@ -19,6 +20,8 @@ const MatchupPage = () => {
 
     const [viewMatchups, setViewMatchups] = useState(week === currentNFLWeek ? currentWeekMatchups : []);
     const [loading, setLoading] = useState(week !== currentNFLWeek);
+    const [error, setError] = useState(null);
+    const [reloadKey, setReloadKey] = useState(0);
 
     /* Selected roster for the focused matchup. Defaults to the logged-in
        user's roster; falls back to the first roster if the user isn't in
@@ -42,6 +45,7 @@ const MatchupPage = () => {
         }
         let cancelled = false;
         setLoading(true);
+        setError(null);
         fetchLeagueMatchups(league.league_id, week)
             .then((data) => {
                 if (!cancelled) {
@@ -49,9 +53,15 @@ const MatchupPage = () => {
                     setLoading(false);
                 }
             })
-            .catch(() => { if (!cancelled) setLoading(false); });
+            .catch((err) => {
+                if (!cancelled) {
+                    console.error('Failed to load matchup', err);
+                    setError(`Couldn't load week ${week} matchups.`);
+                    setLoading(false);
+                }
+            });
         return () => { cancelled = true; };
-    }, [week, league?.league_id, currentNFLWeek, currentWeekMatchups]);
+    }, [week, league?.league_id, currentNFLWeek, currentWeekMatchups, reloadKey]);
 
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
 
@@ -60,6 +70,16 @@ const MatchupPage = () => {
             <div className="font-mono text-2xs uppercase tracking-wider text-text-mute p-12 text-center">
                 Loading matchup…
             </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <ErrorState
+                className="py-12"
+                message={error}
+                onRetry={() => setReloadKey((k) => k + 1)}
+            />
         );
     }
 

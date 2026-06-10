@@ -7,18 +7,40 @@ const BASE_URL = 'https://api.sleeper.app/v1';
  * @param {string} endpoint - The API endpoint to call (e.g., '/user/username')
  * @returns {Promise<any>} - The JSON response
  */
-export const fetchSleeper = async (endpoint) => {
-    try {
-        const response = await fetch(`${BASE_URL}${endpoint}`);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-        if (!response.ok) {
+export const fetchSleeper = async (endpoint, { retries = 2 } = {}) => {
+    let attempt = 0;
+    // Retry transient failures (network errors, 429, 5xx) with exponential
+    // backoff; 4xx other than 429 fail fast. This protects the direct-fetch
+    // callers that have no retry of their own — React Query layers its own
+    // retry on top of the hooked queries.
+    while (true) {
+        try {
+            const response = await fetch(`${BASE_URL}${endpoint}`);
+            if (response.ok) return await response.json();
+
+            const retryable = response.status === 429 || response.status >= 500;
+            if (retryable && attempt < retries) {
+                const retryAfter = Number(response.headers.get('retry-after'));
+                const wait = retryAfter > 0 && retryAfter <= 10
+                    ? retryAfter * 1000
+                    : 400 * 2 ** attempt;
+                attempt++;
+                await sleep(wait);
+                continue;
+            }
             throw new Error(`Sleeper API Error: ${response.status} ${response.statusText}`);
+        } catch (error) {
+            // fetch() throws TypeError on network failure — retry those too.
+            if (error instanceof TypeError && attempt < retries) {
+                await sleep(400 * 2 ** attempt);
+                attempt++;
+                continue;
+            }
+            console.error('Error fetching from Sleeper API:', error);
+            throw error;
         }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching from Sleeper API:', error);
-        throw error;
     }
 };
 
