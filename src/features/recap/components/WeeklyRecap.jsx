@@ -40,6 +40,7 @@ const PlayerHeadshot = ({ playerId, lastName, ringTone = 'border-line' }) => (
         <img
             src={`https://sleepercdn.com/content/nfl/players/${playerId}.jpg`}
             alt={lastName}
+            loading="lazy"
             className="h-full w-full object-cover"
             onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
         />

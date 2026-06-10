@@ -92,6 +92,7 @@ const SeasonSuperlativesView = ({ league, rosters, users, players, seasonMatchup
                                         <img
                                             src={`https://sleepercdn.com/content/nfl/players/${card.data.player.player_id}.jpg`}
                                             alt={card.data.player.last_name}
+                                            loading="lazy"
                                             className="h-full w-full object-cover"
                                             onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
                                         />
