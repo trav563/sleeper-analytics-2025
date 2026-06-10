@@ -1,5 +1,5 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     fetchNFLState,
     fetchLeagueUsers,
@@ -12,6 +12,8 @@ import {
 } from '../../../utils/sleeper';
 
 export function useLeagueData(leagueId) {
+    const queryClient = useQueryClient();
+
     // 1. NFL State (Needed for Matchups Week)
     const { data: state, isLoading: loadingState, error: errorState } = useQuery({
         queryKey: ['nflState'],
@@ -80,18 +82,25 @@ export function useLeagueData(leagueId) {
         staleTime: matchupsStaleTime,
     });
 
-    // Aggregate Loading & Error States
-    const loading = loadingState || loadingPlayers || loadingLeague || loadingUsers || loadingRosters || loadingPicks || loadingMatchups;
+    // Aggregate Loading & Error States.
+    // loadingCore excludes the ~5MB players blob so pages can render league
+    // data while it downloads; `loading` keeps the old all-in gate for
+    // existing consumers.
+    const loadingCore = loadingState || loadingLeague || loadingUsers || loadingRosters || loadingPicks || loadingMatchups;
+    const loading = loadingCore || loadingPlayers;
 
     const error = errorState || errorPlayers || errorLeague || errorUsers || errorRosters || errorPicks || errorMatchups;
 
-    // Refresh function (Invalidates queries to force refetch)
-    // Note: React Query handles refetching automatically based on staleTime. 
-    // Manual refresh would use queryClient.invalidateQueries, but we need access to queryClient.
-    // For now, we return a no-op or we could use useQueryClient to get the client.
+    // Invalidate this league's queries (and shared NFL state) to force a
+    // refetch. The players blob is excluded — it changes daily at most.
     const refresh = () => {
-        // Implementation would require queryClient
-        // window.location.reload(); // Simple brute force for now if requested, or leave empty as auto-refresh handles it
+        queryClient.invalidateQueries({ queryKey: ['nflState'] });
+        queryClient.invalidateQueries({ queryKey: ['league', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['leagueUsers', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['leagueRosters', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['tradedPicks', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['leagueDrafts', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['leagueMatchups', leagueId] });
     };
 
     return {
@@ -104,6 +113,8 @@ export function useLeagueData(leagueId) {
         tradedPicks,
         drafts,
         loading,
+        loadingCore,
+        loadingPlayers,
         error: error ? { message: 'Failed to load data' } : null, // Simplify error object
         refresh
     };
