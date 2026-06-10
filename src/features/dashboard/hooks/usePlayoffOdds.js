@@ -113,11 +113,15 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
     const [loading, setLoading] = useState(false);
     const [isProjection, setIsProjection] = useState(false);
 
+    // Housekeeping only — prune expired cache entries once on mount instead of
+    // re-scanning all of localStorage on every input-identity change. readCache
+    // already TTL-checks per entry, so this is purely to reclaim space.
+    useEffect(() => { pruneStaleCache(); }, []);
+
     useEffect(() => {
         if (!league || !rosters || !currentWeek) return;
 
         let cancelled = false;
-        pruneStaleCache();
 
         const runSimulation = async () => {
             setLoading(true);
