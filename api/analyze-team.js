@@ -5,7 +5,9 @@ const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 // String model IDs route through Vercel AI Gateway when AI_GATEWAY_API_KEY
 // is set (or VERCEL_OIDC_TOKEN on Vercel). Single key, pooled rate limits,
 // observability, billed via Vercel.
-const PRIMARY_MODEL = 'google/gemini-2.0-flash';
+// Gateway catalog slugs (dot form). gemini-2.0-flash was retired from the
+// gateway catalog; keep this pinned to a current Flash model.
+const PRIMARY_MODEL = 'google/gemini-3-flash';
 const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
 // ── Rate Limiting ──
@@ -774,7 +776,9 @@ export default async function handler(req, res) {
             stream = await tryStream(PRIMARY_MODEL);
         } catch (err) {
             const msg = err?.message || '';
-            if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE/i.test(msg)) {
+            // Includes 404/NOT_FOUND so a retired/renamed primary model falls
+            // back to Claude instead of surfacing a hard 500.
+            if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE|404|not.?found/i.test(msg)) {
                 console.warn(`[ai] primary ${PRIMARY_MODEL} failed (${msg.slice(0, 200)}); falling back to ${FALLBACK_MODEL}`);
                 stream = await tryStream(FALLBACK_MODEL);
                 usedFallback = true;
