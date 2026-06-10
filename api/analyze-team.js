@@ -8,12 +8,16 @@ const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 const PRIMARY_MODEL = 'google/gemini-2.0-flash';
 const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
-// ── Rate Limiting (in-memory, per serverless instance) ──
+// ── Rate Limiting ──
+// Durable fixed-window counters via Upstash Redis REST when
+// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are set. Falls back to a
+// per-instance in-memory map otherwise (resets on serverless cold start, so
+// limits are advisory only in that mode).
 const rateLimitMap = new Map();
 const RATE_LIMIT_PER_DAY = 30;
 const RATE_LIMIT_PER_HOUR = 10;
 
-function checkRateLimit(userId) {
+function checkRateLimitMemory(userId) {
     const now = Date.now();
     const key = `rate:${userId}`;
     let entry = rateLimitMap.get(key);
@@ -27,6 +31,39 @@ function checkRateLimit(userId) {
     entry.hourly.push(now);
     entry.daily.push(now);
     return { allowed: true, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
+}
+
+async function checkRateLimit(userId) {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return checkRateLimitMemory(userId);
+    try {
+        const now = Date.now();
+        const hourKey = `rl:h:${userId}:${Math.floor(now / 3600000)}`;
+        const dayKey = `rl:d:${userId}:${Math.floor(now / 86400000)}`;
+        const resp = await fetch(`${url}/pipeline`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify([
+                ['INCR', hourKey], ['EXPIRE', hourKey, '3600'],
+                ['INCR', dayKey], ['EXPIRE', dayKey, '86400'],
+            ]),
+        });
+        if (!resp.ok) throw new Error(`Upstash ${resp.status}`);
+        const results = await resp.json();
+        const hourly = Number(results[0]?.result ?? 0);
+        const daily = Number(results[2]?.result ?? 0);
+        const remaining = Math.max(0, RATE_LIMIT_PER_DAY - daily);
+        if (daily > RATE_LIMIT_PER_DAY)
+            return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day). Try again tomorrow.`, remaining: 0 };
+        if (hourly > RATE_LIMIT_PER_HOUR)
+            return { allowed: false, reason: `Hourly limit reached (${RATE_LIMIT_PER_HOUR}/hour). Try again shortly.`, remaining };
+        return { allowed: true, remaining };
+    } catch (err) {
+        // Redis being down shouldn't take the feature down with it.
+        console.warn('[rate-limit] Upstash unavailable, using in-memory fallback:', err?.message);
+        return checkRateLimitMemory(userId);
+    }
 }
 
 // ── In-memory cache for shared data (stats, players, projections) ──
@@ -596,11 +633,20 @@ export default async function handler(req, res) {
     const { leagueId, userId, week, analysisType = 'roster', constraint = null } = req.body;
     if (!leagueId || !userId || !week) return res.status(400).json({ error: 'Missing required fields' });
 
-    const rateCheck = checkRateLimit(userId);
+    const rateCheck = await checkRateLimit(userId);
     if (!rateCheck.allowed) return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
 
     try {
-        const league = await fetchJSON(`${SLEEPER_BASE}/league/${leagueId}`);
+        const [league, rosters] = await Promise.all([
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}`),
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
+        ]);
+
+        // Reject before the expensive fetch batch (and the LLM call) if the
+        // requesting user doesn't own a roster in this league.
+        const userRoster = rosters.find(r => r.owner_id === userId);
+        if (!userRoster) return res.status(404).json({ error: 'Roster not found' });
+
         const settings = league.settings || {};
         const scoringSettings = league.scoring_settings || {};
         const recPts = scoringSettings.rec ?? 0;
@@ -609,8 +655,7 @@ export default async function handler(req, res) {
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
         // Fetch all data in parallel (Sleeper + ESPN week context for opponent/weather/snaps).
-        const [rosters, users, matchups, nflPlayers, currentStats, prevStats, weekProjections, weekContext, drafts] = await Promise.all([
-            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/rosters`),
+        const [users, matchups, nflPlayers, currentStats, prevStats, weekProjections, weekContext, drafts] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
             fetchCached('players', `${SLEEPER_BASE}/players/nfl`),
@@ -629,7 +674,8 @@ export default async function handler(req, res) {
         try {
             const [txCur, txPrev] = await Promise.all([
                 fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week}`).catch(() => []),
-                week > 1 ? fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
+                // Prior week's transactions are settled - safe to cache.
+                week > 1 ? fetchCached(`tx-${leagueId}-${week - 1}`, `${SLEEPER_BASE}/league/${leagueId}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
             ]);
             transactions = [...(txCur || []), ...(txPrev || [])];
         } catch (e) { /* non-critical */ }
@@ -639,7 +685,8 @@ export default async function handler(req, res) {
         if (week > 1) {
             const pastPromises = [];
             for (let w = 1; w < week; w++) {
-                pastPromises.push(fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null));
+                // Past weeks are immutable - cache them across requests.
+                pastPromises.push(fetchCached(`mu-${leagueId}-${w}`, `${SLEEPER_BASE}/league/${leagueId}/matchups/${w}`).catch(() => null));
             }
             const pastMatchups = await Promise.all(pastPromises);
             pastMatchups.forEach((m, idx) => { if (m) allMatchupHistory[idx + 1] = m; });
@@ -662,10 +709,7 @@ export default async function handler(req, res) {
             playerNews = newsItems || [];
         } catch (e) { /* non-critical */ }
 
-        // Find user's roster & opponent
-        const userRoster = rosters.find(r => r.owner_id === userId);
-        if (!userRoster) return res.status(404).json({ error: 'Roster not found' });
-
+        // Find the user's opponent (roster ownership was validated above).
         const userMatchup = matchups.find(m => m.roster_id === userRoster.roster_id);
         let opponentRoster = null;
         if (userMatchup?.matchup_id != null) {
