@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { classifyInjury, isDSTStarterId } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
@@ -17,6 +18,18 @@ const POSITION_ORDER = {
 };
 
 const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, league }) => {
+    const closeRef = useRef(null);
+
+    // Escape-to-close + move focus into the dialog on open. Guarded inside the
+    // effect (not via early return) so hook order stays stable.
+    useEffect(() => {
+        if (!team || !matchup) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+        document.addEventListener('keydown', onKey);
+        closeRef.current?.focus();
+        return () => document.removeEventListener('keydown', onKey);
+    }, [team, matchup, onClose]);
+
     if (!team || !matchup) return null;
 
     // Use league's roster_positions if available, otherwise fall back to standard positions
@@ -96,6 +109,7 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, le
             onClick={onClose}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="lineup-modal-title"
         >
             <div
                 className="bg-bg-1 rounded-xl shadow-pop max-w-lg w-full max-h-[90vh] overflow-y-auto border border-line"
@@ -117,10 +131,11 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, le
                                 <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
                                     Starting Lineup
                                 </div>
-                                <h2 className="font-display text-lg font-bold text-text truncate">{team.name}</h2>
+                                <h2 id="lineup-modal-title" className="font-display text-lg font-bold text-text truncate">{team.name}</h2>
                             </div>
                         </div>
                         <button
+                            ref={closeRef}
                             type="button"
                             onClick={onClose}
                             aria-label="Close"

@@ -88,10 +88,11 @@ const DashboardPage = () => {
                     </h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
                         <select
                             className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
+                            aria-label="Select week"
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(Number(e.target.value))}
                         >
@@ -102,10 +103,11 @@ const DashboardPage = () => {
                             ))}
                         </select>
                     </label>
-                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">View as</span>
                         <select
                             className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6"
+                            aria-label="View as team"
                             value={selectedUserId}
                             onChange={(e) => setSelectedUserId(e.target.value)}
                         >

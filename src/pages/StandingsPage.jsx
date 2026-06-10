@@ -21,10 +21,11 @@ const StandingsPage = () => {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-end">
-                <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
+                <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
                     <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Through Week</span>
                     <select
                         className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
+                        aria-label="Through week"
                         value={selectedWeek}
                         onChange={(e) => setSelectedWeek(Number(e.target.value))}
                     >
