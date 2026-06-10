@@ -1,49 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 
 export function useSeasonMatchups(leagueId, currentWeek) {
-    const [seasonMatchups, setSeasonMatchups] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const enabled = !!leagueId && !!currentWeek && currentWeek >= 1;
+    const weeks = enabled ? Array.from({ length: currentWeek }, (_, i) => i + 1) : [];
 
-    useEffect(() => {
-        async function fetchAllMatchups() {
-            if (!leagueId || !currentWeek || currentWeek < 1) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                const promises = [];
-                // Fetch matchups for all weeks up to current week
-                // Assuming currentWeek is 1-indexed. If currentWeek is 1, we fetch week 1.
-                // If currentWeek is > 1, we fetch 1 to currentWeek.
-                // Note: Sleeper API might return empty for future weeks, but we only want completed or in-progress.
-                // Let's fetch 1 to currentWeek.
-                for (let w = 1; w <= currentWeek; w++) {
-                    promises.push(fetchLeagueMatchups(leagueId, w).then(data => ({ week: w, data })));
-                }
-
-                const results = await Promise.all(promises);
-                const matchupsByWeek = {};
-                results.forEach(({ week, data }) => {
-                    matchupsByWeek[week] = data;
-                });
-
-                setSeasonMatchups(matchupsByWeek);
-            } catch (err) {
-                console.error("Failed to fetch season matchups:", err);
-                setError("Failed to load season matchups");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchAllMatchups();
-    }, [leagueId, currentWeek]);
-
-    return { seasonMatchups, loading, error };
+    // One query per week, keyed the same as useLeagueData's matchups query so
+    // both hooks (and every component using this one) share a single cache
+    // entry per week instead of refetching the whole season on mount.
+    return useQueries({
+        queries: weeks.map((week) => {
+            const isCurrent = week === currentWeek;
+            return {
+                queryKey: ['leagueMatchups', leagueId, week],
+                // fresh=true bypasses the CDN edge cache for the live week only
+                queryFn: () => fetchLeagueMatchups(leagueId, week, isCurrent),
+                staleTime: isCurrent ? 60 * 1000 : Infinity, // past weeks are immutable
+                gcTime: 24 * 60 * 60 * 1000,
+            };
+        }),
+        combine: (results) => {
+            const seasonMatchups = {};
+            results.forEach((r, i) => {
+                if (r.data) seasonMatchups[weeks[i]] = r.data;
+            });
+            return {
+                seasonMatchups,
+                loading: results.some((r) => r.isLoading),
+                error: results.some((r) => r.error) ? 'Failed to load season matchups' : null,
+            };
+        },
+    });
 }
