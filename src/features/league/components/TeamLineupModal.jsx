@@ -1,8 +1,23 @@
 
-import { isDSTStarterId, classifyInjury, POSITION_ORDER, STATUS_COLORS } from '../utils/nflData';
+import { classifyInjury, isDSTStarterId } from '../../../utils/nflData';
 
 const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, rosterById, userById, league }) => {
     if (!team || !matchup) return null;
+
+    const STATUS_COLORS = {
+        TEXT: {
+            INCOMPLETE: "text-red-500",
+            OK: "text-green-500",
+            PUP: "text-orange-500",
+            OUT: "text-red-500",
+            QUESTIONABLE: "text-yellow-500",
+            DOUBTFUL: "text-red-400"
+        }
+    };
+
+    const POSITION_ORDER = {
+        QB: 1, RB: 2, WR: 3, TE: 4, FLEX: 5, DEF: 6, K: 7
+    };
 
     const { TEXT } = STATUS_COLORS;
 

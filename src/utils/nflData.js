@@ -67,6 +67,14 @@ export function avatarUrl(avatarId, size = "thumbs") {
 }
 
 /**
+ * Get player headshot URL from Sleeper CDN
+ */
+export function playerHeadshotUrl(playerId) {
+    if (!playerId) return null;
+    return `https://sleepercdn.com/content/nfl/players/${playerId}.jpg`;
+}
+
+/**
  * Get display name for a team/user
  */
 export function displayTeamName(user) {

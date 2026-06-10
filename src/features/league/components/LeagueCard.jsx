@@ -1,4 +1,5 @@
 import { Trophy, Users, Calendar, Settings } from 'lucide-react';
+import { avatarUrl } from '../../../utils/nflData';
 
 const LeagueCard = ({ league, onClick }) => {
     const { name, season, total_rosters, scoring_settings, avatar } = league;

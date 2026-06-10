@@ -90,3 +90,187 @@ export const fetchLeague = async (leagueId) => {
     const timestamp = Date.now();
     return fetchSleeper(`/league/${leagueId}?_=${timestamp}`);
 };
+
+/**
+ * Fetch draft picks for a specific draft
+ * @param {string} draftId 
+ */
+export const fetchDraftPicks = async (draftId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/draft/${draftId}/picks?_=${timestamp}`);
+};
+
+/**
+ * Fetch draft metadata (status, type, draft_order, settings)
+ * @param {string} draftId 
+ */
+export const fetchDraft = async (draftId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/draft/${draftId}?_=${timestamp}`);
+};
+
+/**
+ * Fetch all drafts for a league (sorted most recent first)
+ * @param {string} leagueId 
+ */
+export const fetchLeagueDrafts = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/drafts?_=${timestamp}`);
+};
+
+/**
+ * Fetch transactions for a specific round (week)
+ * @param {string} leagueId 
+ * @param {number} round 
+ */
+export const fetchLeagueTransactions = async (leagueId, round) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/transactions/${round}?_=${timestamp}`);
+};
+
+/**
+ * Fetch traded picks for a league
+ * @param {string} leagueId
+ */
+export const fetchTradedPicks = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/traded_picks?_=${timestamp}`);
+};
+
+/**
+ * Fetch NFL stats for a specific season (regular season)
+ * @param {string} season - e.g., '2024'
+ */
+export const fetchSeasonStats = async (season) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/stats/nfl/regular/${season}?_=${timestamp}`);
+};
+
+/**
+ * Fetch trending players (add/drop)
+ * @param {string} type - 'add' or 'drop'
+ * @param {number} lookbackHours - hours to look back (default 24)
+ * @param {number} limit - limit results (default 25)
+ */
+export const fetchTrendingPlayers = async (type = 'add', lookbackHours = 24, limit = 25) => {
+    // Note: trending endpoint doesn't need cache busting usually as it changes often
+    return fetchSleeper(`/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
+};
+
+/**
+ * Fetch winners bracket for a league
+ * @param {string} leagueId 
+ */
+export const fetchLeagueWinnersBracket = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/winners_bracket?_=${timestamp}`);
+};
+
+/**
+ * Fetch losers bracket for a league
+ * @param {string} leagueId 
+ */
+export const fetchLeagueLosersBracket = async (leagueId) => {
+    const timestamp = Date.now();
+    return fetchSleeper(`/league/${leagueId}/losers_bracket?_=${timestamp}`);
+};
+
+/**
+ * Fetch all trade transactions for a specific league (weeks 1-18)
+ * @param {string} leagueId
+ */
+export const fetchSeasonTrades = async (leagueId) => {
+    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+    const promises = weeks.map(week =>
+        fetchLeagueTransactions(leagueId, week)
+            .catch((err) => {
+                console.warn(`Failed to fetch transactions for week ${week}`, err);
+                return [];
+            })
+    );
+
+    const results = await Promise.all(promises);
+    // Flatten and filter for trades
+    return results.flat().filter(t => t.type === 'trade');
+};
+
+/**
+ * Recursively fetch full transaction history across seasons
+ * @param {string} currentLeagueId 
+ * @param {number} depth - How many seasons back to go (default 3)
+ */
+export const fetchFullTransactionHistory = async (currentLeagueId, depth = 3) => {
+    let allTrades = [];
+    let processedIds = new Set();
+    let processingLeagueId = currentLeagueId;
+    let seasonsFetched = 0;
+
+    // We need to fetch league details recursively to find previous_league_id
+    // But we might not have the full league object active.
+    // So we fetch league details for each step.
+
+    while (processingLeagueId && seasonsFetched <= depth) {
+        try {
+            // 1. Fetch League Details (to get previous_league_id and season year)
+            // Note: If processingLeagueId is currentLeagueId, we might already have details, but fetching safe.
+            const leagueDetails = await fetchSleeper(`/league/${processingLeagueId}`);
+
+            // 2. Fetch Trades for this season
+            const seasonTrades = await fetchSeasonTrades(processingLeagueId);
+
+            // 3. Enrich and Deduplicate
+            const yearStr = leagueDetails.season; // e.g., "2024"
+
+            const newTrades = seasonTrades.map(t => ({
+                ...t,
+                season: yearStr,
+                leagueId: processingLeagueId
+            })).filter(t => {
+                if (processedIds.has(t.transaction_id)) return false;
+                processedIds.add(t.transaction_id);
+                return true;
+            });
+
+            allTrades = [...allTrades, ...newTrades];
+
+            // 4. Prepare next iteration
+            processingLeagueId = leagueDetails.previous_league_id;
+            seasonsFetched++;
+
+            // Optimization: If no previous league, break.
+            if (!processingLeagueId) break;
+
+        } catch (err) {
+            console.error(`Error traversing history at league ${processingLeagueId}`, err);
+            break;
+        }
+    }
+
+    return allTrades;
+};
+
+/**
+ * Fetch all matchups up to the current week
+ * @param {string} leagueId 
+ * @param {number} currentWeek 
+ */
+export const fetchAllMatchups = async (leagueId, currentWeek) => {
+    // Determine how many weeks to fetch. If season is over (week 18+), fetch 18.
+    // If currentWeek is < 1, maybe just return empty or fetch nothing.
+    const maxWeeks = Math.min(Math.max(currentWeek, 1), 18);
+
+    // Create array of weeks [1, 2, ..., maxWeeks]
+    const weeks = Array.from({ length: maxWeeks }, (_, i) => i + 1);
+
+    const promises = weeks.map(week =>
+        fetchLeagueMatchups(leagueId, week)
+            .then(matchups => ({ week, matchups }))
+            .catch(err => {
+                console.warn(`Failed to fetch matchups for week ${week}`, err);
+                return { week, matchups: [] };
+            })
+    );
+
+    const results = await Promise.all(promises);
+    return results.sort((a, b) => a.week - b.week);
+};
