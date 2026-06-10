@@ -1,12 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
-import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown } from 'lucide-react';
+import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown, Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
+import { useTheme } from '../../context/ThemeContext';
 
 const Navbar = () => {
     const { user, leagues, leagueHistory, getLeagues } = useSleeper();
+    const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -172,6 +174,18 @@ const Navbar = () => {
                                 </div>
                             </div>
                         )}
+
+                        {/* Theme toggle (visible at all breakpoints) */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleTheme}
+                            className="min-w-[44px] min-h-[44px] text-text-dim hover:text-text hover:bg-bg-2"
+                            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                        </Button>
 
                         {/* Mobile Menu Button */}
                         <Button

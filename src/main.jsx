@@ -6,6 +6,7 @@ import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
 import './index.css'
 import App from './App.jsx'
+import { ThemeProvider } from './context/ThemeContext'
 
 const queryClient = new QueryClient()
 
@@ -47,7 +48,9 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
-          <App />
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
         </HelmetProvider>
       </QueryClientProvider>
     </ErrorBoundary>
