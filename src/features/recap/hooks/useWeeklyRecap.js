@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
+import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
 
 export function useWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
     const recapWeek = currentWeek > 1 ? currentWeek - 1 : 1; // Default to week 1 if current is 1, though usually we want prev week
@@ -22,18 +23,16 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         // Map matchups to get all scores for percentile calc
         const allScores = matchups.map(m => m.points).sort((a, b) => a - b);
 
+        const getOwner = buildOwnerLookup(rosters, users);
+
         // Group by match_id to identify winners/losers
-        const matchGroups = {};
-        matchups.forEach(m => {
-            if (!matchGroups[m.matchup_id]) matchGroups[m.matchup_id] = [];
-            matchGroups[m.matchup_id].push(m);
-        });
+        const matchGroups = groupMatchups(matchups);
 
         let highestLoserScore = -1;
         let unluckyTeam = null;
         let luckOpponent = null;
 
-        Object.values(matchGroups).forEach(group => {
+        matchGroups.forEach(group => {
             if (group.length !== 2) return;
             const [t1, t2] = group;
             const loser = t1.points < t2.points ? t1 : t2.points < t1.points ? t2 : null;
@@ -55,8 +54,8 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             // Note: allScores includes self, so filtering > s works. If duplicate scores, strict > is correct for "beaten".
 
             const percentile = (winsAgainstField / totalOpponents) * 100;
-            const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === unluckyTeam.roster_id)?.owner_id);
-            const oppUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === luckOpponent.roster_id)?.owner_id);
+            const user = getOwner(unluckyTeam.roster_id);
+            const oppUser = getOwner(luckOpponent.roster_id);
 
             robbery = {
                 manager: displayTeamName(user),
@@ -83,7 +82,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 if (player && player.years_exp === 0) {
                     if (points > maxRookiePoints) {
                         maxRookiePoints = points;
-                        const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                        const user = getOwner(m.roster_id);
                         topRookie = {
                             player: player,
                             points: points.toFixed(2),
@@ -103,7 +102,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                         if (player && player.years_exp === 0) {
                             if (points > maxRookiePoints) {
                                 maxRookiePoints = points;
-                                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                                const user = getOwner(m.roster_id);
                                 topRookie = {
                                     player: player,
                                     points: points.toFixed(2),
@@ -161,7 +160,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 const bestBench = bench.length > 0 ? bench[0] : null; // Already sorted desc
 
                 if (bestBench) {
-                    const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                    const user = getOwner(m.roster_id);
                     const playerObj = players[bestBench.id];
                     worstManager = {
                         manager: displayTeamName(user),
@@ -198,7 +197,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 const ratio = bestPlayerPoints / m.points;
                 if (ratio > maxCarryRatio) {
                     maxCarryRatio = ratio;
-                    const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                    const user = getOwner(m.roster_id);
                     bagCarrier = {
                         manager: displayTeamName(user),
                         player: players[bestPlayerId],
@@ -238,7 +237,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                     const diff = betterOption.points - starter.points;
                     if (diff > maxFlipDiff) {
                         maxFlipDiff = diff;
-                        const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                        const user = getOwner(m.roster_id);
                         coinFlipFail = {
                             manager: displayTeamName(user),
                             starter: players[starter.id],
@@ -268,7 +267,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             if (count > maxNapCount) {
                 maxNapCount = count;
                 lowestCardioScore = m.points;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                const user = getOwner(m.roster_id);
                 cardioKing = {
                     manager: displayTeamName(user),
                     count: count,
@@ -277,7 +276,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             } else if (count === maxNapCount && m.points < lowestCardioScore) {
                 // Tie-breaker
                 lowestCardioScore = m.points;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                const user = getOwner(m.roster_id);
                 cardioKing = {
                     manager: displayTeamName(user),
                     count: count,
@@ -293,7 +292,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         matchups.forEach(m => {
             if (m.points < lowestTeamScore && m.points > 0) {
                 lowestTeamScore = m.points;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                const user = getOwner(m.roster_id);
                 tankCommander = {
                     manager: displayTeamName(user),
                     avatar: user?.avatar,
@@ -306,15 +305,15 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         let luckyCharm = null;
         let lowestWinnerScore = Infinity;
 
-        Object.values(matchGroups).forEach(group => {
+        matchGroups.forEach(group => {
             if (group.length !== 2) return;
             const [t1, t2] = group;
             const winner = t1.points > t2.points ? t1 : t2.points > t1.points ? t2 : null;
             if (winner && winner.points < lowestWinnerScore) {
                 lowestWinnerScore = winner.points;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === winner.roster_id)?.owner_id);
+                const user = getOwner(winner.roster_id);
                 const loser = winner === t1 ? t2 : t1;
-                const oppUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === loser.roster_id)?.owner_id);
+                const oppUser = getOwner(loser.roster_id);
                 luckyCharm = {
                     manager: displayTeamName(user),
                     avatar: user?.avatar,
@@ -329,7 +328,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         let closeCall = null;
         let narrowestMargin = Infinity;
 
-        Object.values(matchGroups).forEach(group => {
+        matchGroups.forEach(group => {
             if (group.length !== 2) return;
             const [t1, t2] = group;
             if (t1.points === t2.points) return; // Skip ties
@@ -338,8 +337,8 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 narrowestMargin = margin;
                 const winner = t1.points > t2.points ? t1 : t2;
                 const loser = t1.points > t2.points ? t2 : t1;
-                const winUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === winner.roster_id)?.owner_id);
-                const loseUser = users.find(u => u.user_id === rosters.find(r => r.roster_id === loser.roster_id)?.owner_id);
+                const winUser = getOwner(winner.roster_id);
+                const loseUser = getOwner(loser.roster_id);
                 closeCall = {
                     winner: displayTeamName(winUser),
                     loser: displayTeamName(loseUser),
@@ -364,7 +363,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
             });
             if (teamGhosts.length > ghostCount) {
                 ghostCount = teamGhosts.length;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                const user = getOwner(m.roster_id);
                 ghost = {
                     manager: displayTeamName(user),
                     players: teamGhosts,
@@ -383,7 +382,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 const pts = squadPoints[pid] || 0;
                 if (pts > highestPlayerScore && players[pid]) {
                     highestPlayerScore = pts;
-                    const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                    const user = getOwner(m.roster_id);
                     boomGame = {
                         player: players[pid],
                         points: pts.toFixed(2),
@@ -420,7 +419,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
                 if (!season || season.games < 1) return;
                 const avgPPG = season.total / season.games;
                 const diff = m.points - avgPPG;
-                const user = users.find(u => u.user_id === rosters.find(r => r.roster_id === m.roster_id)?.owner_id);
+                const user = getOwner(m.roster_id);
 
                 if (diff > biggestOver) {
                     biggestOver = diff;

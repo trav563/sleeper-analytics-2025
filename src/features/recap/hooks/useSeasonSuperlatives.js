@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
+import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
 
 // Reuse the flex-slot helper from useWeeklyRecap
 function isValidPosition(playerPos, slotPos) {
@@ -18,10 +19,7 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
         const weeks = Object.keys(seasonMatchups).map(Number).sort((a, b) => a - b);
         if (weeks.length < 3) return null; // Need at least 3 weeks
 
-        const getUserForRoster = (rosterId) => {
-            const roster = rosters.find(r => r.roster_id === rosterId);
-            return users.find(u => u.user_id === roster?.owner_id);
-        };
+        const getUserForRoster = buildOwnerLookup(rosters, users);
 
         // Accumulators per manager (keyed by roster_id)
         const managerStats = {};
@@ -55,15 +53,8 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
                 ? (allScores[allScores.length / 2 - 1] + allScores[allScores.length / 2]) / 2
                 : allScores[Math.floor(allScores.length / 2)];
 
-            // Group by matchup_id
-            const matchGroups = {};
-            matchups.forEach(m => {
-                if (!matchGroups[m.matchup_id]) matchGroups[m.matchup_id] = [];
-                matchGroups[m.matchup_id].push(m);
-            });
-
             // --- Per-matchup analysis ---
-            Object.values(matchGroups).forEach(group => {
+            groupMatchups(matchups).forEach(group => {
                 if (group.length !== 2) return;
                 const [t1, t2] = group;
                 const winner = t1.points > t2.points ? t1 : t2.points > t1.points ? t2 : null;
