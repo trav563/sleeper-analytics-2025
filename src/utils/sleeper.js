@@ -90,6 +90,16 @@ export const fetchLeagueMatchups = async (leagueId, week, fresh = false) => {
 };
 
 /**
+ * Fetch a league's winners (championship) bracket. Bracket round `r` maps to
+ * week `playoff_week_start + r - 1`. Needed to tell real playoff meetings apart
+ * from consolation / toilet-bowl games, which share the same weeks.
+ * @param {string} leagueId
+ */
+export const fetchWinnersBracket = async (leagueId) => {
+    return fetchSleeper(`/league/${leagueId}/winners_bracket`);
+};
+
+/**
  * Fetch current NFL state (week, season type, etc.)
  */
 export const fetchNFLState = async () => {

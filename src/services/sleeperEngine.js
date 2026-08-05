@@ -48,6 +48,9 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
                 roster: userRoster,
                 rosters: rostersByOwnerId,
                 draft_id: league.draft_id,
+                // Needed to split regular season from postseason per season
+                // instead of assuming a fixed week window.
+                playoff_week_start: league.settings?.playoff_week_start,
                 previous_league_id: league.previous_league_id
             });
 
