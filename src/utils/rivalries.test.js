@@ -2,11 +2,18 @@ import { describe, it, expect } from 'vitest';
 import {
     buildPlayoffKeys,
     buildRivalries,
+    bucketRivalries,
+    buildManagerSplits,
+    formatRecord,
     pairKey,
     rivalryBalance,
+    rivalryBucket,
     rivalryMargin,
+    seasonSplits,
     sortRivalries,
     MAX_SCORED_WEEK,
+    MIN_BUCKET_MEETINGS,
+    RIVALRY_BUCKETS,
 } from './rivalries';
 
 const OWNERS = { 1: 'a', 2: 'b', 3: 'c', 4: 'd' };
@@ -479,5 +486,250 @@ describe('sortRivalries', () => {
 
     it('tolerates nullish input', () => {
         expect(sortRivalries(null)).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Buckets
+// ---------------------------------------------------------------------------
+
+/** Minimal record for bucket/sort tests. */
+const rec = (w, l, t = 0) => ({ w, l, t, g: w + l + t, pointsA: 0, pointsB: 0, playoffGames: 0 });
+
+describe('rivalryBucket', () => {
+    it('sends anything under the meeting floor to thin', () => {
+        expect(MIN_BUCKET_MEETINGS).toBe(5);
+        expect(rivalryBucket(rec(0, 0))).toBe('thin'); // never met
+        expect(rivalryBucket(rec(2, 2))).toBe('thin'); // 4 games, dead even
+        expect(rivalryBucket(rec(4, 0))).toBe('thin'); // 4 games, lopsided
+    });
+
+    it('classifies by margin once the floor is met', () => {
+        expect(rivalryBucket(rec(3, 2))).toBe('closest'); // margin 1, 5 games
+        expect(rivalryBucket(rec(3, 3))).toBe('closest'); // margin 0
+        expect(rivalryBucket(rec(4, 2))).toBe('competitive'); // margin 2
+        expect(rivalryBucket(rec(5, 2))).toBe('competitive'); // margin 3
+        expect(rivalryBucket(rec(5, 1))).toBe('lopsided'); // margin 4
+        expect(rivalryBucket(rec(6, 0))).toBe('lopsided'); // margin 6
+    });
+
+    it('counts ties toward the meeting floor', () => {
+        expect(rivalryBucket(rec(2, 2, 1))).toBe('closest'); // 5 games, margin 0
+    });
+
+    it('treats a nullish or malformed record as thin, not closest', () => {
+        // Guards the trap: `undefined < 5` is false, so without normalizing `g`
+        // these would fall through to margin 0 and be called "closest".
+        expect(rivalryBucket(undefined)).toBe('thin');
+        expect(rivalryBucket(null)).toBe('thin');
+        expect(rivalryBucket({ w: 3, l: 3 })).toBe('thin'); // no g
+        expect(rivalryBucket({ w: 3, l: 3, g: NaN })).toBe('thin');
+    });
+});
+
+describe('bucketRivalries', () => {
+    const entry = (aId, bId, r, a = r) => ({ aId, bId, reg: r, all: a, games: [] });
+    const list = [
+        entry('a', 'b', rec(5, 4)), // closest
+        entry('c', 'd', rec(4, 2)), // competitive
+        entry('e', 'f', rec(6, 0)), // lopsided
+        entry('g', 'h', rec(1, 1)), // thin
+    ];
+
+    it('always returns all four buckets', () => {
+        const out = bucketRivalries([], 'reg');
+        expect(Object.keys(out).sort()).toEqual([...RIVALRY_BUCKETS].sort());
+        expect(RIVALRY_BUCKETS.every((b) => Array.isArray(out[b]))).toBe(true);
+    });
+
+    it('partitions: every entry lands in exactly one bucket', () => {
+        const out = bucketRivalries(list, 'reg');
+        const total = RIVALRY_BUCKETS.reduce((s, b) => s + out[b].length, 0);
+        expect(total).toBe(list.length);
+        const seen = RIVALRY_BUCKETS.flatMap((b) => out[b].map((e) => pairKey(e.aId, e.bId)));
+        expect(new Set(seen).size).toBe(list.length);
+    });
+
+    it('lets a pair move bucket when the scope changes', () => {
+        // 4 meetings in regular season (thin), 6 once playoffs count (competitive).
+        const scoped = [entry('a', 'b', rec(2, 2), rec(4, 2))];
+        expect(bucketRivalries(scoped, 'reg').thin).toHaveLength(1);
+        expect(bucketRivalries(scoped, 'all').competitive).toHaveLength(1);
+    });
+
+    it('orders competitive by substance, not by smallest margin', () => {
+        // Documented intent: a 7-meeting 5-2 outranks a 6-meeting 4-2 even though
+        // its margin is larger, because the bucket already bounds the margin.
+        const out = bucketRivalries(
+            [entry('c', 'd', rec(4, 2)), entry('a', 'b', rec(5, 2))],
+            'reg'
+        );
+        expect(out.competitive.map((e) => e.aId)).toEqual(['a', 'c']);
+    });
+
+    it('orders lopsided by widest margin first', () => {
+        const out = bucketRivalries(
+            [entry('a', 'b', rec(5, 1)), entry('c', 'd', rec(6, 0))],
+            'reg'
+        );
+        expect(out.lopsided.map((e) => e.aId)).toEqual(['c', 'a']);
+    });
+
+    it('orders thin by meetings so near-qualifiers surface first', () => {
+        const out = bucketRivalries(
+            [entry('a', 'b', rec(1, 0)), entry('c', 'd', rec(2, 2))],
+            'reg'
+        );
+        expect(out.thin.map((e) => e.aId)).toEqual(['c', 'a']);
+    });
+
+    it('does not mutate the input and tolerates nullish', () => {
+        const before = list.map((e) => e.aId);
+        bucketRivalries(list, 'reg');
+        expect(list.map((e) => e.aId)).toEqual(before);
+        expect(bucketRivalries(null).closest).toEqual([]);
+    });
+});
+
+describe('formatRecord', () => {
+    it('appends the tie column only when there are ties', () => {
+        expect(formatRecord(rec(4, 2))).toBe('4-2');
+        expect(formatRecord(rec(4, 2, 1))).toBe('4-2-1');
+        expect(formatRecord(rec(0, 0))).toBe('0-0');
+        expect(formatRecord(null)).toBe('0-0');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Per-season splits / one-vs-all
+// ---------------------------------------------------------------------------
+
+describe('seasonSplits', () => {
+    const build = () =>
+        buildRivalries({
+            seasons: [
+                season({
+                    season: '2025',
+                    games: { 3: game(1, 120, 2, 100), 15: game(1, 90, 2, 130) },
+                    bracket: [{ r: 1, t1: 1, t2: 2 }],
+                }),
+                season({ season: '2024', games: { 7: game(1, 80, 2, 95) } }),
+            ],
+            currentOwnerIds: ['a', 'b'],
+        });
+
+    it('splits by season and excludes playoff games from the reg scope', () => {
+        const s = seasonSplits(find(build(), 'a', 'b'), 'a', 'reg');
+        expect(s.seasons).toEqual(['2024', '2025']);
+        expect(s.bySeason['2025']).toMatchObject({ w: 1, l: 0, g: 1 });
+        expect(s.bySeason['2024']).toMatchObject({ w: 0, l: 1, g: 1 });
+        expect(s.total).toMatchObject({ w: 1, l: 1, g: 2, playoffGames: 0 });
+    });
+
+    it('includes playoff games in the all scope', () => {
+        const s = seasonSplits(find(build(), 'a', 'b'), 'a', 'all');
+        expect(s.total).toMatchObject({ w: 1, l: 2, g: 3, playoffGames: 1 });
+        expect(s.bySeason['2025']).toMatchObject({ w: 1, l: 1, g: 2, playoffGames: 1 });
+    });
+
+    it('orients points and results to the requested owner', () => {
+        const entry = find(build(), 'a', 'b');
+        const forA = seasonSplits(entry, 'a', 'reg');
+        const forB = seasonSplits(entry, 'b', 'reg');
+        expect(forA.opponentId).toBe('b');
+        expect(forB.opponentId).toBe('a');
+        expect(forB.total.w).toBe(forA.total.l);
+        expect(forB.total.pointsFor).toBeCloseTo(forA.total.pointsAgainst, 5);
+    });
+
+    it('matches the pair record exactly once orientation is normalized', () => {
+        // The guard protecting the board and h2h summary from drifting apart. A
+        // naive deep-equal against entry[scope] cannot work: that object is
+        // oriented to aId, so for ownerId === bId the W/L are swapped.
+        const entry = find(build(), 'a', 'b');
+        ['reg', 'all'].forEach((scope) => {
+            [entry.aId, entry.bId].forEach((ownerId) => {
+                const flip = ownerId !== entry.aId;
+                const p = entry[scope];
+                expect(seasonSplits(entry, ownerId, scope).total).toEqual({
+                    w: flip ? p.l : p.w,
+                    l: flip ? p.w : p.l,
+                    t: p.t,
+                    g: p.g,
+                    pointsFor: flip ? p.pointsB : p.pointsA,
+                    pointsAgainst: flip ? p.pointsA : p.pointsB,
+                    playoffGames: p.playoffGames,
+                });
+            });
+        });
+    });
+
+    it('omits a season that has no counted game', () => {
+        const list = buildRivalries({
+            // 2026 is scheduled but unplayed — both sides scored 0.
+            seasons: [
+                season({ season: '2026', games: { 1: game(1, 0, 2, 0) } }),
+                season({ season: '2025', games: { 3: game(1, 120, 2, 100) } }),
+            ],
+            currentOwnerIds: ['a', 'b'],
+        });
+        expect(seasonSplits(find(list, 'a', 'b'), 'a', 'reg').seasons).toEqual(['2025']);
+    });
+
+    it('returns an empty shape for a nullish entry or a stranger', () => {
+        expect(seasonSplits(null, 'a').total.g).toBe(0);
+        expect(seasonSplits(find(build(), 'a', 'b'), 'zzz').opponentId).toBeNull();
+    });
+});
+
+describe('buildManagerSplits', () => {
+    const threeSeasons = () =>
+        buildRivalries({
+            seasons: [
+                season({
+                    season: '2025',
+                    rosterIdToOwnerId: { 1: 'a', 2: 'b', 3: 'c', 4: 'd' },
+                    games: { 3: [...game(1, 120, 2, 100, 1), ...game(3, 110, 4, 90, 2)] },
+                }),
+                season({
+                    season: '2024',
+                    rosterIdToOwnerId: { 1: 'a', 2: 'b', 3: 'c' },
+                    games: { 4: game(1, 80, 3, 95) },
+                }),
+            ],
+            currentOwnerIds: ['a', 'b', 'c', 'd'],
+        });
+
+    it('returns one row per opponent, including pairs that never met', () => {
+        const split = buildManagerSplits({ rivalries: threeSeasons(), ownerId: 'a' });
+        expect(split.rows).toHaveLength(3); // 4 managers -> 3 opponents
+        expect(split.rows.some((r) => r.total.g === 0)).toBe(true); // never met 'd'
+    });
+
+    it('lists only seasons the manager actually played', () => {
+        const rivalries = threeSeasons();
+        expect(buildManagerSplits({ rivalries, ownerId: 'a' }).seasons).toEqual(['2024', '2025']);
+        // 'd' appears in 2025 only.
+        expect(buildManagerSplits({ rivalries, ownerId: 'd' }).seasons).toEqual(['2025']);
+    });
+
+    it('totals equal the sum of its rows', () => {
+        const split = buildManagerSplits({ rivalries: threeSeasons(), ownerId: 'a' });
+        const sum = split.rows.reduce((acc, r) => acc + r.total.g, 0);
+        expect(split.total.g).toBe(sum);
+        expect(split.total.w + split.total.l + split.total.t).toBe(split.total.g);
+    });
+
+    it('sorts by win percentage and is deterministic', () => {
+        const split = buildManagerSplits({ rivalries: threeSeasons(), ownerId: 'a' });
+        const again = buildManagerSplits({ rivalries: threeSeasons(), ownerId: 'a' });
+        expect(split.rows.map((r) => r.opponentId)).toEqual(again.rows.map((r) => r.opponentId));
+        expect(split.rows[0].opponentId).toBe('b'); // 1-0 vs b beats 0-1 vs c
+        expect(split.rows[split.rows.length - 1].opponentId).toBe('d'); // never met sorts last
+    });
+
+    it('returns an empty shape without an ownerId', () => {
+        expect(buildManagerSplits({ rivalries: threeSeasons() }).rows).toEqual([]);
+        expect(buildManagerSplits().rows).toEqual([]);
     });
 });

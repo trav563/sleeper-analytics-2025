@@ -120,6 +120,7 @@ const AnalyticsPage = () => {
                 selectedUser1Id={selectedUser?.user_id}
                 selectedUser2Id={comparisonMode === 'h2h' ? opponentUser?.user_id : null}
                 leagueId={leagueId}
+                leagueName={league?.name}
             />
         </div>
     );

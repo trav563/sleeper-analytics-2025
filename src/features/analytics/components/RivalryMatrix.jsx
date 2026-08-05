@@ -1,20 +1,36 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { displayTeamName } from '../../../utils/nflData';
-import { Swords } from 'lucide-react';
+import { Swords, Download } from 'lucide-react';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { Button } from '../../../components/ui/Button';
 import { useRivalries } from '../hooks/useRivalries';
-import { pairKey, sortRivalries } from '../../../utils/rivalries';
+import RivalryManagerTable from './RivalryManagerTable';
+import {
+    pairKey,
+    bucketRivalries,
+    buildManagerSplits,
+    MIN_BUCKET_MEETINGS,
+    RIVALRY_BUCKETS,
+    RIVALRY_BUCKET_LABELS,
+    RIVALRY_SCOPE_LABELS,
+} from '../../../utils/rivalries';
+import { toCSV, csvFilename, csvSlug, downloadCSV } from '../../../utils/csv';
+import {
+    buildH2HCsvRows,
+    buildBucketCsvRows,
+    buildManagerCsvRows,
+} from '../utils/rivalryCsv';
 
 const SCOPE_TABS = [
-    { value: 'reg', label: 'Regular Season' },
-    { value: 'all', label: 'All-Time' },
+    { value: 'reg', label: RIVALRY_SCOPE_LABELS.reg },
+    { value: 'all', label: RIVALRY_SCOPE_LABELS.all },
 ];
 
-const SORT_TABS = [
-    { value: 'closest', label: 'Closest' },
-    { value: 'meetings', label: 'Meetings' },
-    { value: 'lopsided', label: 'Lopsided' },
+const VIEW_TABS = [
+    { value: 'h2h', label: 'Head-to-Head', short: 'H2H' },
+    { value: 'matrix', label: 'All Rivalries', short: 'All' },
+    { value: 'manager', label: 'One vs All', short: 'Vs All' },
 ];
 
 const Frame = ({ children }) => (
@@ -27,13 +43,56 @@ const MessageBox = ({ children }) => (
     </Frame>
 );
 
-const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id, leagueId }) => {
+/**
+ * Bucket selector. Not SegmentedTabs: that component sets gridTemplateColumns as
+ * an inline style, so className can't give it the 2x2 mobile layout four labels
+ * plus counts need at 375px. Same token family, 44px targets.
+ */
+const BucketTabs = ({ value, counts, onChange }) => (
+    <div
+        role="tablist"
+        aria-label="Rivalry group"
+        className="grid grid-cols-2 md:grid-cols-4 gap-1 bg-bg-2 rounded-lg p-1 border border-line"
+    >
+        {RIVALRY_BUCKETS.map((b) => {
+            const active = b === value;
+            return (
+                <button
+                    key={b}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => onChange(b)}
+                    className={`min-h-[44px] px-2 rounded-md text-sm font-semibold transition-colors duration-fast flex items-center justify-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-signal ${
+                        active ? 'bg-bg-3 text-signal' : 'text-text-dim hover:text-text'
+                    }`}
+                >
+                    <span>{RIVALRY_BUCKET_LABELS[b]}</span>
+                    <span className="tnum font-mono text-2xs text-text-mute">{counts[b]}</span>
+                </button>
+            );
+        })}
+    </div>
+);
+
+const RivalryMatrix = ({
+    currentUserId,
+    users,
+    selectedUser1Id,
+    selectedUser2Id,
+    leagueId,
+    leagueName,
+}) => {
     const { leagueHistory, loadHistory, user } = useSleeper();
     const [viewMode, setViewMode] = useState('h2h');
     const [scope, setScope] = useState('reg');
-    const [sortKey, setSortKey] = useState('closest');
+    const [bucket, setBucket] = useState('closest');
     const [user1Id, setUser1Id] = useState(currentUserId);
     const [user2Id, setUser2Id] = useState('');
+    // Separate from user1Id on purpose: sharing it would let picking a manager
+    // here overwrite Team A, and if that manager were already Team B the H2H tab
+    // would end up with an impossible same-owner pair.
+    const [managerId, setManagerId] = useState(currentUserId);
 
     // Current-league managers only — the board is about people you can still
     // play, so managers who have left the league are left out.
@@ -66,6 +125,9 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
         setSyncedFrom({ a: selectedUser1Id, b: selectedUser2Id, me: currentUserId });
         if (selectedUser1Id) setUser1Id(selectedUser1Id);
         else if (currentUserId && !user1Id) setUser1Id(currentUserId);
+        if (selectedUser1Id || currentUserId) {
+            setManagerId(selectedUser1Id || currentUserId);
+        }
         if (selectedUser2Id) {
             setUser2Id(selectedUser2Id);
             setViewMode('h2h');
@@ -78,9 +140,21 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
         }
     }, [leagueHistory, leagueId, user, loadHistory]);
 
-    const board = useMemo(
-        () => sortRivalries(rivalries, sortKey, scope),
-        [rivalries, sortKey, scope]
+    // Every pair lands in exactly one bucket, so the four counts sum to the total.
+    // Membership is scope-dependent — a pair can legitimately move when switching.
+    const buckets = useMemo(() => bucketRivalries(rivalries, scope), [rivalries, scope]);
+    const bucketRows = buckets[bucket];
+    const bucketCounts = useMemo(() => {
+        const counts = {};
+        RIVALRY_BUCKETS.forEach((b) => {
+            counts[b] = buckets[b].length;
+        });
+        return counts;
+    }, [buckets]);
+
+    const managerSplit = useMemo(
+        () => buildManagerSplits({ rivalries, ownerId: managerId, scope }),
+        [rivalries, managerId, scope]
     );
 
     // Head-to-head detail is a lookup into the same aggregate the board uses, so
@@ -121,6 +195,52 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
         setViewMode('h2h');
     };
 
+    const canExport =
+        viewMode === 'h2h'
+            ? !!h2h && h2h.games > 0
+            : viewMode === 'matrix'
+              ? bucketRows.length > 0
+              : !!managerId && managerSplit.rows.length > 0;
+
+    // Rows are built on click rather than in a memo: no reason to assemble three
+    // CSVs on every render.
+    const handleExport = () => {
+        const league = leagueName || leagueHistory?.[0]?.name;
+        let prefix;
+        let rows;
+
+        if (viewMode === 'h2h') {
+            prefix = `h2h_${scope}`;
+            rows = buildH2HCsvRows({
+                leagueName: league,
+                scope,
+                nameA: nameOf(user1Id),
+                nameB: nameOf(user2Id),
+                h2h,
+            });
+        } else if (viewMode === 'matrix') {
+            prefix = `rivalries_${bucket}_${scope}`;
+            rows = buildBucketCsvRows({
+                leagueName: league,
+                scope,
+                bucket,
+                entries: bucketRows,
+                nameOf,
+            });
+        } else {
+            prefix = `manager_${csvSlug(nameOf(managerId), 'team')}_${scope}`;
+            rows = buildManagerCsvRows({
+                leagueName: league,
+                scope,
+                managerName: nameOf(managerId),
+                split: managerSplit,
+                nameOf,
+            });
+        }
+
+        downloadCSV(toCSV(rows), csvFilename(prefix, league));
+    };
+
     if (error) return <MessageBox>Could not load rivalry history</MessageBox>;
     if (loading) return <MessageBox>Loading rivalry history…</MessageBox>;
     if (!leagueHistory) return <MessageBox>Loading league history…</MessageBox>;
@@ -145,10 +265,15 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
                         </h3>
                     </div>
                     <SegmentedTabs
-                        tabs={[
-                            { value: 'h2h', label: 'Head-to-Head' },
-                            { value: 'matrix', label: 'All Rivalries' },
-                        ]}
+                        tabs={VIEW_TABS.map((t) => ({
+                            value: t.value,
+                            label: (
+                                <>
+                                    <span className="md:hidden">{t.short}</span>
+                                    <span className="hidden md:inline">{t.label}</span>
+                                </>
+                            ),
+                        }))}
                         value={viewMode}
                         onChange={setViewMode}
                     />
@@ -160,9 +285,19 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
                         onChange={setScope}
                         className="sm:w-72"
                     />
-                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute flex-1">
                         {scopeNote} · consolation excluded
                     </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={!canExport}
+                        className="gap-1 border-line text-text hover:bg-bg-2 min-h-[44px] self-start sm:self-auto"
+                    >
+                        <Download className="w-3 h-3" aria-hidden="true" />
+                        CSV
+                    </Button>
                 </div>
             </header>
 
@@ -286,26 +421,72 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
                             </div>
                         )}
                     </div>
+                ) : viewMode === 'manager' ? (
+                    <div className="space-y-4">
+                        <div className="w-full md:w-72">
+                            <label
+                                htmlFor="rivalry-manager"
+                                className="block font-mono text-2xs uppercase tracking-wider text-text-mute mb-1"
+                            >
+                                Manager
+                            </label>
+                            <select
+                                id="rivalry-manager"
+                                className="w-full bg-bg-2 border border-line text-text rounded-md px-3 min-h-[40px] text-sm focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
+                                value={managerId || ''}
+                                onChange={(e) => setManagerId(e.target.value)}
+                            >
+                                <option value="" disabled>Select a manager</option>
+                                {users?.map((u) => (
+                                    <option key={u.user_id} value={u.user_id}>{displayTeamName(u)}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {managerId ? (
+                            <RivalryManagerTable
+                                seasons={managerSplit.seasons}
+                                rows={managerSplit.rows}
+                                total={managerSplit.total}
+                                nameOf={nameOf}
+                                scope={scope}
+                                ownerId={managerId}
+                                onOpenPair={openPair}
+                            />
+                        ) : (
+                            <div className="text-center py-10 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                Select a manager to see every head-to-head at once
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <label className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                Sort by
-                            </label>
-                            <SegmentedTabs
-                                tabs={SORT_TABS}
-                                value={sortKey}
-                                onChange={setSortKey}
-                                className="sm:w-80"
-                            />
+                        <BucketTabs value={bucket} counts={bucketCounts} onChange={setBucket} />
+
+                        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute tnum">
+                                {bucketRows.length} of {rivalries.length} pairs
+                            </div>
+                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                Group depends on scope — a pair can move when you switch
+                            </div>
                         </div>
 
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute tnum">
-                            {board.length} rivalries
-                        </div>
-
+                        {bucketRows.length === 0 ? (
+                            <div className="text-center py-10 font-mono text-2xs uppercase tracking-wider text-text-mute space-y-1">
+                                <p>
+                                    No pairs in {RIVALRY_BUCKET_LABELS[bucket]} for{' '}
+                                    {RIVALRY_SCOPE_LABELS[scope]}
+                                </p>
+                                {bucket !== 'thin' && (
+                                    <p>
+                                        Groups need {MIN_BUCKET_MEETINGS}+ meetings — try Thin Sample
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
                         <div className="space-y-1.5 max-h-[32rem] overflow-y-auto pr-1">
-                            {board.map((r, i) => {
+                            {bucketRows.map((r, i) => {
                                 const record = r[scope];
                                 const { w, l, t, g } = record;
                                 const leadA = w > l;
@@ -357,6 +538,7 @@ const RivalryMatrix = ({ currentUserId, users, selectedUser1Id, selectedUser2Id,
                                 );
                             })}
                         </div>
+                        )}
                     </div>
                 )}
             </div>
