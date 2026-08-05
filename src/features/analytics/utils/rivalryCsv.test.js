@@ -240,26 +240,48 @@ describe('formula-injection coverage across every user-authored field', () => {
         expect(csv).not.toMatch(/(^|,)=SUM/m);
     });
 
-    it('neutralizes team names and the winner in the h2h export', () => {
-        const csv = toCSV(
-            buildH2HCsvRows({
-                leagueName: 'ok',
-                scope: 'reg',
-                nameA: EVIL,
-                nameB: AT,
-                h2h: {
-                    wins1: 1, wins2: 0, ties: 0, points1: 100, points2: 90, games: 1,
-                    playoffGames: 0,
-                    history: [
-                        { season: '2025', week: 1, isPlayoff: false, score1: 100, score2: 90 },
-                    ],
-                },
-                generatedAt: AT_DATE,
-            })
-        );
-        // Present in both the column header and the Winner cell.
-        expect(csv.match(/'=SUM/g)?.length).toBeGreaterThanOrEqual(2);
-        expect(csv).not.toMatch(/(^|,)=SUM/m);
+    it('neutralizes team names and the winner in the h2h export, per call site', () => {
+        // nameA reaches THREE separate csvText calls (Matchup preamble, the column
+        // header, the Winner cell). A global occurrence count would still pass if
+        // one of them were removed, so each is asserted by position.
+        const rows = buildH2HCsvRows({
+            leagueName: 'ok',
+            scope: 'reg',
+            nameA: EVIL,
+            nameB: AT,
+            h2h: {
+                wins1: 1, wins2: 0, ties: 0, points1: 100, points2: 90, games: 1,
+                playoffGames: 0,
+                history: [{ season: '2025', week: 1, isPlayoff: false, score1: 100, score2: 90 }],
+            },
+            generatedAt: AT_DATE,
+        });
+
+        // Site 1 + 2: the Matchup preamble embeds both names in one cell.
+        expect(val(rows, 'Matchup')).toBe(`'${EVIL} vs '${AT}`);
+        // Site 3 + 4: the column header carries each name in its own cell.
+        expect(headerRow(rows)[3]).toBe(`'${EVIL}`);
+        expect(headerRow(rows)[4]).toBe(`'${AT}`);
+        // Site 5: the Winner cell — nameA won this game.
+        expect(dataRows(rows)[0][5]).toBe(`'${EVIL}`);
+        // And nothing raw survives at a field boundary once serialized.
+        expect(toCSV(rows)).not.toMatch(/(^|,)=SUM/m);
+    });
+
+    it('neutralizes the winner cell when the OTHER team wins', () => {
+        const rows = buildH2HCsvRows({
+            leagueName: 'ok',
+            scope: 'reg',
+            nameA: 'Plain',
+            nameB: AT,
+            h2h: {
+                wins1: 0, wins2: 1, ties: 0, points1: 90, points2: 100, games: 1,
+                playoffGames: 0,
+                history: [{ season: '2025', week: 1, isPlayoff: false, score1: 90, score2: 100 }],
+            },
+            generatedAt: AT_DATE,
+        });
+        expect(dataRows(rows)[0][5]).toBe(`'${AT}`);
     });
 
     it('leaves genuine negative numbers numeric — the guard must not over-apply', () => {

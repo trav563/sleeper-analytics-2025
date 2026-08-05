@@ -141,15 +141,23 @@ const RivalryMatrix = ({
         const members = new Set(currentOwnerIds);
         const stillHere = (id) => !!id && (members.size === 0 || members.has(id));
 
-        const nextUser1 = selectedUser1Id || (stillHere(user1Id) ? user1Id : currentUserId || '');
+        // The parent's pickers are validated too. They read from useLeagueData,
+        // which can lag leagueHistory during a league change, so an incoming prop
+        // is just as capable of naming a non-member as our own stale state is.
+        const propUser1 = stillHere(selectedUser1Id) ? selectedUser1Id : null;
+        const propUser2 = stillHere(selectedUser2Id) ? selectedUser2Id : null;
+        // The viewer is not necessarily in the league they are looking at.
+        const fallback = stillHere(currentUserId) ? currentUserId : currentOwnerIds[0] || '';
+
+        const nextUser1 = propUser1 || (stillHere(user1Id) ? user1Id : fallback);
         if (nextUser1 !== user1Id) setUser1Id(nextUser1);
 
-        const nextUser2 = selectedUser2Id || (stillHere(user2Id) ? user2Id : '');
+        const nextUser2 = propUser2 || (stillHere(user2Id) ? user2Id : '');
         if (nextUser2 !== user2Id) setUser2Id(nextUser2);
-        if (selectedUser2Id) setViewMode('h2h');
+        // Only jump to the pair view for an opponent that actually exists here.
+        if (propUser2) setViewMode('h2h');
 
-        const nextManager =
-            selectedUser1Id || (stillHere(managerId) ? managerId : currentUserId || '');
+        const nextManager = propUser1 || (stillHere(managerId) ? managerId : fallback);
         if (nextManager !== managerId) setManagerId(nextManager);
     }
 
