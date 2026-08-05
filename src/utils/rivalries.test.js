@@ -10,6 +10,7 @@ import {
     rivalryBucket,
     rivalryMargin,
     seasonSplits,
+    seasonTotals,
     sortRivalries,
     MAX_SCORED_WEEK,
     MIN_BUCKET_MEETINGS,
@@ -731,5 +732,66 @@ describe('buildManagerSplits', () => {
     it('returns an empty shape without an ownerId', () => {
         expect(buildManagerSplits({ rivalries: threeSeasons() }).rows).toEqual([]);
         expect(buildManagerSplits().rows).toEqual([]);
+    });
+});
+
+describe('seasonTotals', () => {
+    const sp = (w, l, t = 0) => ({ w, l, t, g: w + l + t });
+
+    it('sums each season column across every opponent', () => {
+        const rows = [
+            { bySeason: { 2024: sp(1, 1), 2025: sp(1, 0) } },
+            { bySeason: { 2025: sp(0, 1) } },
+        ];
+        expect(seasonTotals(rows, ['2024', '2025'])).toEqual([
+            { w: 1, l: 1, t: 0, g: 2 },
+            { w: 1, l: 1, t: 0, g: 2 },
+        ]);
+    });
+
+    it('is parallel to the seasons array and zero-fills an unplayed column', () => {
+        const out = seasonTotals([{ bySeason: { 2025: sp(1, 0) } }], ['2023', '2024', '2025']);
+        expect(out).toHaveLength(3);
+        expect(out[0]).toEqual({ w: 0, l: 0, t: 0, g: 0 });
+    });
+
+    it('carries ties through', () => {
+        expect(seasonTotals([{ bySeason: { 2025: sp(1, 1, 1) } }], ['2025'])[0]).toEqual({
+            w: 1, l: 1, t: 1, g: 3,
+        });
+    });
+
+    it('agrees with the manager total it sits beneath', () => {
+        // The invariant the duplicated implementations used to risk breaking:
+        // column totals must reconcile with buildManagerSplits().total.
+        const rivalries = buildRivalries({
+            seasons: [
+                season({
+                    season: '2025',
+                    rosterIdToOwnerId: { 1: 'a', 2: 'b', 3: 'c' },
+                    games: { 3: [...game(1, 120, 2, 100, 1)], 4: [...game(1, 90, 3, 110, 1)] },
+                }),
+                season({
+                    season: '2024',
+                    rosterIdToOwnerId: { 1: 'a', 2: 'b', 3: 'c' },
+                    games: { 5: game(1, 80, 2, 95) },
+                }),
+            ],
+            currentOwnerIds: ['a', 'b', 'c'],
+        });
+        const split = buildManagerSplits({ rivalries, ownerId: 'a' });
+        const cols = seasonTotals(split.rows, split.seasons);
+        const summed = cols.reduce(
+            (acc, c) => ({ w: acc.w + c.w, l: acc.l + c.l, t: acc.t + c.t, g: acc.g + c.g }),
+            { w: 0, l: 0, t: 0, g: 0 }
+        );
+        expect(summed).toEqual({
+            w: split.total.w, l: split.total.l, t: split.total.t, g: split.total.g,
+        });
+    });
+
+    it('tolerates nullish input', () => {
+        expect(seasonTotals(null, ['2025'])[0]).toEqual({ w: 0, l: 0, t: 0, g: 0 });
+        expect(seasonTotals([], null)).toEqual([]);
     });
 });

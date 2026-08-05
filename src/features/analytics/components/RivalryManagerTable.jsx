@@ -1,4 +1,4 @@
-import { formatRecord } from '../../../utils/rivalries';
+import { formatRecord, seasonTotals } from '../../../utils/rivalries';
 
 /**
  * One manager against every other manager: a row per opponent, a lifetime record,
@@ -28,21 +28,8 @@ const RivalryManagerTable = ({ seasons, rows, total, nameOf, scope, ownerId, onO
         showPlayoffMark &&
         rows.some((row) => seasons.some((s) => (row.bySeason[s]?.playoffGames ?? 0) > 0));
 
-    // Per-season totals across every opponent, for the footer.
-    const seasonTotals = seasons.map((s) =>
-        rows.reduce(
-            (acc, row) => {
-                const sp = row.bySeason[s];
-                if (sp) {
-                    acc.w += sp.w;
-                    acc.l += sp.l;
-                    acc.t += sp.t;
-                }
-                return acc;
-            },
-            { w: 0, l: 0, t: 0 }
-        )
-    );
+    // Shared with the CSV TOTAL row so the two can't drift.
+    const columnTotals = seasonTotals(rows, seasons);
 
     return (
         <>
@@ -106,7 +93,7 @@ const RivalryManagerTable = ({ seasons, rows, total, nameOf, scope, ownerId, onO
                                 {formatRecord(total)}
                                 <span className="text-text-mute ml-1.5">({total.g})</span>
                             </td>
-                            {seasonTotals.map((agg, i) => (
+                            {columnTotals.map((agg, i) => (
                                 <td key={seasons[i]} className="px-3 py-2.5 text-center tnum">
                                     {formatRecord(agg)}
                                 </td>

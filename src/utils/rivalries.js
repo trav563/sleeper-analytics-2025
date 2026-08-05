@@ -410,3 +410,30 @@ export function buildManagerSplits({ rivalries, ownerId, scope = 'reg' } = {}) {
 
     return { ownerId, seasons: [...seasons].sort(), rows, total };
 }
+
+/**
+ * Column totals for a manager's per-opponent rows: one aggregate per season,
+ * summed across every opponent. Shared by the table footer and the CSV TOTAL row
+ * so the two cannot drift apart.
+ *
+ * @param {Array} rows - `buildManagerSplits(...).rows`
+ * @param {string[]} seasons - `buildManagerSplits(...).seasons`
+ * @returns {Array<{w: number, l: number, t: number, g: number}>} parallel to `seasons`
+ */
+export function seasonTotals(rows, seasons) {
+    return (seasons || []).map((season) =>
+        (rows || []).reduce(
+            (acc, row) => {
+                const split = row?.bySeason?.[season];
+                if (split) {
+                    acc.w += split.w;
+                    acc.l += split.l;
+                    acc.t += split.t;
+                    acc.g += split.g;
+                }
+                return acc;
+            },
+            { w: 0, l: 0, t: 0, g: 0 }
+        )
+    );
+}

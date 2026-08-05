@@ -10,6 +10,7 @@ import { csvText } from '../../../utils/csv';
 import {
     formatRecord,
     rivalryMargin,
+    seasonTotals,
     RIVALRY_BUCKET_LABELS,
     RIVALRY_SCOPE_LABELS,
 } from '../../../utils/rivalries';
@@ -178,22 +179,7 @@ export function buildManagerCsvRows({
         ]);
     });
 
-    // Per-season totals across every opponent.
-    const seasonTotals = seasons.map((s) => {
-        const agg = opponents.reduce(
-            (acc, row) => {
-                const sp = row.bySeason[s];
-                if (sp) {
-                    acc.w += sp.w;
-                    acc.l += sp.l;
-                    acc.t += sp.t;
-                }
-                return acc;
-            },
-            { w: 0, l: 0, t: 0 }
-        );
-        return formatRecord(agg);
-    });
+    // Shared with the table footer so the two can't drift.
     rows.push([
         'TOTAL',
         formatRecord(total),
@@ -201,7 +187,7 @@ export function buildManagerCsvRows({
         total.l,
         total.t,
         total.g,
-        ...seasonTotals,
+        ...seasonTotals(opponents, seasons).map(formatRecord),
     ]);
     return rows;
 }

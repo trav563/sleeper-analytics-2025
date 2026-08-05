@@ -113,25 +113,44 @@ const RivalryMatrix = ({
     }, [users]);
     const nameOf = (id) => nameById.get(id) || `User ${id}`;
 
+    // Membership signature. Routes are `league/:leagueId` with no key, so this
+    // component stays mounted across a league switch — without watching the owner
+    // set, a manager picked in the previous league survives into one they are not
+    // in, leaving a select holding a value absent from its own options.
+    const ownerSig = useMemo(() => currentOwnerIds.join(','), [currentOwnerIds]);
+
     // Track the parent's pickers so the selected pair follows them. Adjusting
     // state during render is React's supported pattern for "reset state when a
     // prop changes"; an effect here would cost an extra cascading render.
-    const [syncedFrom, setSyncedFrom] = useState({ a: null, b: null, me: null });
+    const [syncedFrom, setSyncedFrom] = useState({ a: null, b: null, me: null, owners: '' });
     if (
         syncedFrom.a !== selectedUser1Id ||
         syncedFrom.b !== selectedUser2Id ||
-        syncedFrom.me !== currentUserId
+        syncedFrom.me !== currentUserId ||
+        syncedFrom.owners !== ownerSig
     ) {
-        setSyncedFrom({ a: selectedUser1Id, b: selectedUser2Id, me: currentUserId });
-        if (selectedUser1Id) setUser1Id(selectedUser1Id);
-        else if (currentUserId && !user1Id) setUser1Id(currentUserId);
-        if (selectedUser1Id || currentUserId) {
-            setManagerId(selectedUser1Id || currentUserId);
-        }
-        if (selectedUser2Id) {
-            setUser2Id(selectedUser2Id);
-            setViewMode('h2h');
-        }
+        setSyncedFrom({
+            a: selectedUser1Id,
+            b: selectedUser2Id,
+            me: currentUserId,
+            owners: ownerSig,
+        });
+
+        // Until the owner set is known, keep whatever is selected rather than
+        // clearing it on first render.
+        const members = new Set(currentOwnerIds);
+        const stillHere = (id) => !!id && (members.size === 0 || members.has(id));
+
+        const nextUser1 = selectedUser1Id || (stillHere(user1Id) ? user1Id : currentUserId || '');
+        if (nextUser1 !== user1Id) setUser1Id(nextUser1);
+
+        const nextUser2 = selectedUser2Id || (stillHere(user2Id) ? user2Id : '');
+        if (nextUser2 !== user2Id) setUser2Id(nextUser2);
+        if (selectedUser2Id) setViewMode('h2h');
+
+        const nextManager =
+            selectedUser1Id || (stillHere(managerId) ? managerId : currentUserId || '');
+        if (nextManager !== managerId) setManagerId(nextManager);
     }
 
     useEffect(() => {
