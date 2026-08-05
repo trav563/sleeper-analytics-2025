@@ -24,9 +24,11 @@ async function loadSeason(league) {
                 fetchLeagueMatchups(league.league_id, i + 1)
             )
         ),
-        // A season with no postseason yet has no bracket; an empty one simply
-        // means "no playoff games to credit".
-        fetchWinnersBracket(league.league_id).catch(() => []),
+        // Deliberately NOT caught. Sleeper returns a valid empty array for a
+        // season with no postseason yet, so a rejection here is a genuine
+        // failure. Swallowing it would silently reclassify every playoff game
+        // that season as consolation and then cache the wrong answer.
+        fetchWinnersBracket(league.league_id),
     ]);
 
     return {
@@ -90,7 +92,10 @@ export function useRivalries(leagueHistory, currentOwnerIds) {
                 );
             },
             (e) => {
-                requestsRef.current.delete(chainKey); // allow a retry
+                // Drop the failed promise so a later effect run (e.g. the chain
+                // array changing identity) can start a fresh request. Note this
+                // only PERMITS a retry — nothing here schedules one.
+                requestsRef.current.delete(chainKey);
                 if (cancelled) return;
                 console.error('Failed to fetch rivalry history', e);
                 setResult({ chainKey, error: e });

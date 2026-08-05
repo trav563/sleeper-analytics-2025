@@ -122,10 +122,13 @@ describe('buildRivalries — playoff vs consolation', () => {
     const seasons = [
         season({
             games: {
-                // Championship-bracket semifinal, in the winners bracket.
-                15: game(1, 120, 2, 110, 1),
-                // Same week, loser bracket — must not count anywhere.
-                16: game(3, 130, 4, 100, 2),
+                // Both games in the SAME postseason week, with distinct
+                // matchup_ids — the championship and loser brackets really do
+                // run concurrently, so each bucket must be classified on its own.
+                15: [
+                    ...game(1, 120, 2, 110, 1), // championship bracket
+                    ...game(3, 130, 4, 100, 2), // loser bracket
+                ],
             },
             bracket: [{ r: 1, t1: 1, t2: 2 }],
         }),
@@ -137,10 +140,61 @@ describe('buildRivalries — playoff vs consolation', () => {
         expect(ab.all).toMatchObject({ w: 1, l: 0, g: 1, playoffGames: 1 });
     });
 
-    it('excludes consolation-bracket games from both scopes', () => {
+    it('excludes concurrent loser-bracket games in the same week from both scopes', () => {
         const cd = find(buildRivalries({ seasons, currentOwnerIds: ['a', 'b', 'c', 'd'] }), 'c', 'd');
         expect(cd.reg.g).toBe(0);
         expect(cd.all.g).toBe(0);
+    });
+});
+
+describe('buildRivalries — placement games inside the winners bracket', () => {
+    // Sleeper's `p` marks a placement game deciding places p and p+1, so p:1 is
+    // the championship final while p:3 / p:5 are played by eliminated teams.
+    const withP = (p) =>
+        buildRivalries({
+            seasons: [
+                season({
+                    games: { 17: game(1, 120, 2, 110) },
+                    bracket: [{ r: 3, t1: 1, t2: 2, ...(p === undefined ? {} : { p }) }],
+                }),
+            ],
+            currentOwnerIds: ['a', 'b'],
+        });
+
+    it('counts an advancement game (no p field)', () => {
+        expect(find(withP(undefined), 'a', 'b').all).toMatchObject({ g: 1, playoffGames: 1 });
+    });
+
+    it('counts the championship final (p:1)', () => {
+        expect(find(withP(1), 'a', 'b').all).toMatchObject({ g: 1, playoffGames: 1 });
+    });
+
+    it('excludes the third-place game (p:3)', () => {
+        const ab = find(withP(3), 'a', 'b');
+        expect(ab.all.g).toBe(0);
+        expect(ab.reg.g).toBe(0);
+    });
+
+    it('excludes the fifth-place game (p:5)', () => {
+        expect(find(withP(5), 'a', 'b').all.g).toBe(0);
+    });
+
+    it('keeps placement games out of buildPlayoffKeys entirely', () => {
+        const keys = buildPlayoffKeys(
+            [
+                { r: 1, t1: 1, t2: 2 },        // advancement -> kept
+                { r: 3, t1: 1, t2: 3, p: 1 },  // final       -> kept
+                { r: 2, t1: 2, t2: 3, p: 5 },  // fifth place -> dropped
+                { r: 3, t1: 2, t2: 4, p: 3 },  // third place -> dropped
+            ],
+            15,
+            OWNERS
+        );
+        expect(keys.size).toBe(2);
+        expect(keys.has(`15|${pairKey('a', 'b')}`)).toBe(true);
+        expect(keys.has(`17|${pairKey('a', 'c')}`)).toBe(true);
+        expect(keys.has(`16|${pairKey('b', 'c')}`)).toBe(false);
+        expect(keys.has(`17|${pairKey('b', 'd')}`)).toBe(false);
     });
 });
 
@@ -256,6 +310,55 @@ describe('buildRivalries — shape and orientation', () => {
         );
         expect(ab.aId).toBe('a');
         expect(ab.reg).toMatchObject({ w: 0, l: 1, pointsA: 90, pointsB: 130 });
+    });
+
+    it('follows an owner whose roster_id changes between seasons', () => {
+        // Sleeper reassigns roster_ids across seasons; the map is inverted
+        // per-season, so identity must track the owner, not the roster.
+        const ab = find(
+            buildRivalries({
+                seasons: [
+                    season({
+                        season: '2025',
+                        rosterIdToOwnerId: { 7: 'a', 8: 'b' },
+                        games: { 3: game(7, 100, 8, 90) },
+                    }),
+                    season({
+                        season: '2024',
+                        rosterIdToOwnerId: { 1: 'a', 2: 'b' },
+                        games: { 3: game(1, 80, 2, 95) },
+                    }),
+                ],
+                currentOwnerIds: ['a', 'b'],
+            }),
+            'a',
+            'b'
+        );
+        expect(ab.reg).toMatchObject({ w: 1, l: 1, g: 2 });
+    });
+
+    it('does not double-count when a roster appears twice in one week', () => {
+        // Defensive: the public API gives one entry per roster per week, but a
+        // duplicated bucket must not inflate a series.
+        const ab = find(
+            buildRivalries({
+                seasons: [
+                    season({
+                        games: {
+                            4: [
+                                ...game(1, 100, 2, 90, 1),
+                                ...game(1, 100, 2, 90, 1), // same matchup_id, repeated
+                            ],
+                        },
+                    }),
+                ],
+                currentOwnerIds: ['a', 'b'],
+            }),
+            'a',
+            'b'
+        );
+        // The 4-entry bucket is not a clean pair, so it is skipped outright.
+        expect(ab.all.g).toBe(0);
     });
 
     it('accumulates across seasons and sorts games chronologically', () => {

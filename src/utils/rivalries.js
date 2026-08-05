@@ -12,10 +12,15 @@
  *   reg — regular season only: weeks before that season's playoff_week_start
  *   all — regular season plus real playoff meetings
  *
- * Consolation / toilet-bowl games are excluded from BOTH scopes. Postseason
- * weeks contain the championship bracket and the loser bracket side by side, so
- * a postseason game only counts when the winners bracket confirms those two
- * teams actually met in that round. That is why callers must supply the bracket.
+ * Consolation games are excluded from BOTH scopes. Postseason weeks contain the
+ * championship bracket and the loser bracket side by side, so a postseason game
+ * only counts when the winners bracket confirms those two teams actually met in
+ * that round. That is why callers must supply the bracket.
+ *
+ * "Consolation" also covers placement games INSIDE the winners bracket (third
+ * place, fifth place). Those are played by teams already eliminated from the
+ * championship, so counting them while excluding the loser bracket would be an
+ * arbitrary line. Only the championship path counts — see buildPlayoffKeys.
  */
 import { groupMatchups } from './leagueMath';
 
@@ -37,12 +42,19 @@ export function pairKey(a, b) {
  * t1/t2 are still `{ w: matchId }` / `{ l: matchId }` placeholders have not been
  * played, so they are skipped — that is what stops an in-progress postseason
  * from inventing meetings.
+ *
+ * Sleeper marks a placement game with `p`: the game decides places `p` and
+ * `p + 1`. So `p === 1` is the championship final, while `p === 3` / `p === 5`
+ * are the third- and fifth-place games — played by teams already knocked out.
+ * Those are consolation in substance and are excluded; only advancement games
+ * (`p == null`) and the final count.
  */
 export function buildPlayoffKeys(winnersBracket, playoffWeekStart, rosterIdToOwnerId) {
     const keys = new Set();
     const pws = playoffWeekStart || DEFAULT_PLAYOFF_WEEK_START;
     (winnersBracket || []).forEach((m) => {
         if (!m || typeof m.t1 !== 'number' || typeof m.t2 !== 'number') return;
+        if (m.p != null && m.p !== 1) return; // placement game, not the championship path
         const a = rosterIdToOwnerId?.[m.t1];
         const b = rosterIdToOwnerId?.[m.t2];
         if (!a || !b) return;
