@@ -8,7 +8,18 @@ import './index.css'
 import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // fetchSleeper already retries 2x internally; React Query's default 3
+      // retries on top of that meant up to ~9 network attempts per failure.
+      retry: 1,
+      staleTime: 60 * 1000,
+      // Tab refocus was triggering refetch storms against Sleeper/ESPN.
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 class ErrorBoundary extends Component {
   constructor(props) {

@@ -197,7 +197,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
       <div className="space-y-3">
         <SectionHeader icon={Lock} label="Locked Weeks" iconClass="text-signal" />
         {lockedWeeks.map((lw, idx) => (
-          <div key={idx} className="space-y-3 pl-3 border-l-2 border-signal/30">
+          <div key={lw.week} className="space-y-3 pl-3 border-l-2 border-signal/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <label className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</label>

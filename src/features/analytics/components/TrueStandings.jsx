@@ -146,7 +146,7 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                                     <td className="px-3 py-3 text-text">
                                         <div className="flex items-center gap-2">
                                             {team.avatar ? (
-                                                <img src={team.avatar} alt="" className="w-6 h-6 rounded-full ring-1 ring-line shrink-0" />
+                                                <img src={team.avatar} alt="" loading="lazy" className="w-6 h-6 rounded-full ring-1 ring-line shrink-0" />
                                             ) : (
                                                 <Pip seed={team.ownerId ?? team.rosterId} name={team.name} size={24} />
                                             )}

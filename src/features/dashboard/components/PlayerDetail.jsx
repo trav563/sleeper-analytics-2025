@@ -7,13 +7,7 @@ import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
 import { useDefenseRanks } from '../../analytics/hooks/useDefenseRanks';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
-import { useGameWeather } from './_useGameWeather';
-
-/* -----------------------------------------------------------
- * Inline weather hook to avoid yet another file. Falls back to
- * an empty map when ESPN is unreachable.
- * (See _useGameWeather below — it's defined in this same file.)
- * --------------------------------------------------------- */
+import { useGameWeather } from '../hooks/useGameWeather';
 
 const STAT_TONE = { signal: 'text-signal', good: 'text-good', text: 'text-text' };
 
@@ -495,10 +489,3 @@ const ord = (n) => {
 
 export default PlayerDetail;
 
-/* -----------------------------------------------------------
- * Internal helper hooks (kept in this file to avoid sprawl)
- * --------------------------------------------------------- */
-// Note: imported from `_useGameWeather` import above — actually live in
-// this file? No, we declared an import. Let me un-export here and rely
-// on the existing services/nflSchedule.js getGameWeather via a wrapper.
-// (See sibling file _useGameWeather.js.)

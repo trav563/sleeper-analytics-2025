@@ -28,3 +28,4 @@ dist-ssr
 # a read-only reference; not part of source control.
 /league-analysis-ui-overhaul/
 /*.zip
+graphify-out/

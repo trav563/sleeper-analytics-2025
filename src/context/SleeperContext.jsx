@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
 import { fetchUser, fetchUserLeagues } from '../utils/sleeper';
 import { fetchLeagueHistory } from '../services/sleeperEngine';
 
@@ -22,21 +22,6 @@ export const SleeperProvider = ({ children }) => {
         }
     });
 
-    // Sync user changes to localStorage (in case it changes elsewhere or is cleared)
-    useEffect(() => {
-        if (user) {
-            localStorage.setItem('sleeper_user', JSON.stringify(user));
-        } else {
-            // Optional: Only clear if explicitly logging out? 
-            // For now, if user becomes null, we clear storage.
-            // But searchUser sets it to null on error. 
-            // Let's rely on searchUser to set it, but here we just sync.
-            // Actually, safe to just sync whatever is in state.
-            // Wait, if we initialize from storage, then set it to null, we want to clear storage.
-            // If we initialize from null (first timer), we don't want to create empty entry? 
-            // Actually, consistency is key.
-        }
-    }, [user]);
     const [leagues, setLeagues] = useState([]);
     const [leagueHistory, setLeagueHistory] = useState(null);
     const [leagueChains, setLeagueChains] = useState({});
@@ -74,11 +59,6 @@ export const SleeperProvider = ({ children }) => {
         } catch (err) {
             console.error(err);
             setError(err.message || 'Failed to fetch user');
-            // Don't clear user on failed search? Or do we? 
-            // If just searching for a friend, we might not want to log out current user.
-            // But usually this function is used for "Log In".
-            // Let's leave state manipulation to the explicit actions.
-            // But existing code sets setUser(null) on error.
             setUser(null);
             localStorage.removeItem('sleeper_user');
             return null;
@@ -104,24 +84,9 @@ export const SleeperProvider = ({ children }) => {
             }
             const userLeagues = await fetchUserLeagues(userId, targetSeason);
             setLeagues(userLeagues);
-            // Fire-and-forget: pre-walk every league's previous_league_id chain so
-            // the navbar season selector can show the full family even when the
-            // user is currently viewing a past-season URL.
-            if (userLeagues?.length) {
-                Promise.all(
-                    userLeagues.map((l) =>
-                        fetchLeagueHistory(l.league_id, userId)
-                            .then(({ chain }) => [l.league_id, chain || []])
-                            .catch(() => [l.league_id, []])
-                    )
-                )
-                    .then((entries) => {
-                        const map = {};
-                        entries.forEach(([head, chain]) => { map[head] = chain; });
-                        setLeagueChains(map);
-                    })
-                    .catch((err) => console.warn('Failed to pre-walk league chains', err));
-            }
+            // Chains are walked lazily when a league is opened (loadHistory
+            // caches them in leagueChains). Pre-walking every league here fired
+            // leagues × seasons × 2 uncancellable requests on login.
             return userLeagues;
         } catch (err) {
             console.error(err);
@@ -169,6 +134,11 @@ export const SleeperProvider = ({ children }) => {
                 setError('League history may be incomplete — an older season failed to load.');
             }
             setLeagueHistory(chain || []);
+            // Cache so findChainContaining resolves this family without
+            // re-walking on later navigation.
+            if (chain?.length) {
+                setLeagueChains(prev => ({ ...prev, [currentLeagueId]: chain }));
+            }
             return chain;
         } catch (err) {
             console.error("Failed to load league history:", err);
@@ -180,7 +150,7 @@ export const SleeperProvider = ({ children }) => {
         }
     }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         user,
         leagues,
         loading,
@@ -194,7 +164,11 @@ export const SleeperProvider = ({ children }) => {
         leagueChains,
         findChainContaining,
         selectActiveChain
-    };
+    }), [
+        user, leagues, loading, error, season,
+        searchUser, getLeagues, fetchLeagueData, loadHistory,
+        leagueHistory, leagueChains, findChainContaining, selectActiveChain
+    ]);
 
     return (
         <SleeperContext.Provider value={value}>

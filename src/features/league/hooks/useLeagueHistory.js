@@ -6,17 +6,22 @@ export function useLeagueHistory(currentLeagueId) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        const controller = new AbortController();
         async function loadHistory() {
             if (!currentLeagueId) return;
+            // Reset so a league switch never shows the previous league's
+            // seasons while the new walk is in flight.
+            setHistory([]);
             setLoading(true);
 
             const leagues = [];
+            const visited = new Set();
             let nextId = currentLeagueId;
-            let safety = 0;
 
             try {
-                while (nextId && safety < 10) { // Safety limit of 10 years
-                    const league = await fetchLeague(nextId);
+                while (nextId && !visited.has(nextId) && visited.size < 10) { // Safety limit of 10 years
+                    visited.add(nextId);
+                    const league = await fetchLeague(nextId, { signal: controller.signal });
                     if (!league) break;
 
                     leagues.push({
@@ -27,17 +32,17 @@ export function useLeagueHistory(currentLeagueId) {
                     });
 
                     nextId = league.previous_league_id;
-                    safety++;
                 }
-                setHistory(leagues);
+                if (!controller.signal.aborted) setHistory(leagues);
             } catch (err) {
-                console.error("Failed to load league history", err);
+                if (!controller.signal.aborted) console.error("Failed to load league history", err);
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) setLoading(false);
             }
         }
 
         loadHistory();
+        return () => controller.abort();
     }, [currentLeagueId]);
 
     return { history, loading };

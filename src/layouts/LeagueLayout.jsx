@@ -44,17 +44,19 @@ const LeagueLayout = () => {
     }, [leagueId, user, loadHistory, findChainContaining, selectActiveChain]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const getTransactions = async () => {
             if (leagueId && state?.display_week) {
                 try {
-                    const data = await fetchLeagueTransactions(leagueId, state.display_week);
+                    const data = await fetchLeagueTransactions(leagueId, state.display_week, { signal: controller.signal });
                     setTransactions(data);
                 } catch (err) {
-                    console.error("Failed to fetch transactions", err);
+                    if (!controller.signal.aborted) console.error("Failed to fetch transactions", err);
                 }
             }
         };
         getTransactions();
+        return () => controller.abort();
     }, [leagueId, state?.display_week]);
 
     if (loading) {

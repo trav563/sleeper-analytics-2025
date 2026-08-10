@@ -43,8 +43,8 @@ const App = () => {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
 
-              {/* Design system preview (atom smoke test) */}
-              <Route path="_design" element={<DesignPreview />} />
+              {/* Design system preview (atom smoke test) — dev only */}
+              {import.meta.env.DEV && <Route path="_design" element={<DesignPreview />} />}
 
               {/* League Routes */}
               <Route path="league/:leagueId" element={<LeagueLayout />}>

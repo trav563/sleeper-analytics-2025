@@ -204,7 +204,7 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
                 <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-bg-2/60">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {getTeamAvatar(m.teamA) && (
-                      <img src={getTeamAvatar(m.teamA)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
+                      <img src={getTeamAvatar(m.teamA)} alt="" loading="lazy" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
                     )}
                     <span className="truncate text-text">{getTeamDisplay(m.teamA)}</span>
                   </div>
@@ -212,7 +212,7 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
                   <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                     <span className="truncate text-right text-text">{getTeamDisplay(m.teamB)}</span>
                     {getTeamAvatar(m.teamB) && (
-                      <img src={getTeamAvatar(m.teamB)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
+                      <img src={getTeamAvatar(m.teamB)} alt="" loading="lazy" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
                     )}
                   </div>
                 </div>

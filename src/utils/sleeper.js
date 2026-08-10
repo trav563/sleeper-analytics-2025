@@ -9,7 +9,7 @@ const BASE_URL = 'https://api.sleeper.app/v1';
  */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export const fetchSleeper = async (endpoint, { retries = 2 } = {}) => {
+export const fetchSleeper = async (endpoint, { retries = 2, signal } = {}) => {
     let attempt = 0;
     // Retry transient failures (network errors, 429, 5xx) with exponential
     // backoff; 4xx other than 429 fail fast. This protects the direct-fetch
@@ -17,7 +17,7 @@ export const fetchSleeper = async (endpoint, { retries = 2 } = {}) => {
     // retry on top of the hooked queries.
     while (true) {
         try {
-            const response = await fetch(`${BASE_URL}${endpoint}`);
+            const response = await fetch(`${BASE_URL}${endpoint}`, { signal });
             if (response.ok) return await response.json();
 
             const retryable = response.status === 429 || response.status >= 500;
@@ -32,6 +32,8 @@ export const fetchSleeper = async (endpoint, { retries = 2 } = {}) => {
             }
             throw new Error(`Sleeper API Error: ${response.status} ${response.statusText}`);
         } catch (error) {
+            // Cancellation is not a failure — propagate without retry or noise.
+            if (error?.name === 'AbortError') throw error;
             // fetch() throws TypeError on network failure — retry those too.
             if (error instanceof TypeError && attempt < retries) {
                 await sleep(400 * 2 ** attempt);
@@ -66,16 +68,16 @@ export const fetchUserLeagues = async (userId, season) => {
  * Fetch users in a league
  * @param {string} leagueId 
  */
-export const fetchLeagueUsers = async (leagueId) => {
-    return fetchSleeper(`/league/${leagueId}/users`);
+export const fetchLeagueUsers = async (leagueId, opts) => {
+    return fetchSleeper(`/league/${leagueId}/users`, opts);
 };
 
 /**
  * Fetch rosters in a league
  * @param {string} leagueId 
  */
-export const fetchLeagueRosters = async (leagueId) => {
-    return fetchSleeper(`/league/${leagueId}/rosters`);
+export const fetchLeagueRosters = async (leagueId, opts) => {
+    return fetchSleeper(`/league/${leagueId}/rosters`, opts);
 };
 
 /**
@@ -85,9 +87,9 @@ export const fetchLeagueRosters = async (leagueId) => {
  * @param {boolean} fresh - bypass the CDN edge cache (~60s TTL); use only for
  *   the live week, where score freshness matters. Past weeks are immutable.
  */
-export const fetchLeagueMatchups = async (leagueId, week, fresh = false) => {
+export const fetchLeagueMatchups = async (leagueId, week, fresh = false, opts) => {
     const bust = fresh ? `?_=${Date.now()}` : '';
-    return fetchSleeper(`/league/${leagueId}/matchups/${week}${bust}`);
+    return fetchSleeper(`/league/${leagueId}/matchups/${week}${bust}`, opts);
 };
 
 /**
@@ -124,8 +126,8 @@ export const fetchNFLPlayers = async () => {
  * Fetch specific league details
  * @param {string} leagueId 
  */
-export const fetchLeague = async (leagueId) => {
-    return fetchSleeper(`/league/${leagueId}`);
+export const fetchLeague = async (leagueId, opts) => {
+    return fetchSleeper(`/league/${leagueId}`, opts);
 };
 
 /**
@@ -182,8 +184,8 @@ export const getRookieLockState = (league, drafts) => {
  * @param {string} leagueId 
  * @param {number} round 
  */
-export const fetchLeagueTransactions = async (leagueId, round) => {
-    return fetchSleeper(`/league/${leagueId}/transactions/${round}`);
+export const fetchLeagueTransactions = async (leagueId, round, opts) => {
+    return fetchSleeper(`/league/${leagueId}/transactions/${round}`, opts);
 };
 
 /**
@@ -211,78 +213,4 @@ export const fetchSeasonStats = async (season) => {
 export const fetchTrendingPlayers = async (type = 'add', lookbackHours = 24, limit = 25) => {
     // Note: trending endpoint doesn't need cache busting usually as it changes often
     return fetchSleeper(`/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
-};
-
-/**
- * Fetch all trade transactions for a specific league (weeks 1-18)
- * @param {string} leagueId
- */
-export const fetchSeasonTrades = async (leagueId) => {
-    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
-    const promises = weeks.map(week =>
-        fetchLeagueTransactions(leagueId, week)
-            .catch((err) => {
-                console.warn(`Failed to fetch transactions for week ${week}`, err);
-                return [];
-            })
-    );
-
-    const results = await Promise.all(promises);
-    // Flatten and filter for trades
-    return results.flat().filter(t => t.type === 'trade');
-};
-
-/**
- * Recursively fetch full transaction history across seasons
- * @param {string} currentLeagueId 
- * @param {number} depth - How many seasons back to go (default 3)
- */
-export const fetchFullTransactionHistory = async (currentLeagueId, depth = 3) => {
-    let allTrades = [];
-    let processedIds = new Set();
-    let processingLeagueId = currentLeagueId;
-    let seasonsFetched = 0;
-
-    // We need to fetch league details recursively to find previous_league_id
-    // But we might not have the full league object active.
-    // So we fetch league details for each step.
-
-    while (processingLeagueId && seasonsFetched <= depth) {
-        try {
-            // 1. Fetch League Details (to get previous_league_id and season year)
-            // Note: If processingLeagueId is currentLeagueId, we might already have details, but fetching safe.
-            const leagueDetails = await fetchSleeper(`/league/${processingLeagueId}`);
-
-            // 2. Fetch Trades for this season
-            const seasonTrades = await fetchSeasonTrades(processingLeagueId);
-
-            // 3. Enrich and Deduplicate
-            const yearStr = leagueDetails.season; // e.g., "2024"
-
-            const newTrades = seasonTrades.map(t => ({
-                ...t,
-                season: yearStr,
-                leagueId: processingLeagueId
-            })).filter(t => {
-                if (processedIds.has(t.transaction_id)) return false;
-                processedIds.add(t.transaction_id);
-                return true;
-            });
-
-            allTrades = [...allTrades, ...newTrades];
-
-            // 4. Prepare next iteration
-            processingLeagueId = leagueDetails.previous_league_id;
-            seasonsFetched++;
-
-            // Optimization: If no previous league, break.
-            if (!processingLeagueId) break;
-
-        } catch (err) {
-            console.error(`Error traversing history at league ${processingLeagueId}`, err);
-            break;
-        }
-    }
-
-    return allTrades;
 };

@@ -189,6 +189,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             const oppStatus = bucketStarter(oppMatchup, i, players, gameStatuses);
             rows.push({
                 slot,
+                // Stable identity for React keys — survives the position sort
+                // below, unlike the render index.
+                slotIndex: i,
                 me: my ? {
                     name: `${my.first_name} ${my.last_name}`,
                     team: my.team,
@@ -614,12 +617,12 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                 <div className="grid lg:grid-cols-[1fr_360px] gap-4">
                     <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
                         <div>
-                            {positionRows.map((row, i) => {
+                            {positionRows.map((row) => {
                                 const meWin = (row.me?.pts || 0) > (row.opp?.pts || 0);
                                 const oppWin = (row.opp?.pts || 0) > (row.me?.pts || 0);
                                 return (
                                     <div
-                                        key={i}
+                                        key={row.slotIndex}
                                         className="grid grid-cols-[1fr_60px_1fr] gap-2 md:gap-4 items-center px-4 py-3 border-b border-line last:border-0"
                                     >
                                         <PlayerCell side="me" player={row.me} winning={meWin} navigate={navigate} leagueId={league?.league_id} />
@@ -684,8 +687,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 </tr>
                             </thead>
                             <tbody>
-                                {positionRows.map((row, i) => (
-                                    <tr key={i} className="border-b border-line/60 last:border-0">
+                                {positionRows.map((row) => (
+                                    <tr key={row.slotIndex} className="border-b border-line/60 last:border-0">
                                         <td className="px-2 py-2 font-mono text-2xs uppercase tracking-wider text-signal">{row.slot}</td>
                                         <td className="px-2 py-2 text-text truncate">{row.me?.name || '—'}</td>
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.me?.pts || 0) > (row.opp?.pts || 0) ? 'text-good' : 'text-text'}`}>
@@ -713,10 +716,10 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         </p>
                     ) : (
                         <ul className="space-y-2">
-                            {allHistory.map((g, i) => {
+                            {allHistory.map((g) => {
                                 const meWin = g.me > g.opp;
                                 return (
-                                    <li key={i} className="grid grid-cols-[80px_1fr_1fr] items-center gap-3 border-b border-line/60 last:border-0 pb-2 last:pb-0">
+                                    <li key={`${g.season || ''}-${g.week}`} className="grid grid-cols-[80px_1fr_1fr] items-center gap-3 border-b border-line/60 last:border-0 pb-2 last:pb-0">
                                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute tnum">
                                             {g.season || (league?.season || '')} W{g.week}
                                         </span>
@@ -741,7 +744,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 const PairRow = ({ roster, user, score, winning }) => (
     <div className="grid grid-cols-[20px_1fr_auto] gap-2 items-center py-0.5">
         {user?.avatar ? (
-            <img src={avatarUrl(user.avatar)} alt="" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
+            <img src={avatarUrl(user.avatar)} alt="" loading="lazy" className="w-5 h-5 rounded-full ring-1 ring-line shrink-0" />
         ) : (
             <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={20} />
         )}

@@ -181,7 +181,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                                         {i + 1}
                                     </span>
                                     {row.avatar ? (
-                                        <img src={row.avatar} alt="" className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-line shrink-0" />
+                                        <img src={row.avatar} alt="" loading="lazy" className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-line shrink-0" />
                                     ) : (
                                         <Pip seed={row.rosterId} name={row.name} size={28} ring={isMe} />
                                     )}

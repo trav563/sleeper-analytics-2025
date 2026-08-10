@@ -439,7 +439,7 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
             if (!row.pid || row.pid === '0') {
                 return (
                     <div
-                        key={i}
+                        key={`empty-${row.slot}-${i}`}
                         className="grid grid-cols-[40px_1fr_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 items-center px-4 py-2.5 border-b border-line/60 last:border-0"
                     >
                         <span className="font-mono text-2xs font-bold uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm text-center">
@@ -453,7 +453,7 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
 
             return (
                 <button
-                    key={i}
+                    key={row.pid}
                     type="button"
                     onClick={() => navigate(`/league/${leagueId}/player/${row.pid}`)}
                     className={`w-full grid grid-cols-[40px_1fr_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 md:gap-3 items-center px-4 py-2.5 text-left border-b border-line/60 last:border-0 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${

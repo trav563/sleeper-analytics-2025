@@ -118,8 +118,8 @@ const RosterNews = ({ roster, players }) => {
                 )}
 
                 <div className="space-y-1">
-                    {displayNews.map((item, idx) => (
-                        <NewsItem key={idx} item={item} />
+                    {displayNews.map((item) => (
+                        <NewsItem key={item.player_id || item.link || item.title} item={item} />
                     ))}
                 </div>
             </div>

@@ -54,7 +54,8 @@ const LeagueRecordBook = ({ users }) => {
     // historical leagues. Refetches whenever the active league chain changes so
     // a league switch never shows the previous league's records.
     useEffect(() => {
-        let cancelled = false;
+        const controller = new AbortController();
+        const { signal } = controller;
         async function fetchAllHistory() {
             if (!leagueHistory || leagueHistory.length === 0) return;
 
@@ -67,25 +68,25 @@ const LeagueRecordBook = ({ users }) => {
                     // 18 covers every modern Sleeper season incl. late playoff weeks;
                     // unplayed weeks just come back empty.
                     const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
-                    const weekPromises = weeks.map(w => fetchLeagueMatchups(league.league_id, w));
+                    const weekPromises = weeks.map(w => fetchLeagueMatchups(league.league_id, w, false, { signal }));
                     const [weeksData, seasonUsers] = await Promise.all([
                         Promise.all(weekPromises),
-                        fetchLeagueUsers(league.league_id).catch(() => []),
+                        fetchLeagueUsers(league.league_id, { signal }).catch(() => []),
                     ]);
                     newHistory[league.league_id] = { weeks: weeksData, users: seasonUsers };
                 });
 
                 await Promise.all(promises);
-                if (!cancelled) setHistoricalMatchups(newHistory);
+                if (!signal.aborted) setHistoricalMatchups(newHistory);
             } catch (e) {
-                console.error("Failed to fetch historical matchups for records", e);
+                if (!signal.aborted) console.error("Failed to fetch historical matchups for records", e);
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!signal.aborted) setLoading(false);
             }
         }
 
         fetchAllHistory();
-        return () => { cancelled = true; };
+        return () => controller.abort();
     }, [leagueHistory]);
 
     const records = useMemo(() => {
