@@ -39,7 +39,12 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
                     if (r.owner_id) {
                         rostersByOwnerId[r.owner_id] = r;
                     }
-                    if (r.owner_id === userId) {
+                    // Index co-owners too (without displacing a primary owner)
+                    // so a manager who co-owned in past seasons still resolves.
+                    (r.co_owners || []).forEach(coId => {
+                        if (!rostersByOwnerId[coId]) rostersByOwnerId[coId] = r;
+                    });
+                    if (r.owner_id === userId || (r.co_owners || []).includes(userId)) {
                         userRoster = r;
                     }
                 });

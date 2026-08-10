@@ -7,7 +7,7 @@ const FANTASY_CALC_API = 'https://api.fantasycalc.com/values/current';
  *   "2027 1st (Early)"  → PICK_2027_1_early   (future year, tiered)
  *   "2027 1st"          → PICK_2027_1         (future year, generic)
  */
-function pickKeyFromName(name) {
+export function pickKeyFromName(name) {
     let m = /^(\d{4}) Pick (\d+)\.(\d+)$/.exec(name);
     if (m) return `PICK_${m[1]}_${Number(m[2])}_S${Number(m[3])}`;
     m = /^(\d{4}) (\d+)(?:st|nd|rd|th) \((Early|Mid|Late)\)$/.exec(name);
@@ -52,7 +52,16 @@ export const fetchMarketValues = async (isSuperflex = true, numTeams = 12, ppr =
         return valueMap;
     } catch (error) {
         console.error('Error fetching market values:', error);
-        return {}; // Return empty on fail to gracefully fallback
+        // Second opinion: DynastyProcess weekly values (same scale + shape).
+        try {
+            const { fetchDynastyProcessValues } = await import('./dynastyProcess');
+            const dp = await fetchDynastyProcessValues(isSuperflex);
+            console.warn('FantasyCalc unavailable — using DynastyProcess values');
+            return dp;
+        } catch (dpError) {
+            console.error('DynastyProcess fallback also failed:', dpError);
+            return {}; // Empty map → consumers use their formula fallbacks
+        }
     }
 };
 

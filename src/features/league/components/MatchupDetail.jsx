@@ -678,12 +678,12 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
-                                    <th className="px-2 py-2">Slot</th>
-                                    <th className="px-2 py-2">Player</th>
-                                    <th className="px-2 py-2 text-right">Pts</th>
-                                    <th className="px-2 py-2">vs</th>
-                                    <th className="px-2 py-2">Player</th>
-                                    <th className="px-2 py-2 text-right">Pts</th>
+                                    <th scope="col" className="px-2 py-2">Slot</th>
+                                    <th scope="col" className="px-2 py-2">Player</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Pts</th>
+                                    <th scope="col" className="px-2 py-2">vs</th>
+                                    <th scope="col" className="px-2 py-2">Player</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                 </tr>
                             </thead>
                             <tbody>

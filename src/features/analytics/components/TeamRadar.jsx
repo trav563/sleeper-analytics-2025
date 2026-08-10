@@ -115,7 +115,11 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
 
     return (
         <Frame>
-            <div className="h-96 w-full">
+            <div
+                className="h-96 w-full"
+                role="img"
+                aria-label="Radar chart comparing average starter points per game by position (QB, RB, WR, TE, FLEX) for the selected team against the comparison baseline."
+            >
                 <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data} margin={{ top: 0, right: 0, bottom: 30, left: 0 }}>
                         <PolarGrid stroke={theme.color.lineStrong} />

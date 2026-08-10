@@ -42,6 +42,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
     const navigate = useNavigate();
     const week = state?.display_week || state?.week || 1;
     const owner = users?.find((u) => u.user_id === roster?.owner_id);
+    const coOwners = (roster?.co_owners || [])
+        .map((id) => users?.find((u) => u.user_id === id))
+        .filter(Boolean);
     const hue = ROSTER_HUE(roster?.roster_id);
 
     const { details: liveDetails } = useGameLiveDetails(week);
@@ -224,6 +227,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                     <div className="min-w-0">
                         <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
                             @{owner?.username || '—'}
+                            {coOwners.length > 0 && (
+                                <span className="text-text-dim"> · w/ {coOwners.map((u) => u?.display_name || u?.username).filter(Boolean).join(', ')}</span>
+                            )}
                         </div>
                         <h1 className="font-display text-2xl md:text-3xl font-extrabold tracking-snug text-text truncate">
                             {displayTeamName(owner)}

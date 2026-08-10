@@ -141,10 +141,10 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                             <table className="w-full text-sm text-left">
                                 <thead>
                                     <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 border-b border-line">
-                                        <th className="px-4 py-2.5">Pick</th>
-                                        <th className="px-4 py-2.5">Current Owner</th>
-                                        <th className="px-4 py-2.5 text-right">Max PF</th>
-                                        <th className="px-4 py-2.5 hidden sm:table-cell">Details</th>
+                                        <th scope="col" className="px-4 py-2.5">Pick</th>
+                                        <th scope="col" className="px-4 py-2.5">Current Owner</th>
+                                        <th scope="col" className="px-4 py-2.5 text-right">Max PF</th>
+                                        <th scope="col" className="px-4 py-2.5 hidden sm:table-cell">Details</th>
                                     </tr>
                                 </thead>
                                 <tbody>

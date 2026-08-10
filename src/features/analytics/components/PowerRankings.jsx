@@ -3,6 +3,7 @@ import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { usePowerRankings } from '../hooks/usePowerRankings';
 import { Crown, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Pip } from '../../../components/ui/Pip';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import { theme } from '../../../lib/theme';
 
 const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
@@ -10,9 +11,21 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
     const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
 
     if (loading) return (
-        <section className="bg-bg-1 rounded-xl border border-line p-6 shadow-card">
-            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute text-center">
-                Loading Power Rankings…
+        <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card" aria-busy="true">
+            <div className="flex items-center gap-2 mb-4">
+                <Crown className="w-5 h-5 text-signal" aria-hidden="true" />
+                <h3 className="font-display text-lg font-semibold text-text">Power Rankings</h3>
+            </div>
+            <div className="space-y-3">
+                {Array.from({ length: 6 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="w-6 h-6 rounded-md shrink-0" />
+                        <Skeleton className="w-7 h-7 rounded-full shrink-0" />
+                        <Skeleton className="h-4 flex-1 max-w-[180px]" />
+                        <Skeleton className="h-4 w-16 ml-auto hidden sm:block" />
+                        <Skeleton className="h-4 w-12 hidden md:block" />
+                    </div>
+                ))}
             </div>
         </section>
     );
@@ -60,14 +73,14 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">
-                            <th className="px-3 py-2.5 w-10 text-center">#</th>
-                            <th className="px-3 py-2.5">Team</th>
-                            <th className="px-3 py-2.5 text-center hidden sm:table-cell">Record</th>
-                            <th className="px-3 py-2.5 text-center hidden sm:table-cell">PPG</th>
-                            <th className="px-3 py-2.5 text-center hidden md:table-cell">AP W%</th>
-                            <th className="px-3 py-2.5 text-center hidden md:table-cell">SoS</th>
-                            <th className="px-3 py-2.5 text-center w-20">Trend</th>
-                            <th className="px-3 py-2.5 text-center w-12">Move</th>
+                            <th scope="col" className="px-3 py-2.5 w-10 text-center">#</th>
+                            <th scope="col" className="px-3 py-2.5">Team</th>
+                            <th scope="col" className="px-3 py-2.5 text-center hidden sm:table-cell">Record</th>
+                            <th scope="col" className="px-3 py-2.5 text-center hidden sm:table-cell">PPG</th>
+                            <th scope="col" className="px-3 py-2.5 text-center hidden md:table-cell">AP W%</th>
+                            <th scope="col" className="px-3 py-2.5 text-center hidden md:table-cell">SoS</th>
+                            <th scope="col" className="px-3 py-2.5 text-center w-20">Trend</th>
+                            <th scope="col" className="px-3 py-2.5 text-center w-12">Move</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,7 +110,7 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                                     <td className="px-3 py-3 text-center tnum text-text-dim hidden md:table-cell">{team.sos.toFixed(1)}</td>
                                     <td className="px-3 py-3">
                                         {team.trend.length > 1 ? (
-                                            <div className="h-6 w-16 mx-auto">
+                                            <div className="h-6 w-16 mx-auto" aria-hidden="true">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={team.trend}>
                                                         <Line

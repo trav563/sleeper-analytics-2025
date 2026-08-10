@@ -3,6 +3,7 @@ import { useSleeper } from '../../../context/SleeperContext';
 import { displayTeamName } from '../../../utils/nflData';
 import { Swords, Download } from 'lucide-react';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import { Button } from '../../../components/ui/Button';
 import { useRivalries } from '../hooks/useRivalries';
 import RivalryManagerTable from './RivalryManagerTable';
@@ -269,7 +270,23 @@ const RivalryMatrix = ({
     };
 
     if (error) return <MessageBox>Could not load rivalry history</MessageBox>;
-    if (loading) return <MessageBox>Loading rivalry history…</MessageBox>;
+    if (loading) return (
+        <Frame>
+            <div className="p-5 space-y-4" aria-busy="true">
+                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute text-center">
+                    Loading rivalry history…
+                </p>
+                <div className="flex gap-2">
+                    {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9 flex-1" />)}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                    <Skeleton className="h-24" />
+                    <Skeleton className="h-24" />
+                </div>
+                <Skeleton className="h-40 w-full" />
+            </div>
+        </Frame>
+    );
     if (!leagueHistory) return <MessageBox>Loading league history…</MessageBox>;
     if (leagueHistory.length === 0) return <MessageBox>No league history found</MessageBox>;
 

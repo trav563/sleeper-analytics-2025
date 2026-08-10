@@ -37,10 +37,10 @@ const RivalryManagerTable = ({ seasons, rows, total, nameOf, scope, ownerId, onO
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">
-                            <th className="px-3 py-2.5">Opponent</th>
-                            <th className="px-3 py-2.5 text-center">Lifetime</th>
+                            <th scope="col" className="px-3 py-2.5">Opponent</th>
+                            <th scope="col" className="px-3 py-2.5 text-center">Lifetime</th>
                             {seasons.map((s) => (
-                                <th key={s} className="px-3 py-2.5 text-center tnum">
+                                <th scope="col" key={s} className="px-3 py-2.5 text-center tnum">
                                     {s}
                                 </th>
                             ))}

@@ -104,19 +104,22 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">
-                            <th className="px-3 py-2.5">Team</th>
-                            <th className="px-3 py-2.5 text-center">
+                            <th scope="col" className="px-3 py-2.5">Team</th>
+                            <th scope="col" className="px-3 py-2.5 text-center">
                                 <span className="md:hidden">Rec</span>
                                 <span className="hidden md:inline">Actual</span>
                             </th>
-                            <th className="px-3 py-2.5 text-center">
+                            <th scope="col" className="px-3 py-2.5 text-center">
                                 <span className="md:hidden">AP</span>
                                 <span className="hidden md:inline">All-Play</span>
                             </th>
-                            <th className="px-3 py-2.5 text-center relative">
+                            <th scope="col" className="px-3 py-2.5 text-center relative">
                                 <button
                                     type="button"
-                                    className="inline-flex items-center justify-center gap-1 mx-auto focus:outline-none uppercase tracking-wider"
+                                    aria-expanded={showTooltip}
+                                    aria-controls="luck-tooltip"
+                                    aria-label="What is the Luck index?"
+                                    className="inline-flex items-center justify-center gap-1 mx-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-signal rounded-sm uppercase tracking-wider"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setShowTooltip(!showTooltip);
@@ -127,6 +130,8 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                                     <span className="text-text-mute" aria-hidden="true">?</span>
                                 </button>
                                 <div
+                                    id="luck-tooltip"
+                                    role="tooltip"
                                     className={`absolute top-full right-0 mt-2 px-3 py-2 bg-bg-1 text-xs text-text rounded-md shadow-pop transition-opacity w-52 z-10 border border-line normal-case tracking-normal ${
                                         showTooltip ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                                     }`}

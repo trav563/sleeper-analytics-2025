@@ -4,6 +4,7 @@ import { fetchLeagueMatchups, fetchLeagueUsers } from '../../../utils/sleeper';
 import { Trophy, ArrowDown, TrendingUp, Minimize2, Loader2 } from 'lucide-react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
     <section className="rounded-xl bg-bg-1 border border-line p-4 shadow-card">
@@ -211,11 +212,28 @@ const LeagueRecordBook = ({ users }) => {
 
     if (!leagueHistory) return null;
     if (loading) return (
-        <div className="flex items-center justify-center p-6 bg-bg-1 rounded-xl border border-line">
-            <Loader2 className="w-5 h-5 text-signal animate-spin mr-2" />
-            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                Compiling League Record Book…
-            </span>
+        <div className="space-y-4" aria-busy="true">
+            <div className="flex items-center gap-2.5">
+                <Loader2 className="w-5 h-5 text-signal animate-spin" aria-hidden="true" />
+                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    Compiling League Record Book…
+                </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="rounded-xl bg-bg-1 border border-line p-4 shadow-card">
+                        <Skeleton className="h-3 w-24 mb-4" />
+                        <div className="flex items-center gap-3 mb-3">
+                            <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-5 w-16" />
+                                <Skeleton className="h-3 w-28" />
+                            </div>
+                        </div>
+                        <Skeleton className="h-3 w-full" />
+                    </div>
+                ))}
+            </div>
         </div>
     );
 

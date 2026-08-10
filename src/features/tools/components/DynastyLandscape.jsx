@@ -517,7 +517,11 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             </header>
 
             <div className="p-2 sm:p-5 sm:pt-3">
-                <div className="h-[480px] w-full text-xs">
+                <div
+                    className="h-[480px] w-full text-xs"
+                    role="img"
+                    aria-label="Scatter chart of every team's average roster age (horizontal axis) against production (vertical axis), split into contender and rebuild quadrants. The Dynasty Window table above lists the same teams with scores as text."
+                >
                     <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke={theme.color.lineStrong} opacity={0.4} />

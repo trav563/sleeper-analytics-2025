@@ -134,13 +134,13 @@ const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">
-                            <th className="px-3 py-2.5 w-10 text-center">#</th>
-                            <th className="px-3 py-2.5">Team</th>
-                            <th className="px-3 py-2.5 text-center w-16">Window</th>
-                            <th className="px-3 py-2.5 hidden md:table-cell w-24">Value</th>
-                            <th className="px-3 py-2.5 hidden md:table-cell w-24">Youth</th>
-                            <th className="px-3 py-2.5 hidden md:table-cell w-24">Picks</th>
-                            <th className="px-3 py-2.5 text-right w-28">Phase</th>
+                            <th scope="col" className="px-3 py-2.5 w-10 text-center">#</th>
+                            <th scope="col" className="px-3 py-2.5">Team</th>
+                            <th scope="col" className="px-3 py-2.5 text-center w-16">Window</th>
+                            <th scope="col" className="px-3 py-2.5 hidden md:table-cell w-24">Value</th>
+                            <th scope="col" className="px-3 py-2.5 hidden md:table-cell w-24">Youth</th>
+                            <th scope="col" className="px-3 py-2.5 hidden md:table-cell w-24">Picks</th>
+                            <th scope="col" className="px-3 py-2.5 text-right w-28">Phase</th>
                         </tr>
                     </thead>
                     <tbody>

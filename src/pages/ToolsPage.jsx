@@ -4,6 +4,8 @@ import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
 import DynastyWindow from '../features/tools/components/DynastyWindow';
+import DraftBoard from '../features/tools/components/DraftBoard';
+import TradeRetro from '../features/tools/components/TradeRetro';
 import RosterClogger from '../features/tools/components/RosterClogger';
 import ScheduleGenerator from '../features/tools/components/ScheduleGenerator';
 import HistoricalBanner from '../components/layout/HistoricalBanner';
@@ -43,6 +45,14 @@ const ToolsPage = () => {
                     currentWeek={currentWeek}
                 />
             )}
+
+            <DraftBoard
+                league={league}
+                rosters={rosters}
+                users={users}
+                drafts={drafts}
+                tradedPicks={tradedPicks}
+            />
 
             <DynastyWindow
                 league={league}
@@ -88,6 +98,14 @@ const ToolsPage = () => {
                     tradedPicks={tradedPicks}
                 />
             )}
+
+            <TradeRetro
+                leagueId={leagueId}
+                league={league}
+                rosters={rosters}
+                users={users}
+                players={players}
+            />
         </div>
     );
 };

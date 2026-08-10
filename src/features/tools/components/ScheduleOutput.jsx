@@ -235,9 +235,9 @@ const ScheduleOutput = ({ schedule, constraintReport, fairness, teams, users, ro
           <table className="text-xs w-full border-collapse">
             <thead>
               <tr>
-                <th className="px-2 py-1.5 text-left text-text-mute font-mono uppercase tracking-wider sticky left-0 bg-bg-1 z-10"></th>
+                <th scope="col" className="px-2 py-1.5 text-left text-text-mute font-mono uppercase tracking-wider sticky left-0 bg-bg-1 z-10"></th>
                 {teams.map(t => (
-                  <th key={t.id} className="px-2 py-1.5 text-center text-text-mute font-mono font-normal uppercase tracking-wider min-w-[40px]" title={t.name}>
+                  <th scope="col" key={t.id} className="px-2 py-1.5 text-center text-text-mute font-mono font-normal uppercase tracking-wider min-w-[40px]" title={t.name}>
                     <span className="inline-block max-w-[80px] truncate">
                       {t.name.length > 8 ? t.name.slice(0, 8) + '…' : t.name}
                     </span>
