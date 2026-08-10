@@ -65,7 +65,7 @@ Real data surface:
 - Hooks named in `handoff/page-briefs/*` (`useMatchup`, `useLeagueStandings`, `useAiInsights`, `useRosterNews`, `useMatchupHistory`, `usePowerRankings`, `usePlayer`, `usePlayerGameLog`) are **hypothetical** — they don't exist; the briefs are visual references only.
 - Lower-level Sleeper API helpers in `src/utils/sleeper.js`: `fetchUser`, `fetchUserLeagues`, `fetchLeagueUsers`, `fetchLeagueRosters`, `fetchLeagueMatchups`, `fetchNFLState`, `fetchPlayers`, `fetchLeague`, plus draft/transaction/trending helpers. Reach for these only when extending the existing hooks or `SleeperContext`.
 - `SleeperContext` in `src/context/SleeperContext.jsx` — user/leagues/season state for the home flow.
-- AI integration: `src/features/dashboard/components/AnalyzeMyTeam.jsx` calls `POST /api/analyze-team` (Vercel serverless function at `api/analyze-team.js` using **Google Gemini** via `@google/generative-ai`, not Anthropic). Server-only env var: `GEMINI_API_KEY`. Streams via SSE; client-side rate limit + 1hr cache via `useAnalyzeTeam`.
+- AI integration: `src/features/dashboard/components/Insights.jsx` → `CoachCard.jsx` + `useAnalyzeTeam` call `POST /api/analyze-team` (Vercel serverless function at `api/analyze-team.js` using the **Vercel AI Gateway** via the `ai` SDK — primary `google/gemini-3-flash`, fallback `anthropic/claude-haiku-4.5`). Server-only env vars: `AI_GATEWAY_API_KEY` (or `VERCEL_OIDC_TOKEN` on Vercel), optional `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` for durable rate limiting. Streams via SSE; client-side rate limit + 1hr cache via `useAnalyzeTeam`.
 - Status/team helpers in `src/utils/nflData.js`: `displayTeamName`, `avatarUrl`, plus team/position constants.
 
 ## When you're stuck or uncertain

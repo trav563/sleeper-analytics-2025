@@ -41,7 +41,8 @@ const RosterClogger = ({ rosters, players, league, drafts }) => {
 
     useEffect(() => {
         const loadStats = async () => {
-            const season = league?.season || '2025';
+            const season = league?.season || String(new Date().getFullYear());
+            setLoading(true);
             try {
                 let data = await fetchSeasonStats(season);
                 const hasData = data && Object.values(data).some(s => s?.gp > 0);
@@ -75,7 +76,7 @@ const RosterClogger = ({ rosters, players, league, drafts }) => {
         const freeAgents = Object.values(players)
             .filter(p =>
                 !allRosteredIds.has(p.player_id) &&
-                p.search_rank < 1000 &&
+                p.search_rank != null && p.search_rank < 1000 &&
                 ['QB', 'RB', 'WR', 'TE'].includes(p.position) &&
                 p.team &&
                 (p.status === 'Active' || !p.status) &&

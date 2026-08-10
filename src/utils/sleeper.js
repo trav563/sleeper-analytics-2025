@@ -54,10 +54,11 @@ export const fetchUser = async (username) => {
 
 /**
  * Fetch all leagues for a user in a specific season
- * @param {string} userId 
- * @param {string} season - e.g., '2024'
+ * @param {string} userId
+ * @param {string} season - e.g., '2024' (required; callers resolve it from NFL state)
  */
-export const fetchUserLeagues = async (userId, season = '2025') => {
+export const fetchUserLeagues = async (userId, season) => {
+    if (!season) throw new Error('fetchUserLeagues requires a season');
     return fetchSleeper(`/user/${userId}/leagues/nfl/${season}`);
 };
 

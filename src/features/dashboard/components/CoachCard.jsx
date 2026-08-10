@@ -2,6 +2,22 @@ import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAnalyzeTeam } from '../hooks/useAnalyzeTeam';
 
 /**
+ * Escape HTML metacharacters, then apply the inline markdown patterns
+ * (**bold**, *em*). The model output echoes Sleeper-sourced strings (team
+ * names etc.), so it must never reach dangerouslySetInnerHTML unescaped.
+ */
+export function formatInlineMarkdown(line) {
+    const escaped = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    return escaped
+        .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text">$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+/**
  * Render the streamed markdown response. Reuses the same patterns as the
  * old AnalyzeMyTeam renderer (## headings, **bold**, - bullets) but stays
  * compact for the dashboard card form factor.
@@ -24,8 +40,7 @@ function renderMarkdown(text) {
             return;
         }
 
-        let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-text">$1</strong>');
-        processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        const processed = formatInlineMarkdown(line);
 
         if (processed.match(/^[-*]\s+/)) {
             const content = processed.replace(/^[-*]\s+/, '');

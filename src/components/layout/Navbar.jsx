@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 import { useTheme } from '../../context/ThemeContext';
 
 const Navbar = () => {
-    const { user, leagues, leagueHistory, getLeagues } = useSleeper();
+    const { user, leagues, leagueHistory, getLeagues, season } = useSleeper();
     const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
@@ -32,10 +32,12 @@ const Navbar = () => {
     };
 
     useEffect(() => {
-        if (user && leagues.length === 0) {
+        // Wait for the NFL state season to resolve so a restored user isn't
+        // fetched against a stale/guessed season.
+        if (user && season && leagues.length === 0) {
             getLeagues(user.user_id);
         }
-    }, [user, leagues.length, getLeagues]);
+    }, [user, season, leagues.length, getLeagues]);
 
     // Close mobile menu when location changes
     useEffect(() => {

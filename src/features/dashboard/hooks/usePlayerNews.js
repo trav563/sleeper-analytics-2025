@@ -1,3 +1,4 @@
+import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTrendingPlayers } from '../../../utils/sleeper';
 
@@ -30,8 +31,9 @@ export const usePlayerNews = (roster, players) => {
         staleTime: 60 * 60 * 1000,
     });
 
+    const result = useMemo(() => {
     if (!newsItems && !roster) {
-        return { personalNews: [], topHeadlines: [], isLoading: true };
+        return { personalNews: [], topHeadlines: [], isLoading: true, updatedHistory: null };
     }
 
     // Process Roster Players
@@ -62,6 +64,15 @@ export const usePlayerNews = (roster, players) => {
     }
 
     let historyUpdated = false;
+
+    // Prune stale entries so alert_history can't grow forever.
+    const THIRTY_DAYS = 30 * oneDay;
+    Object.entries(alertHistory).forEach(([pid, rec]) => {
+        if (!rec?.timestamp || now.getTime() - rec.timestamp > THIRTY_DAYS) {
+            delete alertHistory[pid];
+            historyUpdated = true;
+        }
+    });
 
     rosterPlayers.forEach(p => {
         // Only care about Bad Statuses, ignore Defenses
@@ -101,11 +112,6 @@ export const usePlayerNews = (roster, players) => {
         }
     });
 
-    // Save History (Side Effect - Debounced or direct)
-    if (historyUpdated) {
-        localStorage.setItem('alert_history', JSON.stringify(alertHistory));
-    }
-
     // Strategy 3: Trending Context
     // Tag news items if the player is also trending down
     personalNews = personalNews.map(item => {
@@ -129,6 +135,21 @@ export const usePlayerNews = (roster, players) => {
     return {
         personalNews,
         topHeadlines: (newsItems || []).slice(0, 3),
-        isLoading: !newsItems
+        isLoading: !newsItems,
+        updatedHistory: historyUpdated ? alertHistory : null,
     };
+    }, [newsItems, trendingDrops, roster, players]);
+
+    // Persist alert history outside render; best-effort (Safari private mode /
+    // quota errors must not crash the dashboard).
+    useEffect(() => {
+        if (!result.updatedHistory) return;
+        try {
+            localStorage.setItem('alert_history', JSON.stringify(result.updatedHistory));
+        } catch {
+            // best-effort persistence only
+        }
+    }, [result]);
+
+    return result;
 };

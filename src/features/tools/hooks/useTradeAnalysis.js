@@ -211,7 +211,6 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
                         tradeValue,
                         isOTB: nickname?.toUpperCase().includes('OTB'),
                         type: 'Player',
-                        isOTB: roster.metadata?.[`p_nick_${pid}`]?.toUpperCase().includes('OTB'),
                         isDynastyStash: tradeValue > 2500 && ppg < 8 // High Value, Low Production
                     };
                 })

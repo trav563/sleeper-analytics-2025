@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
-import { fetchLeagueMatchups } from '../../../utils/sleeper';
+import { fetchLeagueMatchups, fetchLeagueUsers } from '../../../utils/sleeper';
 import { Trophy, ArrowDown, TrendingUp, Minimize2, Loader2 } from 'lucide-react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
@@ -50,34 +50,42 @@ const LeagueRecordBook = ({ users }) => {
     const [historicalMatchups, setHistoricalMatchups] = useState({}); // league_id -> matchups
     const [loading, setLoading] = useState(false);
 
-    // Fetch matchups for all historical leagues
+    // Fetch matchups (and that season's users, for departed managers) for all
+    // historical leagues. Refetches whenever the active league chain changes so
+    // a league switch never shows the previous league's records.
     useEffect(() => {
+        let cancelled = false;
         async function fetchAllHistory() {
             if (!leagueHistory || leagueHistory.length === 0) return;
-            // Avoid re-fetching if we already have data
-            if (Object.keys(historicalMatchups).length > 0) return;
 
+            setHistoricalMatchups({});
             setLoading(true);
             const newHistory = {};
 
             try {
                 const promises = leagueHistory.map(async (league) => {
-                    const weeks = Array.from({ length: 16 }, (_, i) => i + 1);
+                    // 18 covers every modern Sleeper season incl. late playoff weeks;
+                    // unplayed weeks just come back empty.
+                    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
                     const weekPromises = weeks.map(w => fetchLeagueMatchups(league.league_id, w));
-                    const weeksData = await Promise.all(weekPromises);
-                    newHistory[league.league_id] = weeksData;
+                    const [weeksData, seasonUsers] = await Promise.all([
+                        Promise.all(weekPromises),
+                        fetchLeagueUsers(league.league_id).catch(() => []),
+                    ]);
+                    newHistory[league.league_id] = { weeks: weeksData, users: seasonUsers };
                 });
 
                 await Promise.all(promises);
-                setHistoricalMatchups(newHistory);
+                if (!cancelled) setHistoricalMatchups(newHistory);
             } catch (e) {
                 console.error("Failed to fetch historical matchups for records", e);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         }
 
         fetchAllHistory();
+        return () => { cancelled = true; };
     }, [leagueHistory]);
 
     const records = useMemo(() => {
@@ -93,9 +101,15 @@ const LeagueRecordBook = ({ users }) => {
         const sortedHistory = [...leagueHistory].sort((a, b) => a.season - b.season);
 
         sortedHistory.forEach(league => {
-            const leagueMatchups = historicalMatchups[league.league_id];
-            if (!leagueMatchups) return;
+            const entry = historicalMatchups[league.league_id];
+            if (!entry) return;
+            const leagueMatchups = entry.weeks;
             const rosters = league.rosters || {};
+            // Prefer current-league users (freshest names); fall back to that
+            // season's users so departed managers still resolve.
+            const seasonUsers = entry.users || [];
+            const findUser = (ownerId) =>
+                users?.find(u => u.user_id === ownerId) || seasonUsers.find(u => u.user_id === ownerId);
 
             leagueMatchups.forEach((weekMs, weekIdx) => {
                 if (!weekMs || weekMs.length === 0) return;
@@ -116,7 +130,7 @@ const LeagueRecordBook = ({ users }) => {
                     [m1, m2].forEach(m => {
                         if (m.points > highestScore.value) {
                             const r = Object.values(rosters).find(r => r.roster_id === m.roster_id);
-                            const u = users?.find(user => user.user_id === r?.owner_id);
+                            const u = findUser(r?.owner_id);
                             highestScore = {
                                 value: m.points.toFixed(2),
                                 teamName: displayTeamName(u),
@@ -128,7 +142,7 @@ const LeagueRecordBook = ({ users }) => {
                         }
                         if (m.points > 0 && m.points < lowestScore.value) {
                             const r = Object.values(rosters).find(r => r.roster_id === m.roster_id);
-                            const u = users?.find(user => user.user_id === r?.owner_id);
+                            const u = findUser(r?.owner_id);
                             lowestScore = {
                                 value: m.points.toFixed(2),
                                 teamName: displayTeamName(u),
@@ -144,8 +158,8 @@ const LeagueRecordBook = ({ users }) => {
                     if (diff < closestMatch.value) {
                         const r1 = Object.values(rosters).find(r => r.roster_id === m1.roster_id);
                         const r2 = Object.values(rosters).find(r => r.roster_id === m2.roster_id);
-                        const u1 = users?.find(user => user.user_id === r1?.owner_id);
-                        const u2 = users?.find(user => user.user_id === r2?.owner_id);
+                        const u1 = findUser(r1?.owner_id);
+                        const u2 = findUser(r2?.owner_id);
 
                         closestMatch = {
                             value: diff.toFixed(2),
@@ -163,7 +177,7 @@ const LeagueRecordBook = ({ users }) => {
                         if (wRoster?.owner_id) {
                             streakTracker[wRoster.owner_id] = (streakTracker[wRoster.owner_id] || 0) + 1;
                             if (streakTracker[wRoster.owner_id] > longestStreak.value) {
-                                const u = users?.find(user => user.user_id === wRoster.owner_id);
+                                const u = findUser(wRoster.owner_id);
                                 longestStreak = {
                                     value: streakTracker[wRoster.owner_id],
                                     teamName: displayTeamName(u),

@@ -18,8 +18,7 @@ import { displayTeamName, avatarUrl } from '../../../utils/nflData';
  * Composite = 25% winPct + 25% PPG + 25% all-play% + 25% strength of schedule.
  * Empty arrays / object when there's no data.
  */
-export const usePowerRankings = (seasonMatchups, rosters, users) => {
-    return useMemo(() => {
+export const computePowerRankings = (seasonMatchups, rosters, users) => {
         if (!seasonMatchups || !rosters || Object.keys(seasonMatchups).length === 0) {
             return { rankings: [], weeksPlayed: [] };
         }
@@ -153,6 +152,9 @@ export const usePowerRankings = (seasonMatchups, rosters, users) => {
                 } else if (b.points > a.points) {
                     if (finalScores[b.roster_id]) finalScores[b.roster_id].wins++;
                     if (finalScores[a.roster_id]) finalScores[a.roster_id].losses++;
+                } else if (a.points || b.points) {
+                    if (finalScores[a.roster_id]) finalScores[a.roster_id].ties++;
+                    if (finalScores[b.roster_id]) finalScores[b.roster_id].ties++;
                 }
                 if (finalScores[a.roster_id]) finalScores[a.roster_id].opponentPoints += b.points || 0;
                 if (finalScores[b.roster_id]) finalScores[b.roster_id].opponentPoints += a.points || 0;
@@ -208,7 +210,13 @@ export const usePowerRankings = (seasonMatchups, rosters, users) => {
         }).sort((a, b) => a.currentRank - b.currentRank);
 
         return { rankings, weeksPlayed };
-    }, [seasonMatchups, rosters, users]);
+};
+
+export const usePowerRankings = (seasonMatchups, rosters, users) => {
+    return useMemo(
+        () => computePowerRankings(seasonMatchups, rosters, users),
+        [seasonMatchups, rosters, users]
+    );
 };
 
 export default usePowerRankings;

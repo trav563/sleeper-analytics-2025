@@ -1,34 +1,39 @@
 import { fetchLeague, fetchLeagueRosters } from '../utils/sleeper';
 
+// Hard stop for the previous_league_id walk. Sleeper dynasty chains are one
+// league per season, so 15 covers any real league while bounding a bad chain.
+const MAX_CHAIN_DEPTH = 15;
+
 /**
- * Recursively fetches the history of a league by following the previous_league_id chain.
- * 
+ * Fetches the history of a league by following the previous_league_id chain.
+ *
  * @param {string} currentLeagueId - The ID of the league to start fetching from.
  * @param {string} userId - The ID of the user to find their specific roster.
- * @returns {Promise<Array>} - An array of league objects sorted by season (descending).
+ * @returns {Promise<{chain: Array, truncated: boolean}>} - League objects sorted
+ *   by season (descending). `truncated` is true when a mid-chain hop failed and
+ *   the walk stopped early, so consumers can warn instead of silently computing
+ *   over partial history. A failure on the *first* league throws.
  */
 export const fetchLeagueHistory = async (currentLeagueId, userId) => {
     const history = [];
+    const visited = new Set();
+    let truncated = false;
 
-    const fetchRecursive = async (leagueId) => {
-        if (!leagueId) return;
-
+    let leagueId = currentLeagueId;
+    while (leagueId && !visited.has(leagueId) && visited.size < MAX_CHAIN_DEPTH) {
+        visited.add(leagueId);
         try {
-            console.log(`Fetching history for league: ${leagueId}`);
-            // 1. Fetch league details
             const league = await fetchLeague(leagueId);
             if (!league) {
-                console.warn(`League not found: ${leagueId}`);
-                return;
+                if (history.length === 0) throw new Error(`League not found: ${leagueId}`);
+                truncated = true;
+                break;
             }
 
-            // 2. Fetch rosters
             const rosters = await fetchLeagueRosters(leagueId);
 
-            // 3. Map rosters by owner_id for easy access
             const rostersByOwnerId = {};
             let userRoster = null;
-
             if (rosters) {
                 rosters.forEach(r => {
                     if (r.owner_id) {
@@ -40,7 +45,6 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
                 });
             }
 
-            // 4. Store relevant data
             history.push({
                 season: league.season,
                 league_id: league.league_id,
@@ -54,19 +58,17 @@ export const fetchLeagueHistory = async (currentLeagueId, userId) => {
                 previous_league_id: league.previous_league_id
             });
 
-            // 5. Recursive call if previous league exists
-            if (league.previous_league_id) {
-                await fetchRecursive(league.previous_league_id);
-            }
-
+            leagueId = league.previous_league_id;
         } catch (error) {
-            console.error(`Error fetching history for league ${leagueId}:`, error);
+            // A dead first hop is a real error the caller must see; a dead
+            // deeper hop yields a partial chain, flagged so it isn't silent.
+            if (history.length === 0) throw error;
+            console.warn(`League history truncated at league ${leagueId}:`, error);
+            truncated = true;
+            break;
         }
-    };
-
-    await fetchRecursive(currentLeagueId);
-    console.log("History fetched:", history);
+    }
 
     // Sort by season descending (newest first)
-    return history.sort((a, b) => b.season - a.season);
+    return { chain: history.sort((a, b) => b.season - a.season), truncated };
 };

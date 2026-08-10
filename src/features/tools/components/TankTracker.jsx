@@ -25,23 +25,25 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
         const nextDraftYear = (parseInt(league?.season || '2025') + 1).toString();
 
         return sorted.map((roster, index) => {
-            const originalOwnerId = roster.roster_id;
+            const originalRosterId = roster.roster_id;
             const originalOwner = users.find(u => u.user_id === roster.owner_id);
             const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
 
             const tradeEntry = tradedPicks?.find(p =>
-                p.roster_id === originalOwnerId &&
+                p.roster_id === originalRosterId &&
                 p.round === selectedRound &&
                 p.season === nextDraftYear
             );
 
-            let currentOwnerId = originalOwnerId;
+            let currentRosterId = originalRosterId;
             let currentOwner = originalOwner;
             let isTraded = false;
 
             if (tradeEntry) {
-                currentOwnerId = tradeEntry.owner_id;
-                const currentRoster = rosters.find(r => r.roster_id === currentOwnerId);
+                // In Sleeper's traded_picks payload, owner_id is the acquiring
+                // ROSTER id (not a user id).
+                currentRosterId = tradeEntry.owner_id;
+                const currentRoster = rosters.find(r => r.roster_id === currentRosterId);
                 currentOwner = users.find(u => u.user_id === currentRoster?.owner_id);
                 isTraded = true;
             }
@@ -50,8 +52,8 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                 pick: `${selectedRound}.${String(index + 1).padStart(2, '0')}`,
                 originalOwner,
                 currentOwner,
-                originalOwnerId,
-                currentOwnerId,
+                originalRosterId,
+                currentRosterId,
                 maxPf: maxPf.toFixed(2),
                 isTraded
             };
@@ -162,7 +164,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                                                                 className="w-8 h-8 rounded-full ring-1 ring-line"
                                                             />
                                                         ) : (
-                                                            <Pip seed={row.currentOwnerId ?? 'team'} name={displayTeamName(row.currentOwner)} size={32} />
+                                                            <Pip seed={row.currentRosterId ?? 'team'} name={displayTeamName(row.currentOwner)} size={32} />
                                                         )}
                                                         {row.isTraded && (
                                                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-signal rounded-full ring-2 ring-bg" />
@@ -191,7 +193,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                                                             {row.originalOwner?.avatar ? (
                                                                 <img src={avatarUrl(row.originalOwner.avatar)} alt="" className="w-4 h-4 rounded-full" />
                                                             ) : (
-                                                                <Pip seed={row.originalOwnerId ?? 'orig'} name={displayTeamName(row.originalOwner)} size={16} />
+                                                                <Pip seed={row.originalRosterId ?? 'orig'} name={displayTeamName(row.originalOwner)} size={16} />
                                                             )}
                                                             <span className="truncate max-w-[120px]">{displayTeamName(row.originalOwner)}</span>
                                                         </div>

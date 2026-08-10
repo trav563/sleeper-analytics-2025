@@ -68,16 +68,18 @@ export function useLeagueData(leagueId) {
     });
 
     // 4. Matchups (Dynamic Cache)
-    // If it's the current live week, cache for 60s. If past week, cache for 24h.
-    // Note: state.week is usually the live week. display_week might be same.
-    // For simplicity, if we are fetching the week returned by fetchNFLState, assume it's live/active.
-    const isLiveWeek = true; // We are fetching the 'current' week as defined by Sleeper State
+    // The display week only has live scores during the regular season of the
+    // league's own season. Historical leagues and the offseason/preseason serve
+    // immutable data, so cache those for 24h and skip the CDN cache-bust.
+    const isLiveWeek =
+        state?.season_type === 'regular' &&
+        (!league?.season || !state?.season || league.season === state.season);
     const matchupsStaleTime = isLiveWeek ? 60 * 1000 : 24 * 60 * 60 * 1000;
 
     const { data: matchups, isLoading: loadingMatchups, error: errorMatchups } = useQuery({
         queryKey: ['leagueMatchups', leagueId, displayWeek],
         // fresh=true bypasses the CDN edge cache so live scores aren't stale
-        queryFn: () => fetchLeagueMatchups(leagueId, displayWeek, true),
+        queryFn: () => fetchLeagueMatchups(leagueId, displayWeek, isLiveWeek),
         enabled: !!leagueId && !!displayWeek,
         staleTime: matchupsStaleTime,
     });

@@ -67,6 +67,85 @@ function mulberry32(seed) {
     };
 }
 
+// Standard normal sample (Box-Muller) driven by the seeded PRNG.
+function gaussian(rng) {
+    let u = 0, v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+// Same weekly-score model as src/lib/winProbability.js:
+// score ~ Normal(ppg, (ppg * 0.18)^2). Sampling scores (instead of a fixed
+// ppg ratio) gives wins realistic variance AND makes the points-for
+// tiebreaker vary across simulations instead of resolving identically.
+const VARIANCE_FACTOR = 0.18;
+
+/**
+ * First week the Monte Carlo should simulate. Sleeper finalizes
+ * roster.settings records at the end of a week before display_week advances,
+ * so in that window `currentWeek`'s result is already in the standings and
+ * simulating it again would double-count.
+ */
+export function firstWeekToSimulate(teams, currentWeek) {
+    const maxGamesPlayed = Math.max(0, ...teams.map(t => t.gamesPlayed || 0));
+    return maxGamesPlayed >= currentWeek ? currentWeek + 1 : currentWeek;
+}
+
+/**
+ * Pure in-season Monte Carlo: returns { rosterId: playoffAppearances } over
+ * `simulations` runs. Deterministic for a given seedString.
+ */
+export function simulateInSeasonOdds({ teams, processedSchedule, playoffSpots, seedString, simulations = 10000 }) {
+    const rng = mulberry32(hashSeed(seedString));
+    const results = {};
+    teams.forEach(t => { results[t.rosterId] = 0; });
+
+    for (let i = 0; i < simulations; i++) {
+        const simState = {};
+        teams.forEach(t => {
+            simState[t.rosterId] = {
+                wins: t.currentWins,
+                fpts: t.currentFpts,
+                rosterId: t.rosterId
+            };
+        });
+
+        processedSchedule.forEach(weekGames => {
+            weekGames.forEach(pair => {
+                if (pair.length < 2) return;
+                const [r1, r2] = pair;
+                const team1 = teams.find(t => t.rosterId === r1);
+                const team2 = teams.find(t => t.rosterId === r2);
+                if (!team1 || !team2) return;
+
+                const s1 = team1.ppg * (1 + VARIANCE_FACTOR * gaussian(rng));
+                const s2 = team2.ppg * (1 + VARIANCE_FACTOR * gaussian(rng));
+
+                if (s1 > s2) simState[r1].wins += 1;
+                else if (s2 > s1) simState[r2].wins += 1;
+                else if (rng() < 0.5) simState[r1].wins += 1; // e.g. both ppg 0 early season
+                else simState[r2].wins += 1;
+
+                simState[r1].fpts += s1;
+                simState[r2].fpts += s2;
+            });
+        });
+
+        const sorted = Object.values(simState).sort((a, b) => {
+            if (a.wins !== b.wins) return b.wins - a.wins;
+            return b.fpts - a.fpts;
+        });
+
+        for (let k = 0; k < playoffSpots; k++) {
+            if (sorted[k]) {
+                results[sorted[k].rosterId]++;
+            }
+        }
+    }
+    return results;
+}
+
 function readCache(seedKey) {
     try {
         const raw = localStorage.getItem(CACHE_PREFIX + seedKey);
@@ -140,13 +219,14 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                         currentWins: r.settings.wins,
                         currentTies: r.settings.ties,
                         currentFpts: fpts,
+                        gamesPlayed,
                         ppg: ppg,
                         players: r.players || []
                     };
                 });
 
                 const weeksToSimulate = [];
-                for (let w = currentWeek; w < playoffStartWeek; w++) {
+                for (let w = firstWeekToSimulate(teams, currentWeek); w < playoffStartWeek; w++) {
                     weeksToSimulate.push(w);
                 }
 
@@ -305,8 +385,10 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                 // --- IN-SEASON MONTE CARLO ---
                 setIsProjection(false);
 
+                // v2: score-sampling model — must not reuse v1 cached results.
                 const seedString = [
                     league.league_id,
+                    'v2',
                     `wk${currentWeek}`,
                     teams
                         .map(t => `${t.rosterId}:${t.currentWins}:${t.currentTies}:${t.currentFpts.toFixed(2)}`)
@@ -335,56 +417,14 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     return Object.values(matchupsById);
                 });
 
-                const rng = mulberry32(hashSeed(seedString));
                 const SIMULATIONS = 10000;
-                const results = {};
-                teams.forEach(t => results[t.rosterId] = 0);
-
-                for (let i = 0; i < SIMULATIONS; i++) {
-                    const simState = {};
-                    teams.forEach(t => {
-                        simState[t.rosterId] = {
-                            wins: t.currentWins,
-                            fpts: t.currentFpts,
-                            rosterId: t.rosterId
-                        };
-                    });
-
-                    processedSchedule.forEach(weekGames => {
-                        weekGames.forEach(pair => {
-                            if (pair.length < 2) return;
-                            const r1 = pair[0];
-                            const r2 = pair[1];
-
-                            const team1 = teams.find(t => t.rosterId === r1);
-                            const team2 = teams.find(t => t.rosterId === r2);
-
-                            if (!team1 || !team2) return;
-
-                            const prob1 = team1.ppg / (team1.ppg + team2.ppg);
-
-                            if (rng() < prob1) {
-                                simState[r1].wins += 1;
-                            } else {
-                                simState[r2].wins += 1;
-                            }
-
-                            simState[r1].fpts += team1.ppg;
-                            simState[r2].fpts += team2.ppg;
-                        });
-                    });
-
-                    const sorted = Object.values(simState).sort((a, b) => {
-                        if (a.wins !== b.wins) return b.wins - a.wins;
-                        return b.fpts - a.fpts;
-                    });
-
-                    for (let k = 0; k < playoffSpots; k++) {
-                        if (sorted[k]) {
-                            results[sorted[k].rosterId]++;
-                        }
-                    }
-                }
+                const results = simulateInSeasonOdds({
+                    teams,
+                    processedSchedule,
+                    playoffSpots,
+                    seedString,
+                    simulations: SIMULATIONS,
+                });
 
                 const finalOdds = {};
                 teams.forEach(t => {

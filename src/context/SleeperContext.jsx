@@ -89,12 +89,19 @@ export const SleeperProvider = ({ children }) => {
 
     const getLeagues = useCallback(async (userId, seasonOverride) => {
         if (!userId) return [];
-        // Use override, or state season, or fallback to '2025'
-        const targetSeason = seasonOverride || season || '2025';
+        // Use override, or state season; if neither has resolved yet, ask the
+        // Sleeper NFL state directly so we never guess at a hardcoded year.
+        let targetSeason = seasonOverride || season;
 
         setLoading(true);
         setError(null);
         try {
+            if (!targetSeason) {
+                const { fetchNFLState } = await import('../utils/sleeper');
+                const nfl = await fetchNFLState();
+                targetSeason = nfl.season;
+                setSeason(nfl.season);
+            }
             const userLeagues = await fetchUserLeagues(userId, targetSeason);
             setLeagues(userLeagues);
             // Fire-and-forget: pre-walk every league's previous_league_id chain so
@@ -103,7 +110,9 @@ export const SleeperProvider = ({ children }) => {
             if (userLeagues?.length) {
                 Promise.all(
                     userLeagues.map((l) =>
-                        fetchLeagueHistory(l.league_id, userId).then((chain) => [l.league_id, chain || []])
+                        fetchLeagueHistory(l.league_id, userId)
+                            .then(({ chain }) => [l.league_id, chain || []])
+                            .catch(() => [l.league_id, []])
                     )
                 )
                     .then((entries) => {
@@ -153,13 +162,14 @@ export const SleeperProvider = ({ children }) => {
             return;
         }
 
-        console.log(`Loading history for league ${currentLeagueId} and user ${userId}`);
         setLoading(true);
         try {
-            const history = await fetchLeagueHistory(currentLeagueId, userId);
-            console.log("History loaded:", history);
-            setLeagueHistory(history || []);
-            return history;
+            const { chain, truncated } = await fetchLeagueHistory(currentLeagueId, userId);
+            if (truncated) {
+                setError('League history may be incomplete — an older season failed to load.');
+            }
+            setLeagueHistory(chain || []);
+            return chain;
         } catch (err) {
             console.error("Failed to load league history:", err);
             setError("Failed to load league history");
