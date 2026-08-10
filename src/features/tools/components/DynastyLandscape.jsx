@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { activeRosterIds } from '../../../utils/leagueMath';
 import { Switch } from '../../../components/ui/Switch';
 import { fetchLeagueRosters } from '../../../utils/sleeper';
 import { Globe } from 'lucide-react';
@@ -162,7 +163,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             const maxPf = (ppgRoster.settings?.ppts || 0) + (ppgRoster.settings?.ppts_decimal || 0) / 100;
             const productionMetric = useMaxPf ? maxPf : ppg;
 
-            const validPlayers = (roster.players || [])
+            // Active roster only — taxi rookies and IR vets would skew the
+            // contender/rebuild age signal.
+            const validPlayers = activeRosterIds(roster)
                 .map(id => players[id])
                 .filter(p => p && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && p.age);
 

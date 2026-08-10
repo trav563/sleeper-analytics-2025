@@ -40,3 +40,14 @@ export function buildOwnerLookup(rosters, users) {
     );
     return (rosterId) => ownerByRoster.get(rosterId);
 }
+
+/**
+ * Active roster player ids: roster.players minus taxi squad and IR.
+ * Sleeper's roster.players INCLUDES taxi + reserve, so analytics that
+ * describe the playable roster (average age, tradeable assets, clogged
+ * spots) must exclude them or taxi rookies / IR vets skew the numbers.
+ */
+export function activeRosterIds(roster) {
+    const inactive = new Set([...(roster?.taxi || []), ...(roster?.reserve || [])]);
+    return (roster?.players || []).filter((pid) => !inactive.has(pid));
+}

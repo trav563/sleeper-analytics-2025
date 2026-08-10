@@ -3,6 +3,7 @@ import TradeSimulator from '../features/tools/components/TradeSimulator';
 import TradeFinder from '../features/tools/components/TradeFinder';
 import TankTracker from '../features/tools/components/TankTracker';
 import DynastyLandscape from '../features/tools/components/DynastyLandscape';
+import DynastyWindow from '../features/tools/components/DynastyWindow';
 import RosterClogger from '../features/tools/components/RosterClogger';
 import ScheduleGenerator from '../features/tools/components/ScheduleGenerator';
 import HistoricalBanner from '../components/layout/HistoricalBanner';
@@ -42,6 +43,14 @@ const ToolsPage = () => {
                     currentWeek={currentWeek}
                 />
             )}
+
+            <DynastyWindow
+                league={league}
+                rosters={rosters}
+                users={users}
+                players={players}
+                tradedPicks={tradedPicks}
+            />
 
             <DynastyLandscape
                 rosters={rosters}

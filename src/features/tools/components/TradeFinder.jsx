@@ -314,8 +314,8 @@ const TradeFinder = ({ leagueId, currentWeek, rosters, users, players, league, t
                                             <div>
                                                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2">Potential Offer · Your Surplus</p>
                                                 <div className="space-y-2">
-                                                    {match.giving.map(item => (
-                                                        <div key={item.position} className="flex flex-wrap gap-2">
+                                                    {match.giving.map((item, i) => (
+                                                        <div key={i} className="flex flex-wrap gap-2">
                                                             {item?.assets?.map(player => (
                                                                 <div key={player.id} className="flex items-center gap-2 bg-bg-2 rounded p-1.5 pr-3 border border-line">
                                                                     <span className="font-mono text-2xs font-bold text-text-dim w-6">{player.position}</span>

@@ -1,30 +1,10 @@
 import { useMemo } from 'react';
+import { activeRosterIds } from '../../../utils/leagueMath';
+import { buildPickLedger } from '../utils/pickLedger';
 
 // --- VALUATION HELPERS ---
 
-// 1. Pick Value (Standardized 0-10,000 Scale)
-const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = true) => {
-    // Rank 1 = 1.01 (Highest Value)
-
-    if (round === 1) {
-        if (rankInsideLeague <= 3) return 7000; // Early 1st
-        if (rankInsideLeague <= 8) return 5500; // Mid 1st
-        return 4500; // Late 1st
-    }
-
-    if (round === 2) {
-        if (rankInsideLeague <= 4) return 2800; // Early 2nd
-        if (rankInsideLeague <= 8) return 2200; // Mid 2nd
-        return 1600; // Late 2nd
-    }
-
-    if (round === 3) return 600;
-    if (round === 4) return 200;
-
-    return 150; // Fallback
-};
-
-// 2. Player Value Calculation (Fallback only)
+// Player Value Calculation (Fallback only)
 const calculateFallbackValue = (ppg, age, position, isSuperflex = true, searchRank = 9999) => {
     // If no PPG data, estimate value from search_rank (lower rank = higher value)
     if (!ppg || ppg <= 0) {
@@ -118,67 +98,8 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
         const contenderThreshold = allPPTS[3]?.ppts || 0; // Top 4
         const rebuilderThreshold = allPPTS[Math.max(0, totalTeams - 4)]?.ppts || 0; // Bottom 4
 
-        // --- PICK LEDGER ---
-        const currentYear = parseInt(league.season);
-        const nextYear = currentYear + 1; // Focus on upcoming class
-
-        // Generate Base Picks
-        let allPicks = [];
-        rosters.forEach(r => {
-            [currentYear + 1, currentYear + 2].forEach(year => {
-                [1, 2, 3].forEach(round => {
-                    allPicks.push({
-                        id: `pick-${year}-${round}-${r.roster_id}`,
-                        loading_id: `pick-${year}-${round}-${r.roster_id}`, // unique key
-                        year,
-                        round,
-                        original_owner_id: r.roster_id,
-                        roster_id: r.roster_id, // Current Owner
-                        type: 'Pick'
-                    });
-                });
-            });
-        });
-
-        // Apply Trades
-        if (tradedPicks) {
-            tradedPicks.forEach(tp => {
-                const year = parseInt(tp.season);
-                const pickIndex = allPicks.findIndex(p =>
-                    p.year === year &&
-                    p.round === tp.round &&
-                    p.original_owner_id === tp.roster_id
-                );
-                if (pickIndex !== -1) {
-                    allPicks[pickIndex].roster_id = tp.owner_id;
-                }
-            });
-        }
-
-        // Assign Values to Picks
-        // We need draft order (reverse MaxPF)
-        const draftOrder = [...allPPTS].sort((a, b) => a.ppts - b.ppts); // Low ppts first
-
-        allPicks.forEach(p => {
-            // Find original owner's rank in draft
-            const draftIndex = draftOrder.findIndex(d => d.rosterId === p.original_owner_id);
-            const rank = draftIndex !== -1 ? draftIndex + 1 : 6; // default mid
-
-            p.tradeValue = getPickValue(p.round, rank, totalTeams, isSuperflex);
-
-            // Text Desc
-            let qual = 'Mid';
-            if (rank <= 4) qual = 'Early';
-            else if (rank >= 9) qual = 'Late';
-            p.description = `${p.year} ${p.round === 1 ? '1st' : p.round === 2 ? '2nd' : p.round + 'rd'} (${qual})`;
-            p.full_name = p.description; // Consistency with players
-        });
-
-        const ledgerByRoster = {};
-        allPicks.forEach(p => {
-            if (!ledgerByRoster[p.roster_id]) ledgerByRoster[p.roster_id] = [];
-            ledgerByRoster[p.roster_id].push(p);
-        });
+        // --- PICK LEDGER --- (shared with DynastyWindow; see utils/pickLedger)
+        const { ledgerByRoster } = buildPickLedger(league, rosters, tradedPicks, marketValues, isSuperflex);
 
         // --- BUILD ROSTER ANALYSIS ---
         rosters.forEach(roster => {
@@ -187,8 +108,9 @@ export function useTradeAnalysis(league, rosters, players, seasonMatchups, curre
             if (ppts >= contenderThreshold) status = 'Contender';
             else if (ppts <= rebuilderThreshold) status = 'Rebuilder';
 
-            // Process Players
-            const rosterPlayers = (roster.players || [])
+            // Process Players (active roster only — taxi/IR aren't tradeable
+            // assets in the proposal engine's sense and skew age/value reads)
+            const rosterPlayers = activeRosterIds(roster)
                 .map(pid => {
                     const p = players[pid];
                     if (!p || p.position === 'DEF') return null;

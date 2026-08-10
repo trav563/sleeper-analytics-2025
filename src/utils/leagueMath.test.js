@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupMatchups, buildOwnerLookup } from './leagueMath';
+import { groupMatchups, buildOwnerLookup, activeRosterIds } from './leagueMath';
 
 describe('groupMatchups', () => {
     it('groups entries into head-to-head pairs by matchup_id', () => {
@@ -75,5 +75,25 @@ describe('buildOwnerLookup', () => {
     it('tolerates empty or nullish inputs', () => {
         expect(buildOwnerLookup(null, null)(1)).toBeUndefined();
         expect(buildOwnerLookup([], [])(1)).toBeUndefined();
+    });
+});
+
+describe('activeRosterIds', () => {
+    it('excludes taxi and reserve players from roster.players', () => {
+        const roster = {
+            players: ['1', '2', '3', '4', '5'],
+            taxi: ['4'],
+            reserve: ['5'],
+        };
+        expect(activeRosterIds(roster)).toEqual(['1', '2', '3']);
+    });
+
+    it('returns all players when taxi/reserve are absent', () => {
+        expect(activeRosterIds({ players: ['1', '2'] })).toEqual(['1', '2']);
+    });
+
+    it('tolerates nullish rosters', () => {
+        expect(activeRosterIds(null)).toEqual([]);
+        expect(activeRosterIds({})).toEqual([]);
     });
 });

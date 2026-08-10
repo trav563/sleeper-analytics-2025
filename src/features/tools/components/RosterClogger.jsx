@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { fetchSeasonStats, getRookieLockState } from '../../../utils/sleeper';
 import { playerHeadshotUrl } from '../../../utils/nflData';
+import { activeRosterIds } from '../../../utils/leagueMath';
 import { Loader2, AlertTriangle, TrendingUp, ShieldCheck, Skull } from 'lucide-react';
 
 const PlayerInfo = ({ player, ppg }) => {
@@ -66,7 +67,9 @@ const RosterClogger = ({ rosters, players, league, drafts }) => {
         const userRoster = rosters.find(r => r.owner_id === user.user_id);
         if (!userRoster) return [];
 
-        const benchIds = (userRoster.players || []).filter(id => !userRoster.starters.includes(id));
+        // Active roster minus starters — taxi/IR players don't occupy a
+        // regular roster spot, so they can't "clog" one.
+        const benchIds = activeRosterIds(userRoster).filter(id => !userRoster.starters.includes(id));
 
         const allRosteredIds = new Set();
         rosters.forEach(r => {

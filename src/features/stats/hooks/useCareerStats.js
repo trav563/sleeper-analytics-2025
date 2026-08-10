@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchSeasonStats } from '../../../utils/sleeper';
 
-export function useCareerStats(startYear, endYear) {
+/**
+ * @param {string|number} startYear
+ * @param {string|number} endYear
+ * @param {object} [scoringSettings] league.scoring_settings — selects the
+ *   matching stats field (pts_ppr / pts_half_ppr / pts_std). Defaults to PPR
+ *   when omitted, matching the old behavior.
+ */
+export function useCareerStats(startYear, endYear, scoringSettings) {
     const [rawStats, setRawStats] = useState({}); // season -> stats
     const [loading, setLoading] = useState(false);
 
@@ -33,6 +40,14 @@ export function useCareerStats(startYear, endYear) {
         loadStats();
     }, [startYear, endYear]);
 
+    // League-scoring-aware stats field (same selection as TradeSimulator).
+    const ptsField = useMemo(() => {
+        const rec = scoringSettings?.rec ?? 1; // default PPR when no settings
+        if (rec >= 1) return 'pts_ppr';
+        if (rec >= 0.5) return 'pts_half_ppr';
+        return 'pts_std';
+    }, [scoringSettings?.rec]);
+
     // Aggregate Stats
     const careerStats = useMemo(() => {
         const aggregated = {}; // playerId -> { totalPoints, gamesPlayed, seasons: [] }
@@ -44,8 +59,7 @@ export function useCareerStats(startYear, endYear) {
                     aggregated[playerId] = { totalPoints: 0, gamesPlayed: 0, seasons: [] };
                 }
                 // Sleeper stats object structure: { pts_ppr: 123, gp: 10, ... }
-                // Assuming PPR for now, could be configurable
-                const points = playerStats.pts_ppr || 0;
+                const points = playerStats[ptsField] || 0;
                 const gp = playerStats.gp || 0;
 
                 aggregated[playerId].totalPoints += points;
@@ -55,7 +69,7 @@ export function useCareerStats(startYear, endYear) {
         });
 
         return aggregated;
-    }, [rawStats]);
+    }, [rawStats, ptsField]);
 
     return { careerStats, loading };
 }

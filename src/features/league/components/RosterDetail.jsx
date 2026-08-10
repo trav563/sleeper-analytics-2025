@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { displayTeamName, avatarUrl, BYE_MAP_2025 } from '../../../utils/nflData';
+import { displayTeamName, avatarUrl, getByeMap } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 
@@ -144,15 +144,17 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
         });
     }, [seasonMatchups, players, roster?.roster_id]);
 
-    /* Upcoming byes for this team (uses BYE_MAP_2025; will be wrong for
-       other seasons but it's the only static map we have right now). */
+    /* Season-aware bye map (generated from nflverse; see npm run update-byes). */
+    const byeMap = useMemo(() => getByeMap(league?.season), [league?.season]);
+
+    /* Upcoming byes for this team. */
     const upcomingByes = useMemo(() => {
         if (!roster) return [];
         const teamPlayers = (roster.players || [])
             .map((pid) => players?.[pid])
             .filter((p) => p?.team);
         const byWeek = {};
-        Object.entries(BYE_MAP_2025).forEach(([wk, teams]) => {
+        Object.entries(byeMap).forEach(([wk, teams]) => {
             const wkNum = Number(wk);
             if (wkNum < week) return;
             teams.forEach((teamAbbr) => {
@@ -169,7 +171,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
             }))
             .sort((a, b) => a.week - b.week)
             .slice(0, 3);
-    }, [roster, players, week]);
+    }, [roster, players, week, byeMap]);
 
     // (AI Roster Analysis removed — covered by the dashboard's "Rate My Roster" card.)
 
@@ -265,6 +267,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                         gameStatuses={gameStatuses}
                         navigate={navigate}
                         leagueId={league?.league_id}
+                        byeMap={byeMap}
                         showLive
                     />
 
@@ -277,6 +280,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             gameStatuses={gameStatuses}
                             navigate={navigate}
                             leagueId={league?.league_id}
+                            byeMap={byeMap}
                         />
                     )}
 
@@ -287,6 +291,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             playerSeason={playerSeason}
                             navigate={navigate}
                             leagueId={league?.league_id}
+                            byeMap={byeMap}
                         />
                     )}
 
@@ -297,6 +302,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             playerSeason={playerSeason}
                             navigate={navigate}
                             leagueId={league?.league_id}
+                            byeMap={byeMap}
                         />
                     )}
                 </section>
@@ -422,7 +428,7 @@ const SectionShell = ({ title, eyebrow, action, children }) => (
     </section>
 );
 
-const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, showLive = false }) => (
+const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, byeMap, showLive = false }) => (
     <div>
         <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold px-4 pt-3 pb-1.5 bg-bg-2/40">
             {title}
@@ -493,7 +499,7 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
                         {seasonAvg != null ? seasonAvg.toFixed(1) : '—'}
                     </div>
                     <div className="hidden md:block font-mono text-2xs uppercase tracking-wider text-text-mute text-right">
-                        {byeWeekFor(player.team) ? `W${byeWeekFor(player.team)}` : '—'}
+                        {byeWeekFor(player.team, byeMap) ? `W${byeWeekFor(player.team, byeMap)}` : '—'}
                     </div>
                 </button>
             );
@@ -501,10 +507,10 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
     </div>
 );
 
-/* Reverse-lookup helper for BYE_MAP_2025: given a team abbr, what week is the bye? */
-const byeWeekFor = (team) => {
-    if (!team) return null;
-    for (const [wk, teams] of Object.entries(BYE_MAP_2025)) {
+/* Reverse-lookup: given a team abbr and a season bye map, what week is the bye? */
+const byeWeekFor = (team, byeMap) => {
+    if (!team || !byeMap) return null;
+    for (const [wk, teams] of Object.entries(byeMap)) {
         if (teams.includes(team)) return Number(wk);
     }
     return null;

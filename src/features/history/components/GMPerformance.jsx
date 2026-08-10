@@ -57,7 +57,7 @@ const GMPerformance = ({ league, players, users, rosters }) => {
     }, [activeLeagueData]);
 
     const currentSeason = league?.season || '2025';
-    const { careerStats, loading: loadingStats } = useCareerStats(selectedSeason, currentSeason);
+    const { careerStats, loading: loadingStats } = useCareerStats(selectedSeason, currentSeason, league?.scoring_settings);
 
     useEffect(() => {
         if (!selectedRosterId && rosters && rosters.length > 0) {

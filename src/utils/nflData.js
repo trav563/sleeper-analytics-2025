@@ -1,3 +1,7 @@
+// Per-season NFL bye weeks derived from nflverse schedule data.
+// Regenerate with `npm run update-byes` when a new schedule drops.
+import byeWeeks from '../data/byeWeeks.json';
+
 // List of all 32 NFL teams (Sleeper/Standard abbreviations)
 export const ALL_NFL_TEAMS = [
     "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
@@ -6,20 +10,14 @@ export const ALL_NFL_TEAMS = [
     "TEN", "WAS"
 ];
 
-// 2025 NFL Bye Weeks map (source: Official NFL Schedule, May 14, 2025)
-// Team abbreviations match Sleeper's format
-export const BYE_MAP_2025 = {
-    5: ["CHI", "ATL", "GB", "PIT"],
-    6: ["HOU", "MIN"],
-    7: ["BUF", "BAL"],
-    8: ["TB", "ARI", "JAX", "DET", "LV", "LAR", "SEA"],
-    9: ["CLE", "PHI", "NYJ"],
-    10: ["CIN", "KC", "DAL", "TEN"],
-    11: ["IND", "NO"],
-    12: ["DEN", "LAC", "WAS", "MIA"],
-    13: [], // All 32 teams active
-    14: ["SF", "NYG", "CAR", "NE"],
-};
+/**
+ * Bye-week map for a season: { week: [teamAbbr, ...] }.
+ * Returns {} for seasons not in the generated data.
+ * @param {string|number} season
+ */
+export function getByeMap(season) {
+    return byeWeeks[String(season)] || {};
+}
 
 // Indoor stadiums — skip weather alerts for these teams (domes/retractable roofs)
 export const INDOOR_STADIUMS = new Set([
