@@ -19,6 +19,8 @@
  * }
  */
 
+import { validateScheduleIntegrity } from './scheduleValidation';
+
 const MAX_SWAP_ATTEMPTS = 1000;
 
 export function generateSchedule(config) {
@@ -93,12 +95,6 @@ export function generateSchedule(config) {
   // Check max-repeat violations
   checkMaxRepeat(schedule, maxRepeat, violations, teamIds);
 
-  // Build constraint report
-  const constraintReport = {
-    satisfied: violations.length === 0,
-    violations,
-  };
-
   // Format output
   const formattedSchedule = schedule.map(weekData => ({
     week: weekData.week,
@@ -107,6 +103,15 @@ export function generateSchedule(config) {
     isLocked: weekData.isLocked || false,
     byes: weekData.byes || [],
   }));
+
+  // Structural safety net: the "All constraints satisfied" banner must never
+  // show for a schedule where a team is duplicated or missing in any week.
+  violations.push(...validateScheduleIntegrity(formattedSchedule, { teamIds, weeks, fixedWeeks }));
+
+  const constraintReport = {
+    satisfied: violations.length === 0,
+    violations,
+  };
 
   return { schedule: formattedSchedule, constraintReport };
 }
@@ -366,19 +371,19 @@ function resolveBackToBack(schedule, fixedWeeks, violations, teamIds, maxAttempt
 
     const { weekIdx1, weekIdx2, pair } = b2b;
 
-    // Try to swap a matchup from weekIdx2 with a matchup from a non-adjacent week
+    // Swap one of the two adjacent weeks wholesale with another free week
     let resolved = false;
 
     // Don't swap fixed weeks
     const w2 = schedule[weekIdx2];
     if (fixedWeeks.has(w2.week)) {
-      // Try swapping from weekIdx1 instead if it's not fixed
+      // Try swapping weekIdx1 instead if it's not fixed
       const w1 = schedule[weekIdx1];
       if (!fixedWeeks.has(w1.week)) {
-        resolved = trySwapFromWeek(schedule, weekIdx1, pair, fixedWeeks);
+        resolved = trySwapWholeWeek(schedule, weekIdx1, fixedWeeks);
       }
     } else {
-      resolved = trySwapFromWeek(schedule, weekIdx2, pair, fixedWeeks);
+      resolved = trySwapWholeWeek(schedule, weekIdx2, fixedWeeks);
     }
 
     if (!resolved) {
@@ -437,50 +442,42 @@ function findBackToBack(schedule, teamIds) {
   return null;
 }
 
-function trySwapFromWeek(schedule, weekIdx, pair, fixedWeeks) {
-  const pairKey = pair.sort().join('|');
+/**
+ * Resolve a back-to-back by swapping the ENTIRE contents (matchups + byes) of
+ * `weekIdx` with another free week. Each generated week is a perfect matching
+ * — every team exactly once — so swapping whole weeks preserves that
+ * invariant, per-week byes, and season pair counts by construction. (The old
+ * per-matchup swap transplanted a single pair between weeks, duplicating its
+ * teams in one week and dropping the displaced pair's teams from the other.)
+ */
+function trySwapWholeWeek(schedule, weekIdx, fixedWeeks) {
   const week = schedule[weekIdx];
 
-  // Find the matchup index containing this pair
-  const matchupIdx = week.matchups.findIndex(
-    ([a, b]) => [a, b].sort().join('|') === pairKey
-  );
-  if (matchupIdx === -1) return false;
-
-  // Try swapping with a matchup from a non-adjacent, non-fixed week
   for (let otherIdx = 0; otherIdx < schedule.length; otherIdx++) {
-    // Must not be adjacent to weekIdx
-    if (Math.abs(otherIdx - weekIdx) <= 1) continue;
+    if (otherIdx === weekIdx) continue;
 
     const otherWeek = schedule[otherIdx];
     if (fixedWeeks.has(otherWeek.week)) continue;
 
-    for (let otherMatchupIdx = 0; otherMatchupIdx < otherWeek.matchups.length; otherMatchupIdx++) {
-      const otherPairKey = otherWeek.matchups[otherMatchupIdx].slice().sort().join('|');
+    // Temporarily swap the week contents; slots keep their week number and
+    // rivalry/locked flags.
+    const savedMatchups = week.matchups;
+    const savedByes = week.byes;
+    week.matchups = otherWeek.matchups;
+    week.byes = otherWeek.byes;
+    otherWeek.matchups = savedMatchups;
+    otherWeek.byes = savedByes;
 
-      // Don't swap if the other pair is the same
-      if (otherPairKey === pairKey) continue;
-
-      // Check that swapping won't create a new back-to-back
-      // Temporarily swap and verify
-      const saved1 = week.matchups[matchupIdx];
-      const saved2 = otherWeek.matchups[otherMatchupIdx];
-
-      week.matchups[matchupIdx] = saved2;
-      otherWeek.matchups[otherMatchupIdx] = saved1;
-
-      // Verify no new back-to-back around both affected weeks
-      const ok1 = !hasBackToBackAt(schedule, weekIdx);
-      const ok2 = !hasBackToBackAt(schedule, otherIdx);
-
-      if (ok1 && ok2) {
-        return true; // Swap stays
-      }
-
-      // Revert
-      week.matchups[matchupIdx] = saved1;
-      otherWeek.matchups[otherMatchupIdx] = saved2;
+    // Keep only if neither affected week now borders a repeat pairing.
+    if (!hasBackToBackAt(schedule, weekIdx) && !hasBackToBackAt(schedule, otherIdx)) {
+      return true;
     }
+
+    // Revert
+    otherWeek.matchups = week.matchups;
+    otherWeek.byes = week.byes;
+    week.matchups = savedMatchups;
+    week.byes = savedByes;
   }
 
   return false;

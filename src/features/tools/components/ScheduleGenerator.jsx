@@ -5,6 +5,7 @@ import { displayTeamName } from '../../../utils/nflData';
 import ScheduleConfigForm from './ScheduleConfigForm';
 import ScheduleOutput from './ScheduleOutput';
 import { generateSchedule } from '../utils/scheduleAlgorithm';
+import { validateScheduleIntegrity } from '../utils/scheduleValidation';
 import { calculateFairness } from '../utils/scheduleFairness';
 
 const STORAGE_KEY_PREFIX = 'schedule_generator_';
@@ -70,14 +71,28 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.config) setConfig(parsed.config);
-        if (parsed.result) setGeneratedResult(parsed.result);
+        if (parsed.result) {
+          // Results saved by the pre-fix resolver can be structurally corrupt
+          // (a team in two matchups in one week) yet carry a green banner —
+          // and stale results can reference departed rosters. Validate before
+          // trusting; purge invalid ones so they can't come back.
+          const violations = validateScheduleIntegrity(parsed.result.schedule, {
+            teamIds: teams.map(t => t.id),
+          });
+          if (violations.length === 0) {
+            setGeneratedResult(parsed.result);
+          } else {
+            console.warn('Discarding saved schedule (failed integrity check):', violations);
+            localStorage.removeItem(STORAGE_KEY_PREFIX + league.league_id);
+          }
+        }
         setIsExpanded(true);
       }
     } catch (e) {
       console.error('Failed to restore schedule:', e);
     }
     setShowRestore(false);
-  }, [league?.league_id]);
+  }, [league?.league_id, teams]);
 
   const handleDismissRestore = () => setShowRestore(false);
 

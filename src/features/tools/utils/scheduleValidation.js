@@ -212,11 +212,19 @@ function validateLockedMatchups(weekConfig, teams, label) {
   }
 
   // Check for duplicate team assignments within the week
+  const validIds = new Set(teams.map(t => t.id));
   const usedTeams = new Set();
   for (const m of matchups) {
     if (!m.teamA || !m.teamB) {
       errors.push(`${label} has an incomplete matchup.`);
       continue;
+    }
+    // Stale saved configs can reference rosters no longer in the league;
+    // the generator would throw on them (counts[a] is undefined).
+    for (const id of [m.teamA, m.teamB]) {
+      if (!validIds.has(id)) {
+        errors.push(`${label} references a team that is no longer in the league.`);
+      }
     }
     if (m.teamA === m.teamB) {
       errors.push(`${label} has a team matched against itself.`);
@@ -232,6 +240,83 @@ function validateLockedMatchups(weekConfig, teams, label) {
   }
 
   return { errors, warnings };
+}
+
+/**
+ * Post-generation structural integrity check on a FORMATTED schedule
+ * ({ week, matchups: [{teamA, teamB}], byes }). Pure and throw-free, so it can
+ * run on fresh generator output and on results rehydrated from localStorage.
+ *
+ * The core invariant — every team id appears exactly once per week across
+ * matchups + byes — subsumes duplicate teams, missing teams, wrong matchup
+ * counts, unknown ids, and bye correctness for even and odd leagues.
+ *
+ * @param {Array} schedule formatted weeks
+ * @param {{teamIds: string[], weeks?: number, fixedWeeks?: Map<number, {matchups: Array}>}} opts
+ * @returns {Array<{type: 'integrity', message: string}>}
+ */
+export function validateScheduleIntegrity(schedule, { teamIds, weeks, fixedWeeks } = {}) {
+  const violations = [];
+  const push = (message) => violations.push({ type: 'integrity', message });
+
+  if (!Array.isArray(schedule) || !Array.isArray(teamIds) || teamIds.length === 0) {
+    push('Schedule or team list is missing.');
+    return violations;
+  }
+
+  if (weeks != null && schedule.length !== weeks) {
+    push(`Schedule has ${schedule.length} weeks, expected ${weeks}.`);
+  }
+
+  const idSet = new Set(teamIds);
+  for (const weekData of schedule) {
+    const label = `Week ${weekData?.week}`;
+    const seen = new Map(); // id -> count
+    const record = (id) => seen.set(id, (seen.get(id) || 0) + 1);
+
+    for (const m of weekData?.matchups || []) {
+      if (!m || m.teamA == null || m.teamB == null) {
+        push(`${label} has an incomplete matchup.`);
+        continue;
+      }
+      if (m.teamA === m.teamB) push(`${label} has a team matched against itself.`);
+      record(m.teamA);
+      record(m.teamB);
+    }
+    for (const id of weekData?.byes || []) record(id);
+
+    for (const [id, count] of seen) {
+      if (!idSet.has(id)) push(`${label} references unknown team ${id}.`);
+      else if (count > 1) push(`${label} has team ${id} in ${count} matchups.`);
+    }
+    for (const id of idSet) {
+      if (!seen.has(id)) push(`${label} is missing team ${id}.`);
+    }
+  }
+
+  // Fixed (rivalry/locked) weeks must survive generation exactly as configured.
+  // fw.matchups may be [a, b] pairs (algorithm-internal) or {teamA, teamB}.
+  if (fixedWeeks) {
+    for (const [weekNum, fw] of fixedWeeks) {
+      const out = schedule.find(w => w?.week === weekNum);
+      if (!out) continue; // length mismatch already reported
+      const wanted = new Set(
+        (fw.matchups || [])
+          .map(m => (Array.isArray(m) ? m : [m?.teamA, m?.teamB]))
+          .filter(([a, b]) => a && b)
+          .map(([a, b]) => [a, b].sort().join('|'))
+      );
+      const got = new Set(
+        (out.matchups || [])
+          .filter(m => m?.teamA && m?.teamB)
+          .map(m => [m.teamA, m.teamB].sort().join('|'))
+      );
+      const same = wanted.size === got.size && [...wanted].every(p => got.has(p));
+      if (!same) push(`Week ${weekNum} no longer matches its locked/rivalry matchups.`);
+    }
+  }
+
+  return violations;
 }
 
 function pairsFromMatchups(matchups) {
