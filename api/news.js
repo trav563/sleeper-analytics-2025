@@ -37,7 +37,8 @@ async function loadFeed() {
 }
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
+    // HEAD too, or uptime monitors get a 405.
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
