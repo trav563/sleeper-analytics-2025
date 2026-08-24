@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
 import { fetchUser, fetchUserLeagues } from '../utils/sleeper';
 import { fetchLeagueHistory } from '../services/sleeperEngine';
+import { clearLocalUserData, pruneAiAnalysisCache } from '../utils/localData';
 
 const SleeperContext = createContext();
 
@@ -44,6 +45,19 @@ export const SleeperProvider = ({ children }) => {
             }
         };
         init();
+    }, []);
+
+    // Housekeeping: expire stale AI narratives once per session.
+    useEffect(() => { pruneAiAnalysisCache(); }, []);
+
+    /** Forget this user on this device — needed on shared machines. */
+    const signOut = useCallback(() => {
+        clearLocalUserData();
+        setUser(null);
+        setLeagues([]);
+        setLeagueHistory(null);
+        setLeagueChains({});
+        setError(null);
     }, []);
 
     const searchUser = useCallback(async (username) => {
@@ -157,6 +171,7 @@ export const SleeperProvider = ({ children }) => {
         error,
         season,
         searchUser,
+        signOut,
         getLeagues,
         fetchLeagueData,
         loadHistory,
@@ -166,7 +181,7 @@ export const SleeperProvider = ({ children }) => {
         selectActiveChain
     }), [
         user, leagues, loading, error, season,
-        searchUser, getLeagues, fetchLeagueData, loadHistory,
+        searchUser, signOut, getLeagues, fetchLeagueData, loadHistory,
         leagueHistory, leagueChains, findChainContaining, selectActiveChain
     ]);
 

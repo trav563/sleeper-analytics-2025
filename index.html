@@ -3,6 +3,10 @@
 
 <head>
   <meta charset="UTF-8" />
+  <!-- Belt-and-braces for embedded webviews (in-app browsers from Discord,
+       Reddit etc.) that may still default to sending the full URL — which
+       would hand our league ids to sleepercdn/ESPN/FantasyCalc via Referer. -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />

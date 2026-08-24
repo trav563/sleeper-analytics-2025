@@ -38,7 +38,7 @@ const NewsItem = ({ item }) => {
 
     return (
         <a
-            href={item.link || '#'}
+            href={/^https?:\/\//i.test(item.link || '') ? item.link : '#'}
             target={item.link ? '_blank' : '_self'}
             rel="noreferrer"
             className={`block mb-2 last:mb-0 group ${!item.link ? 'cursor-default' : ''}`}

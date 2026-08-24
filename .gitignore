@@ -29,3 +29,6 @@ dist-ssr
 /league-analysis-ui-overhaul/
 /*.zip
 graphify-out/
+
+# Local AI review transcripts — contain league member names/IDs, never publish
+code-review/

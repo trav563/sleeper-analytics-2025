@@ -7,7 +7,7 @@ import { Button } from '../../../components/ui/Button';
 
 const UserSearch = () => {
     const navigate = useNavigate();
-    const { user, leagues, loading, error, searchUser, getLeagues, season } = useSleeper();
+    const { user, leagues, loading, error, searchUser, signOut, getLeagues, season } = useSleeper();
     const [username, setUsername] = useState('');
     const [showLeagues, setShowLeagues] = useState(false);
 
@@ -112,10 +112,10 @@ const UserSearch = () => {
                                         <h3 className="text-md font-semibold text-text truncate">{user?.display_name}</h3>
                                         <button
                                             type="button"
-                                            onClick={() => setShowLeagues(false)}
+                                            onClick={() => { signOut(); setShowLeagues(false); }}
                                             className="font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast"
                                         >
-                                            ← Change user
+                                            ← Sign out
                                         </button>
                                     </div>
                                 </div>

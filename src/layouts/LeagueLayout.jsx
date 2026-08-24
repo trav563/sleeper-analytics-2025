@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Outlet, useParams, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
@@ -73,19 +72,18 @@ const LeagueLayout = () => {
 
     return (
         <>
-            <Helmet>
-                <title>{league ? `${league.name} Analysis | League Analysis` : 'League Analysis'}</title>
-                <meta name="description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
-                <meta property="og:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
-                <meta property="og:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
-                <meta property="og:image" content="/favicon.png" />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content={window.location.href} />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
-                <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
-                <meta name="twitter:image" content="/favicon.png" />
-            </Helmet>
+            {/* React 19 hoists these into <head> natively — no Helmet needed. */}
+            <title>{league ? `${league.name} Analysis | League Analysis` : 'League Analysis'}</title>
+            <meta name="description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
+            <meta property="og:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
+            <meta property="og:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
+            <meta property="og:image" content="/favicon.png" />
+            <meta property="og:type" content="website" />
+            <meta property="og:url" content={window.location.href} />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={league ? `${league.name} Analysis | League Analysis` : 'League Analysis'} />
+            <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
+            <meta name="twitter:image" content="/favicon.png" />
 
             <AnimatePresence mode="wait">
                 <PageTransition key={location.pathname} className="min-h-[50vh]">

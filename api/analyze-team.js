@@ -11,45 +11,26 @@ const PRIMARY_MODEL = 'google/gemini-3-flash';
 const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
 // ── Rate Limiting ──
-// Durable fixed-window counters via Upstash Redis REST when
-// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are set. Falls back to a
-// per-instance in-memory map otherwise (resets on serverless cold start, so
-// limits are advisory only in that mode).
-const rateLimitMap = new Map();
+// Durable fixed-window counters via Upstash Redis REST. This endpoint spends
+// real money on every call, so it fails CLOSED when Redis is unavailable
+// rather than falling back to a per-instance counter that loosens under load.
 const RATE_LIMIT_PER_DAY = 30;
 const RATE_LIMIT_PER_HOUR = 10;
 
-function checkRateLimitMemory(userId) {
-    const now = Date.now();
-    const key = `rate:${userId}`;
-    // Evict keys whose daily window has fully expired so the map can't grow
-    // unbounded on a warm instance.
-    if (rateLimitMap.size > 500) {
-        for (const [k, v] of rateLimitMap) {
-            if (!v.daily.some(t => t > now - 86400000)) rateLimitMap.delete(k);
-        }
-    }
-    let entry = rateLimitMap.get(key);
-    if (!entry) { entry = { hourly: [], daily: [] }; rateLimitMap.set(key, entry); }
-    entry.hourly = entry.hourly.filter(t => t > now - 3600000);
-    entry.daily = entry.daily.filter(t => t > now - 86400000);
-    if (entry.daily.length >= RATE_LIMIT_PER_DAY)
-        return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day). Try again tomorrow.`, remaining: 0 };
-    if (entry.hourly.length >= RATE_LIMIT_PER_HOUR)
-        return { allowed: false, reason: `Hourly limit reached (${RATE_LIMIT_PER_HOUR}/hour). Try again shortly.`, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
-    entry.hourly.push(now);
-    entry.daily.push(now);
-    return { allowed: true, remaining: RATE_LIMIT_PER_DAY - entry.daily.length };
-}
-
-async function checkRateLimit(userId) {
+async function checkRateLimit(clientKey) {
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) return checkRateLimitMemory(userId);
+    // Fail CLOSED. The in-memory fallback is per-lambda, so under load Vercel
+    // scales out and the effective quota GROWS — the opposite of a limit. For a
+    // paid endpoint, refusing is safer than degrading.
+    if (!url || !token) {
+        console.error('[rate-limit] Upstash not configured — refusing request');
+        return { allowed: false, reason: 'AI analysis is temporarily unavailable.', remaining: 0, unavailable: true };
+    }
     try {
         const now = Date.now();
-        const hourKey = `rl:h:${userId}:${Math.floor(now / 3600000)}`;
-        const dayKey = `rl:d:${userId}:${Math.floor(now / 86400000)}`;
+        const hourKey = `rl:h:${clientKey}:${Math.floor(now / 3600000)}`;
+        const dayKey = `rl:d:${clientKey}:${Math.floor(now / 86400000)}`;
         const resp = await fetch(`${url}/pipeline`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -63,32 +44,41 @@ async function checkRateLimit(userId) {
         const hourly = Number(results[0]?.result ?? 0);
         const daily = Number(results[2]?.result ?? 0);
         const remaining = Math.max(0, RATE_LIMIT_PER_DAY - daily);
-        if (daily > RATE_LIMIT_PER_DAY)
+        if (daily >= RATE_LIMIT_PER_DAY)
             return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day). Try again tomorrow.`, remaining: 0 };
-        if (hourly > RATE_LIMIT_PER_HOUR)
+        if (hourly >= RATE_LIMIT_PER_HOUR)
             return { allowed: false, reason: `Hourly limit reached (${RATE_LIMIT_PER_HOUR}/hour). Try again shortly.`, remaining };
         return { allowed: true, remaining };
     } catch (err) {
-        // Redis being down shouldn't take the feature down with it.
-        console.warn('[rate-limit] Upstash unavailable, using in-memory fallback:', err?.message);
-        return checkRateLimitMemory(userId);
+        // Also fail closed on a Redis error — otherwise an attacker who can
+        // make Upstash flap gets the unlimited in-memory path for free.
+        console.error('[rate-limit] Upstash unavailable — refusing request:', err?.message);
+        return { allowed: false, reason: 'AI analysis is temporarily unavailable.', remaining: 0, unavailable: true };
     }
 }
 
 // ── In-memory cache for shared data (stats, players, projections) ──
 const dataCache = new Map();
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const CACHE_MAX_ENTRIES = 200;
+const CURRENT_WEEK_TTL = 5 * 60 * 1000; // in-flight week data: short, not never
 
-async function fetchCached(key, url) {
+async function fetchCached(key, url, ttl = CACHE_TTL) {
     const cached = dataCache.get(key);
-    if (cached && Date.now() - cached.time < CACHE_TTL) return cached.data;
+    if (cached && Date.now() - cached.time < ttl) return cached.data;
     const data = await fetchJSON(url);
-    // Drop expired entries before inserting so a warm instance serving many
-    // leagues/weeks doesn't accumulate matchup blobs until OOM.
-    if (dataCache.size > 200) {
+    // Bound the cache for real. Expiry-only eviction is unbounded under
+    // rotating-leagueId traffic, where every entry is always fresh.
+    if (dataCache.size >= CACHE_MAX_ENTRIES) {
         const now = Date.now();
         for (const [k, v] of dataCache) {
             if (now - v.time >= CACHE_TTL) dataCache.delete(k);
+        }
+        // Still over? Drop oldest-inserted entries (Map preserves insertion order).
+        while (dataCache.size >= CACHE_MAX_ENTRIES) {
+            const oldest = dataCache.keys().next().value;
+            if (oldest === undefined) break;
+            dataCache.delete(oldest);
         }
     }
     dataCache.set(key, { data, time: Date.now() });
@@ -456,7 +446,7 @@ ${oppLines.join('\n')}`;
                 const opp = wMatchups.find(m => m.matchup_id === my.matchup_id && m.roster_id !== my.roster_id);
                 const oppR = opp ? rosters.find(r => r.roster_id === opp.roster_id) : null;
                 const oppO = oppR ? users.find(u => u.user_id === oppR.owner_id) : null;
-                const oppName = oppO?.display_name || '?';
+                const oppName = cleanName(oppO?.display_name, '?');
                 const result = my.points > (opp?.points || 0) ? 'W' : my.points < (opp?.points || 0) ? 'L' : 'T';
                 return `Wk${w}: ${my.points?.toFixed(1) || 0} vs ${oppName} (${opp?.points?.toFixed(1) || 0}) → ${result}`;
             }).filter(Boolean);
@@ -476,7 +466,7 @@ ${oppLines.join('\n')}`;
         return rosterPlayerNames.some(name => name && item.title.toLowerCase().includes(name.toLowerCase()));
     }).slice(0, 10).map(item => {
         const daysAgo = item.pubDate ? Math.floor((Date.now() - new Date(item.pubDate).getTime()) / 86400000) : '?';
-        return `- "${item.title}" (${daysAgo}d ago)`;
+        return `- "${cleanName(item.title, "Untitled")}" (${daysAgo}d ago)`;
     });
 
     let playerNewsText = '';
@@ -564,7 +554,11 @@ Use bullet format:
     };
 
     // Default unknown analysisType to 'roster' (defensive — never 400-fail).
-    const instructions = typeInstructions[analysisType] || typeInstructions.roster;
+    // Own-property lookup only: a bare index lets "constructor"/"__proto__"
+    // pull functions off the prototype chain and into the prompt.
+    const instructions = Object.hasOwn(typeInstructions, analysisType)
+        ? typeInstructions[analysisType]
+        : typeInstructions.roster;
 
     // Constraint-specific extra instruction appended at the end.
     const constraintInstructions = {
@@ -578,7 +572,7 @@ Use bullet format:
         compete: 'CONSTRAINT: Frame all advice assuming I am COMPETING for a championship THIS year. Recommend short-term moves only; do not suggest selling for picks.',
         build: 'CONSTRAINT: Frame all advice assuming I am REBUILDING for next year. Recommend long-term moves; trade veterans for picks/youth.',
     };
-    const constraintTail = constraint && constraintInstructions[constraint]
+    const constraintTail = constraint && Object.hasOwn(constraintInstructions, constraint)
         ? `\n\n${constraintInstructions[constraint]}`
         : '';
 
@@ -605,7 +599,7 @@ PLAYER EVALUATION GUIDE — use PPG from the stats columns to judge player quali
 ═══════════════════════════════════════
 LEAGUE SETTINGS
 ═══════════════════════════════════════
-League: ${league.name || 'Unknown'}
+League: ${cleanName(league.name, 'Unknown')}
 Format: ${scoringFormat}
 ${scoringDetail}
 Starting Slots: ${startingSlotsDesc}
@@ -681,12 +675,23 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid constraint' });
     }
 
-    // Key the limit on IP + userId: userId alone is public data anyone can
-    // rotate, which would make the quota decorative.
-    const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
-        || req.socket?.remoteAddress || 'unknown';
-    const rateCheck = await checkRateLimit(`${ip}:${userId}`);
-    if (!rateCheck.allowed) return res.status(429).json({ error: rateCheck.reason, remaining: rateCheck.remaining });
+    // Key on IP ALONE. Including userId looked stricter but did the opposite:
+    // userId is public, attacker-supplied data, so every value opened a fresh
+    // quota bucket from the same IP. Keying on IP only also stops us storing an
+    // IP-to-Sleeper-account mapping in Upstash.
+    //
+    // Prefer x-vercel-forwarded-for (set by the platform); the LEFTMOST entry of
+    // x-forwarded-for is client-controlled, so fall back to the RIGHTMOST hop.
+    const xff = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean);
+    const ip = String(req.headers['x-vercel-forwarded-for'] || '').trim()
+        || xff[xff.length - 1]
+        || req.socket?.remoteAddress
+        || 'unknown';
+    const rateCheck = await checkRateLimit(ip);
+    if (!rateCheck.allowed) {
+        return res.status(rateCheck.unavailable ? 503 : 429)
+            .json({ error: rateCheck.reason, remaining: rateCheck.remaining });
+    }
 
     try {
         const [league, rosters] = await Promise.all([
@@ -725,7 +730,9 @@ export default async function handler(req, res) {
         let transactions = [];
         try {
             const [txCur, txPrev] = await Promise.all([
-                fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/transactions/${week}`).catch(() => []),
+                // Current week is still mutable, so a short TTL rather than none:
+                // every request used to hit Sleeper for this one.
+                fetchCached(`tx-${leagueId}-${week}`, `${SLEEPER_BASE}/league/${leagueId}/transactions/${week}`, CURRENT_WEEK_TTL).catch(() => []),
                 // Prior week's transactions are settled - safe to cache.
                 week > 1 ? fetchCached(`tx-${leagueId}-${week - 1}`, `${SLEEPER_BASE}/league/${leagueId}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
             ]);
@@ -846,7 +853,6 @@ export default async function handler(req, res) {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Remaining', String(rateCheck.remaining));
-        res.setHeader('X-Model', usedFallback ? FALLBACK_MODEL : PRIMARY_MODEL);
 
         // Flush the buffered first chunk, then drain the rest.
         if (!stream.first.done && stream.first.value) {
@@ -863,9 +869,12 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Analyze team error:', error);
-        const raw = error?.message || 'Analysis failed. Please try again.';
+        const raw = error?.message || '';
         // Translate common Gemini SDK errors into user-actionable messages.
-        let userMessage = raw;
+        // Default to a generic message — `raw` can carry upstream URLs
+        // (fetchJSON throws "API error: {status} from {url}") and provider
+        // internals. Only known-safe, user-actionable translations are shown.
+        let userMessage = 'Analysis failed. Please try again.';
         if (/quota|rate.?limit|429|RESOURCE_EXHAUSTED/i.test(raw)) {
             userMessage = 'AI service is busy (Gemini rate limit hit). Wait ~60 seconds and try again.';
         } else if (/SAFETY|blocked|safety_settings/i.test(raw)) {

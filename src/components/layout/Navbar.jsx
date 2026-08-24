@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils';
 import { useTheme } from '../../context/ThemeContext';
 
 const Navbar = () => {
-    const { user, leagues, leagueHistory, getLeagues, season } = useSleeper();
+    const { user, leagues, leagueHistory, getLeagues, signOut, season } = useSleeper();
     const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
@@ -260,10 +260,17 @@ const Navbar = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="ml-3">
-                                    <div className="text-base font-semibold leading-none text-text">{user.display_name}</div>
+                                <div className="ml-3 min-w-0">
+                                    <div className="text-base font-semibold leading-none text-text truncate">{user.display_name}</div>
                                     <div className="font-mono text-2xs text-text-mute mt-1">@{user.username}</div>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { signOut(); navigate('/'); setIsMobileMenuOpen(false); }}
+                                    className="ml-auto font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast min-h-[44px] px-2"
+                                >
+                                    Sign out
+                                </button>
                             </div>
 
                             {leagues.length > 0 && (
