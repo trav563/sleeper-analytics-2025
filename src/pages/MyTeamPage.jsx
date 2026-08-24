@@ -44,7 +44,7 @@ const MyTeamPage = () => {
     const playoffStart = league?.settings?.playoff_week_start || 15;
     const { seasonMatchups: fullSchedule } = useSeasonMatchups(league?.league_id, playoffStart - 1);
     const { projFor } = useWeekProjections(league?.season, currentWeek, league?.scoring_settings);
-    const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
 
     const { data: marketValues } = useQuery({
         queryKey: ['fantasyCalc', league?.league_id],
@@ -113,6 +113,7 @@ const MyTeamPage = () => {
                 odds={odds}
                 isProjection={isProjection}
                 rankings={rankings}
+                ranked={ranked}
                 fullSchedule={fullSchedule}
                 currentWeek={currentWeek}
             />

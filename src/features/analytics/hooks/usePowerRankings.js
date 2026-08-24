@@ -20,13 +20,13 @@ import { displayTeamName, avatarUrl } from '../../../utils/nflData';
  */
 export const computePowerRankings = (seasonMatchups, rosters, users) => {
         if (!seasonMatchups || !rosters || Object.keys(seasonMatchups).length === 0) {
-            return { rankings: [], weeksPlayed: [] };
+            return { rankings: [], weeksPlayed: [], ranked: false };
         }
 
         const weeksPlayed = Object.keys(seasonMatchups)
             .map(Number)
             .sort((a, b) => a - b);
-        if (weeksPlayed.length === 0) return { rankings: [], weeksPlayed: [] };
+        if (weeksPlayed.length === 0) return { rankings: [], weeksPlayed: [], ranked: false };
 
         const lastWeek = weeksPlayed[weeksPlayed.length - 1];
         const weeklyRankings = {}; // rosterId -> [rank per week]
@@ -209,7 +209,12 @@ export const computePowerRankings = (seasonMatchups, rosters, users) => {
             };
         }).sort((a, b) => a.currentRank - b.currentRank);
 
-        return { rankings, weeksPlayed };
+        // With no games played every composite is identical, so the stable
+        // sort falls through to roster order — i.e. signup order. That is not
+        // a ranking, and callers must not present it as one.
+        const ranked = rankings.some((r) => r.pf > 0);
+
+        return { rankings, weeksPlayed, ranked };
 };
 
 export const usePowerRankings = (seasonMatchups, rosters, users) => {

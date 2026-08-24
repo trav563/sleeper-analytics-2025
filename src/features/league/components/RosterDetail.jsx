@@ -121,14 +121,19 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
         };
     }, [roster, players, league?.roster_positions]);
 
+    /* Real weekly projections scored with this league's settings. */
+    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
+
     /* Positional strength: avg per-game points by position group, scored
        against absolute PPG thresholds (the same tiers the AI prompt uses).
        Result is consistent across leagues: "Elite" really means elite. */
-    const positionalStrength = useMemo(() => {
-        if (!seasonMatchups || !roster || !players) return [];
+    const { rows: positionalStrength, projected: strengthIsProjected } = useMemo(() => {
+        const empty = { rows: [], projected: false };
+        if (!roster || !players) return empty;
+
         const totals = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
         const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-        Object.values(seasonMatchups).forEach((ms) => {
+        Object.values(seasonMatchups || {}).forEach((ms) => {
             if (!Array.isArray(ms)) return;
             const m = ms.find((x) => x.roster_id === roster.roster_id);
             if (!m) return;
@@ -143,15 +148,32 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                 }
             });
         });
-        return POSITION_GROUPS.map((pos) => {
+
+        // No games played yet — grade the same way, but from this week's
+        // league-scored projections so the panel says something useful in the
+        // preseason instead of six empty bars.
+        const projected = POSITION_GROUPS.every((pos) => counts[pos] === 0);
+        if (projected) {
+            (roster.starters || []).forEach((pid) => {
+                if (!pid || pid === '0') return;
+                const p = players?.[pid];
+                if (!p?.position || !POSITION_GROUPS.includes(p.position)) return;
+                const pts = projFor?.(pid) || 0;
+                if (pts > 0) {
+                    totals[p.position] += pts;
+                    counts[p.position] += 1;
+                }
+            });
+        }
+
+        const rows = POSITION_GROUPS.map((pos) => {
             const ppg = counts[pos] > 0 ? totals[pos] / counts[pos] : 0;
             const pct = Math.round(scorePosition(pos, ppg));
             return { pos, pct, label: labelForScore(pct), ppg };
         });
-    }, [seasonMatchups, players, roster?.roster_id]);
+        return { rows, projected };
+    }, [seasonMatchups, players, roster, projFor]);
 
-    /* Real weekly projections scored with this league's settings. */
-    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     /* Season-aware bye map (generated from nflverse; see npm run update-byes). */
     const byeMap = useMemo(() => getByeMap(league?.season), [league?.season]);
@@ -326,6 +348,11 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                 {/* Right rail */}
                 <aside className="space-y-4 min-w-0">
                     <SectionShell title="Positional Strength">
+                        {strengthIsProjected && (
+                            <p className="font-mono text-2xs uppercase tracking-wider text-signal mb-2">
+                                Projected · no games played yet
+                            </p>
+                        )}
                         <details className="mb-3 group">
                             <summary className="cursor-pointer font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast list-none inline-flex items-center gap-1 select-none">
                                 <span className="group-open:rotate-90 transition-transform duration-fast inline-block">›</span>
@@ -333,6 +360,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             </summary>
                             <div className="mt-2 p-3 rounded-md bg-bg-2 border border-line text-xs text-text-dim leading-relaxed space-y-1.5">
                                 <p>Each position is scored 0–100 against absolute PPG thresholds (PPR scoring), independent of how the rest of the league performs.</p>
+                                {strengthIsProjected && (
+                                    <p>Before any games are played this uses each starter's projected points for the upcoming week, scored with your league's settings.</p>
+                                )}
                                 <ul className="space-y-0.5 mt-1 font-mono text-2xs">
                                     <li>QB · Elite ≥ 22 · Good ≥ 18 · Avg ≥ 14 · Thin ≥ 10</li>
                                     <li>RB / WR · Elite ≥ 19 · Good ≥ 15 · Avg ≥ 11 · Thin ≥ 7</li>

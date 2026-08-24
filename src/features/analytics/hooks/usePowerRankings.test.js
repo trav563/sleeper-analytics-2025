@@ -19,9 +19,28 @@ const week = (scores) =>
 
 describe('computePowerRankings', () => {
     it('returns empty results for missing input', () => {
-        expect(computePowerRankings(null, rosters, users)).toEqual({ rankings: [], weeksPlayed: [] });
-        expect(computePowerRankings({}, rosters, users)).toEqual({ rankings: [], weeksPlayed: [] });
-        expect(computePowerRankings({ 1: [] }, null, users)).toEqual({ rankings: [], weeksPlayed: [] });
+        const empty = { rankings: [], weeksPlayed: [], ranked: false };
+        expect(computePowerRankings(null, rosters, users)).toEqual(empty);
+        expect(computePowerRankings({}, rosters, users)).toEqual(empty);
+        expect(computePowerRankings({ 1: [] }, null, users)).toEqual(empty);
+    });
+
+    it('reports ranked=false when no games have been played', () => {
+        // Every composite ties at 0, so the stable sort would otherwise hand
+        // back roster order dressed up as a ranking.
+        const scoreless = {
+            1: week([[1, 1, 0], [2, 1, 0], [3, 2, 0], [4, 2, 0]]),
+        };
+        const { ranked, rankings } = computePowerRankings(scoreless, rosters, users);
+        expect(ranked).toBe(false);
+        expect(rankings.map((r) => r.rosterId)).toEqual([1, 2, 3, 4]); // roster order, hence meaningless
+    });
+
+    it('reports ranked=true once anyone has scored', () => {
+        const played = {
+            1: week([[1, 1, 120], [2, 1, 90], [3, 2, 110], [4, 2, 100]]),
+        };
+        expect(computePowerRankings(played, rosters, users).ranked).toBe(true);
     });
 
     it('counts all-play losses so AP% is not universally 100%', () => {

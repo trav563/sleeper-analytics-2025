@@ -8,7 +8,7 @@ import { theme } from '../../../lib/theme';
 
 const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
-    const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
 
     if (loading) return (
         <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card" aria-busy="true">
@@ -30,7 +30,7 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
         </section>
     );
 
-    if (!rankings || rankings.length === 0) return (
+    if (!rankings || rankings.length === 0 || !ranked) return (
         <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card">
             <header className="flex items-center gap-2 mb-2">
                 <Crown className="w-5 h-5 text-signal" aria-hidden="true" />

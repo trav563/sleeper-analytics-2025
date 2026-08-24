@@ -63,13 +63,15 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
     const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(
         league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters
     );
-    const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
 
     /* Pick the four cells. */
     const cells = useMemo(() => {
         if (!myRoster) return [];
         const myRanking = rankings.find((r) => r.rosterId === myRoster.roster_id);
-        const rank = myRanking?.currentRank ?? null;
+        // Before any games every composite ties, so the "rank" would just be
+        // roster order. Show nothing rather than a meaningless number.
+        const rank = ranked ? (myRanking?.currentRank ?? null) : null;
         const rankChange = myRanking?.rankChange ?? 0;
         const myOdds = odds?.[myRoster.roster_id];
         const oddsPct = myOdds ? `${myOdds.percent}%` : (oddsLoading ? '…' : '—');
@@ -97,7 +99,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
             {
                 label: 'Rank',
                 value: rank != null ? `#${rank}` : '—',
-                sub: rankChange > 0 ? `▲ ${rankChange} wk` : rankChange < 0 ? `▼ ${Math.abs(rankChange)} wk` : 'no change',
+                sub: !ranked ? 'not ranked yet' : rankChange > 0 ? `▲ ${rankChange} wk` : rankChange < 0 ? `▼ ${Math.abs(rankChange)} wk` : 'no change',
                 subTone: rankChange > 0 ? 'good' : rankChange < 0 ? 'bad' : 'mute',
                 valueTone: rank === 1 ? 'signal' : 'text',
             },
@@ -123,7 +125,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                 valueTone: 'text',
             },
         ];
-    }, [myRoster, rankings, odds, oddsLoading, isProjection, seasonMatchups, rosters]);
+    }, [myRoster, rankings, ranked, odds, oddsLoading, isProjection, seasonMatchups, rosters]);
 
     if (cells.length === 0) return null;
 

@@ -8,10 +8,11 @@ import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
 import { useDefenseRanks } from '../../analytics/hooks/useDefenseRanks';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
 import { useGameWeather } from '../hooks/useGameWeather';
+import { useWeekProjections } from '../../league/hooks/useWeekProjections';
 
 const STAT_TONE = { signal: 'text-signal', good: 'text-good', text: 'text-text' };
 
-const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHistoricalSeason }) => {
+const PlayerDetail = ({ player, players, league, rosters, users, state, currentWeek, isHistoricalSeason }) => {
     const navigate = useNavigate();
     const leagueId = league?.league_id;
     const week = currentWeek || state?.display_week || state?.week || 1;
@@ -20,11 +21,10 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHi
     const { seasonMatchups } = useSeasonMatchups(leagueId, week);
     const { details: liveDetails } = useGameLiveDetails(week);
     const { weather } = useGameWeather(week);
-    const defenseRanks = useDefenseRanks(seasonMatchups, useMemo(() => {
-        const map = {};
-        if (player) map[player.player_id] = player;
-        return map;
-    }, [player]));
+    // Needs the FULL player map: points allowed is aggregated across every
+    // starter in the league, not just the player being viewed.
+    const defenseRanks = useDefenseRanks(seasonMatchups, players, league?.season);
+    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     const [tab, setTab] = useState('gamelog');
 
@@ -76,8 +76,11 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHi
         return total ? Math.round((owned / total) * 100) : null;
     }, [rosters, player]);
 
+    /* Rank among players at the same position by points scored in this
+       league so far. Needs the full players map for positions — before the
+       fix that map wasn't passed, so this always returned null. */
     const positionRank = useMemo(() => {
-        if (!seasonMatchups || !player || !player.position) return null;
+        if (!seasonMatchups || !player?.position || !players) return null;
         const totals = {}; // pid -> total
         Object.values(seasonMatchups).forEach((ms) => {
             if (!Array.isArray(ms)) return;
@@ -87,15 +90,13 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHi
                 });
             });
         });
-        // We only have positions for players in `players` map — caller must
-        // pass the whole players map for true ranking. For now compute a
-        // local rank only if we have it on the focus player.
-        const focusTotal = totals[player.player_id];
-        if (!focusTotal) return null;
-        // Without a global players-map here we can't rank by position; skip
-        // for now — rendered as `—`.
-        return null;
-    }, [seasonMatchups, player]);
+        if (!totals[player.player_id]) return null; // hasn't scored yet
+        const peers = Object.entries(totals)
+            .filter(([pid]) => players[pid]?.position === player.position)
+            .sort(([, a], [, b]) => b - a);
+        const idx = peers.findIndex(([pid]) => pid === player.player_id);
+        return idx >= 0 ? idx + 1 : null;
+    }, [seasonMatchups, player, players]);
 
     /* -------------------------------------------------------
      * Loading / not-found states
@@ -148,7 +149,9 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHi
         },
         {
             label: 'Proj',
-            value: seasonStats.avg != null ? seasonStats.avg.toFixed(1) : '—',
+            value: projFor(player.player_id)
+                ? projFor(player.player_id).toFixed(1)
+                : seasonStats.avg != null ? seasonStats.avg.toFixed(1) : '—',
             tone: 'text',
         },
         {
@@ -443,7 +446,14 @@ const PlayerDetail = ({ player, league, rosters, users, state, currentWeek, isHi
                         </p>
                     ) : (
                         <ul className="space-y-2">
-                            <Row k={`${player.position} fantasy pts allowed`} v={defRank ? `${defRank}${ord(defRank)}-most` : '—'} sub={defRank ? `Position rank vs ${oppTeam}` : null} tone="signal" />
+                            <Row
+                                k={`${player.position} points allowed by ${oppTeam}`}
+                                v={defRank ? `${defRank}${ord(defRank)}-most` : '—'}
+                                sub={defRank
+                                    ? `Of 32 defenses · from this league's starters`
+                                    : 'Needs completed games to rank'}
+                                tone="signal"
+                            />
                             <Row k="Game state" v={isLive ? `Q${live.period} ${live.displayClock}` : (live?.statusName === 'STATUS_FINAL' ? 'Final' : 'Scheduled')} sub={null} />
                             <Row k="Home / Away" v={live?.isHome ? 'Home' : 'Away'} sub={null} />
                             <Row

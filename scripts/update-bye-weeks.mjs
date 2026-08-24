@@ -33,6 +33,9 @@ const [iSeason, iType, iWeek, iAway, iHome] =
 const playing = {};
 // season -> Set(all teams that appear at all)
 const teamsBySeason = {};
+// season -> week -> { TEAM: OPPONENT } — needed to attribute fantasy points
+// to the defense that actually allowed them.
+const opponents = {};
 
 for (const line of lines.slice(1)) {
     const f = line.split(',');
@@ -43,6 +46,9 @@ for (const line of lines.slice(1)) {
     const home = fix(f[iHome]);
     ((playing[season] ??= {})[week] ??= new Set()).add(away);
     playing[season][week].add(home);
+    const wk = ((opponents[season] ??= {})[week] ??= {});
+    wk[away] = home;
+    wk[home] = away;
     (teamsBySeason[season] ??= new Set()).add(away);
     teamsBySeason[season].add(home);
 }
@@ -62,8 +68,15 @@ for (const [season, weeks] of Object.entries(playing)) {
     }
 }
 
-const outPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'byeWeeks.json');
-mkdirSync(dirname(outPath), { recursive: true });
-writeFileSync(outPath, JSON.stringify(byeWeeks, null, 2) + '\n');
-console.log(`Wrote ${outPath}:`,
+const dataDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data');
+mkdirSync(dataDir, { recursive: true });
+
+const byePath = join(dataDir, 'byeWeeks.json');
+writeFileSync(byePath, JSON.stringify(byeWeeks, null, 2) + '\n');
+console.log(`Wrote ${byePath}:`,
     Object.entries(byeWeeks).map(([s, w]) => `${s} (${Object.keys(w).length} bye weeks)`).join(', '));
+
+const schedPath = join(dataDir, 'nflOpponents.json');
+writeFileSync(schedPath, JSON.stringify(opponents) + '\n');
+console.log(`Wrote ${schedPath}:`,
+    Object.entries(opponents).map(([s, w]) => `${s} (${Object.keys(w).length} weeks)`).join(', '));

@@ -11,6 +11,7 @@ const PlayerPage = () => {
     return (
         <PlayerDetail
             player={player}
+            players={players}
             league={league}
             rosters={rosters}
             users={users}

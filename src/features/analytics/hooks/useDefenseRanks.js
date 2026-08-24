@@ -1,46 +1,48 @@
 import { useMemo } from 'react';
+import nflOpponents from '../../../data/nflOpponents.json';
 
 /**
- * Computes per-NFL-team defensive fantasy points allowed by skill position,
- * then ranks each team 1..32 (1 = most points allowed = "softest matchup").
+ * Fantasy points each NFL defense ALLOWS by skill position, ranked 1..32
+ * (1 = most points allowed = softest matchup).
  *
- * Walks every starter line item across `seasonMatchups`. Pairs are derived
- * from `matchup_id`: when a roster is the home team, the OPPOSING NFL team
- * (i.e., the player's NFL team) is debited the points scored. Since fantasy
- * matchups don't carry NFL team-vs-team info, the "defensive opponent" here
- * is approximated as the player's *own* NFL team — that lets us track what
- * each NFL team is willing to give up at each position via aggregate scoring.
+ * Attribution requires knowing which NFL team a player faced in a given week
+ * — fantasy matchups carry no NFL team-vs-team info. That comes from the
+ * nflverse schedule baked into src/data/nflOpponents.json (regenerate with
+ * `npm run update-byes`).
  *
- * Returns:
- *   {
- *     [nflTeamAbbr]: {
- *       QB:  { totalPoints, gamesPlayed, ppg, rank },
- *       RB:  { ... },
- *       WR:  { ... },
- *       TE:  { ... },
- *     }
- *   }
+ * Every starter's points are debited to the defense they played against, so
+ * "QB points allowed by IND" means what it says. A player whose NFL opponent
+ * is unknown for that week (bye, or a season outside the generated data) is
+ * skipped rather than misattributed.
  *
- * Note: this is an approximation. A fully accurate "points allowed by NFL
- * defense to position X" requires the NFL schedule cross-reference (which
- * NFL team played which NFL team in week N). We skip that for this pass —
- * the rank is "least friendly schedule for this position" as a proxy.
+ * Returns { [nflTeamAbbr]: { QB|RB|WR|TE: { totalPoints, gamesPlayed, ppg, rank } } }
  */
-export const useDefenseRanks = (seasonMatchups, players) => {
+export const useDefenseRanks = (seasonMatchups, players, season) => {
     return useMemo(() => {
         if (!seasonMatchups || !players) return {};
 
+        const schedule = nflOpponents[String(season)];
+        // Without the schedule we cannot say who allowed what — return nothing
+        // rather than a number that means something else.
+        if (!schedule) return {};
+
         const positions = ['QB', 'RB', 'WR', 'TE'];
         const byTeam = {};
+        const ensure = (team) => {
+            if (!byTeam[team]) {
+                byTeam[team] = {};
+                positions.forEach((p) => {
+                    byTeam[team][p] = { totalPoints: 0, gamesPlayed: 0 };
+                });
+            }
+            return byTeam[team];
+        };
 
-        Object.values(seasonMatchups).forEach((weekMatchups) => {
-            if (!weekMatchups) return;
+        Object.entries(seasonMatchups).forEach(([week, weekMatchups]) => {
+            if (!Array.isArray(weekMatchups)) return;
+            const weekOpponents = schedule[String(week)];
+            if (!weekOpponents) return;
 
-            // For each starter that scored in this week, attribute their
-            // points to *opponent* NFL teams — but we don't have NFL
-            // schedule, so we attribute to their own team as a self-proxy
-            // (i.e., what this team's offensive stable produced becomes a
-            // signal for league-wide weak/strong slots at that position).
             weekMatchups.forEach((m) => {
                 const starters = m.starters || [];
                 const points = m.starters_points || [];
@@ -48,23 +50,29 @@ export const useDefenseRanks = (seasonMatchups, players) => {
                     if (!pid || pid === '0') return;
                     const player = players[pid];
                     if (!player || !positions.includes(player.position)) return;
-                    const team = player.team;
-                    if (!team) return;
-                    const pts = points[idx] ?? 0;
+                    if (!player.team) return;
 
-                    if (!byTeam[team]) {
-                        byTeam[team] = {};
-                        positions.forEach((p) => {
-                            byTeam[team][p] = { totalPoints: 0, gamesPlayed: 0 };
-                        });
-                    }
-                    byTeam[team][player.position].totalPoints += pts;
-                    if (pts > 0) byTeam[team][player.position].gamesPlayed += 1;
+                    // The defense that faced this player in this week.
+                    const defense = weekOpponents[player.team];
+                    if (!defense) return; // bye week or unknown
+
+                    const pts = points[idx] ?? 0;
+                    const slot = ensure(defense)[player.position];
+                    slot.totalPoints += pts;
+                    if (pts > 0) slot.gamesPlayed += 1;
                 });
             });
         });
 
-        // Compute per-position PPG and ranks.
+        // With no completed games every defense ties at 0, and the sort would
+        // fall through to insertion order — an arbitrary number presented as a
+        // rank. Report nothing instead.
+        const anyGames = Object.values(byTeam).some((data) =>
+            positions.some((p) => data[p].gamesPlayed > 0)
+        );
+        if (!anyGames) return {};
+
+        // Rank by points allowed per game, most-allowed first.
         positions.forEach((pos) => {
             const ranking = Object.entries(byTeam)
                 .map(([team, data]) => {
@@ -81,7 +89,7 @@ export const useDefenseRanks = (seasonMatchups, players) => {
         });
 
         return byTeam;
-    }, [seasonMatchups, players]);
+    }, [seasonMatchups, players, season]);
 };
 
 export default useDefenseRanks;

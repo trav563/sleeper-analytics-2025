@@ -8,7 +8,7 @@ import { theme } from '../../../lib/theme';
  * Where this team is heading: playoff odds, power-ranking trend, and how hard
  * the rest of the schedule looks (opponents' average points per game).
  */
-const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, rankings, fullSchedule, currentWeek }) => {
+const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, rankings, ranked = true, fullSchedule, currentWeek }) => {
     const mine = useMemo(
         () => rankings?.find((r) => r.rosterId === roster?.roster_id) || null,
         [rankings, roster]
@@ -74,12 +74,14 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
                 <div className="p-4 text-center">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">Power rank</div>
                     <div className="tnum font-display text-2xl font-bold text-text mt-1">
-                        {mine ? `#${mine.currentRank}` : '—'}
+                        {ranked && mine ? `#${mine.currentRank}` : '—'}
                     </div>
                     <div className="font-mono text-2xs text-text-mute mt-0.5">
-                        {mine && mine.rankChange !== 0
-                            ? `${mine.rankChange > 0 ? '▲' : '▼'} ${Math.abs(mine.rankChange)} this week`
-                            : 'no change'}
+                        {!ranked
+                            ? 'not ranked yet'
+                            : mine && mine.rankChange !== 0
+                                ? `${mine.rankChange > 0 ? '▲' : '▼'} ${Math.abs(mine.rankChange)} this week`
+                                : 'no change'}
                     </div>
                 </div>
                 <div className="p-4 text-center col-span-2 md:col-span-1 border-t md:border-t-0 border-line">
@@ -106,7 +108,7 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
                 </div>
             </div>
 
-            {mine?.trend?.length > 1 && (
+            {ranked && mine?.trend?.length > 1 && (
                 <div className="p-4">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2">
                         Power rank trend

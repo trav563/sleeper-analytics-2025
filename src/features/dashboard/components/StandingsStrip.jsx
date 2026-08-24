@@ -6,7 +6,7 @@ import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
 /** Full standings preview with deep-link to power rankings page. */
 const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId }) => {
     const navigate = useNavigate();
-    const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
