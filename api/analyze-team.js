@@ -1,4 +1,5 @@
 import { streamText } from 'ai';
+import { checkRateLimit, clientIp } from './_rateLimit.js';
 
 const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 
@@ -9,53 +10,6 @@ const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 // gateway catalog; keep this pinned to a current Flash model.
 const PRIMARY_MODEL = 'google/gemini-3-flash';
 const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
-
-// ── Rate Limiting ──
-// Durable fixed-window counters via Upstash Redis REST. This endpoint spends
-// real money on every call, so it fails CLOSED when Redis is unavailable
-// rather than falling back to a per-instance counter that loosens under load.
-const RATE_LIMIT_PER_DAY = 30;
-const RATE_LIMIT_PER_HOUR = 10;
-
-async function checkRateLimit(clientKey) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    // Fail CLOSED. The in-memory fallback is per-lambda, so under load Vercel
-    // scales out and the effective quota GROWS — the opposite of a limit. For a
-    // paid endpoint, refusing is safer than degrading.
-    if (!url || !token) {
-        console.error('[rate-limit] Upstash not configured — refusing request');
-        return { allowed: false, reason: 'AI analysis is temporarily unavailable.', remaining: 0, unavailable: true };
-    }
-    try {
-        const now = Date.now();
-        const hourKey = `rl:h:${clientKey}:${Math.floor(now / 3600000)}`;
-        const dayKey = `rl:d:${clientKey}:${Math.floor(now / 86400000)}`;
-        const resp = await fetch(`${url}/pipeline`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify([
-                ['INCR', hourKey], ['EXPIRE', hourKey, '3600'],
-                ['INCR', dayKey], ['EXPIRE', dayKey, '86400'],
-            ]),
-        });
-        if (!resp.ok) throw new Error(`Upstash ${resp.status}`);
-        const results = await resp.json();
-        const hourly = Number(results[0]?.result ?? 0);
-        const daily = Number(results[2]?.result ?? 0);
-        const remaining = Math.max(0, RATE_LIMIT_PER_DAY - daily);
-        if (daily >= RATE_LIMIT_PER_DAY)
-            return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day). Try again tomorrow.`, remaining: 0 };
-        if (hourly >= RATE_LIMIT_PER_HOUR)
-            return { allowed: false, reason: `Hourly limit reached (${RATE_LIMIT_PER_HOUR}/hour). Try again shortly.`, remaining };
-        return { allowed: true, remaining };
-    } catch (err) {
-        // Also fail closed on a Redis error — otherwise an attacker who can
-        // make Upstash flap gets the unlimited in-memory path for free.
-        console.error('[rate-limit] Upstash unavailable — refusing request:', err?.message);
-        return { allowed: false, reason: 'AI analysis is temporarily unavailable.', remaining: 0, unavailable: true };
-    }
-}
 
 // ── In-memory cache for shared data (stats, players, projections) ──
 const dataCache = new Map();
@@ -682,14 +636,7 @@ export default async function handler(req, res) {
     // quota bucket from the same IP. Keying on IP only also stops us storing an
     // IP-to-Sleeper-account mapping in Upstash.
     //
-    // Prefer x-vercel-forwarded-for (set by the platform); the LEFTMOST entry of
-    // x-forwarded-for is client-controlled, so fall back to the RIGHTMOST hop.
-    const xff = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean);
-    const ip = String(req.headers['x-vercel-forwarded-for'] || '').trim()
-        || xff[xff.length - 1]
-        || req.socket?.remoteAddress
-        || 'unknown';
-    const rateCheck = await checkRateLimit(ip);
+    const rateCheck = await checkRateLimit(clientIp(req));
     if (!rateCheck.allowed) {
         return res.status(rateCheck.unavailable ? 503 : 429)
             .json({ error: rateCheck.reason, remaining: rateCheck.remaining });
