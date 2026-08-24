@@ -11,6 +11,17 @@ const SLEEPER_BASE = 'https://api.sleeper.app/v1';
 const PRIMARY_MODEL = 'google/gemini-3-flash';
 const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
+// Gemini 3 Flash is a reasoning model, and maxOutputTokens is a budget SHARED
+// between invisible reasoning and visible text — at a 20-token budget it spent
+// all 17 on reasoning and emitted nothing. Measured on a dynasty trade prompt,
+// the default burned 911 reasoning tokens against 285 of text (~76% invisible),
+// and reasoning bills at the output rate. Disabling it produced equal-quality
+// answers, because the prompt hands the model computed projections, PPG and
+// grades — it is judging and summarizing, not deriving.
+// Raise this if a card's answers ever get shallow. Ignored by the Claude
+// fallback, which takes a different reasoning option shape.
+const THINKING_BUDGET = 0;
+
 // ── In-memory cache for shared data (stats, players, projections) ──
 const dataCache = new Map();
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -776,6 +787,9 @@ export default async function handler(req, res) {
                 prompt,
                 maxOutputTokens: 4096,
                 abortSignal: AbortSignal.timeout(55_000),
+                providerOptions: {
+                    google: { thinkingConfig: { thinkingBudget: THINKING_BUDGET } },
+                },
                 onError: (e) => { captured = e?.error ?? e; },
             });
 
