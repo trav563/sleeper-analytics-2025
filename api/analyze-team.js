@@ -659,7 +659,9 @@ export default async function handler(req, res) {
 
     // Gateway-managed; either AI_GATEWAY_API_KEY (preferred) or auto-OIDC on Vercel.
     if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
-        return res.status(500).json({ error: 'AI service not configured (set AI_GATEWAY_API_KEY in Vercel)' });
+        // Don't name the env var to the public — log it, return generic.
+        console.error('[ai] AI_GATEWAY_API_KEY / VERCEL_OIDC_TOKEN not configured');
+        return res.status(503).json({ error: 'AI analysis is temporarily unavailable.' });
     }
 
     const { leagueId, userId, week: rawWeek, analysisType = 'roster', constraint = null } = req.body || {};
@@ -873,16 +875,17 @@ export default async function handler(req, res) {
         // Translate common Gemini SDK errors into user-actionable messages.
         // Default to a generic message — `raw` can carry upstream URLs
         // (fetchJSON throws "API error: {status} from {url}") and provider
-        // internals. Only known-safe, user-actionable translations are shown.
+        // internals, name env vars, or name a provider (the fallback may be
+        // what failed). Only known-safe, user-actionable translations are shown.
         let userMessage = 'Analysis failed. Please try again.';
         if (/quota|rate.?limit|429|RESOURCE_EXHAUSTED/i.test(raw)) {
-            userMessage = 'AI service is busy (Gemini rate limit hit). Wait ~60 seconds and try again.';
+            userMessage = 'The AI service is busy right now. Wait ~60 seconds and try again.';
         } else if (/SAFETY|blocked|safety_settings/i.test(raw)) {
-            userMessage = 'Gemini blocked this analysis (safety filter). Try a different card or constraint.';
+            userMessage = 'The AI provider blocked this analysis (safety filter). Try a different card or constraint.';
         } else if (/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED/i.test(raw)) {
-            userMessage = 'AI service unauthenticated. Verify AI_GATEWAY_API_KEY in Vercel.';
+            userMessage = 'AI analysis is temporarily unavailable.';
         } else if (/timeout|ETIMEDOUT|ECONNRESET|503|UNAVAILABLE/i.test(raw)) {
-            userMessage = 'Gemini service unavailable right now. Try again in a moment.';
+            userMessage = 'The AI service is unavailable right now. Try again in a moment.';
         }
         if (res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: userMessage })}\n\n`);
