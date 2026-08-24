@@ -9,8 +9,21 @@ import { useDefenseRanks } from '../../analytics/hooks/useDefenseRanks';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
 import { useGameWeather } from '../hooks/useGameWeather';
 import { useWeekProjections } from '../../league/hooks/useWeekProjections';
+import { usePlayerNews } from '../hooks/usePlayerNews';
 
 const STAT_TONE = { signal: 'text-signal', good: 'text-good', text: 'text-text' };
+
+/** "3h ago" style stamp for feed items. */
+const timeAgo = (dateString) => {
+    const then = new Date(dateString).getTime();
+    if (!Number.isFinite(then)) return '';
+    const mins = Math.floor((Date.now() - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+};
 
 const PlayerDetail = ({ player, players, league, rosters, users, state, currentWeek, isHistoricalSeason }) => {
     const navigate = useNavigate();
@@ -25,6 +38,16 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
     // starter in the league, not just the player being viewed.
     const defenseRanks = useDefenseRanks(seasonMatchups, players, league?.season);
     const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
+
+    // usePlayerNews filters a roster's players against the feed, so a one-player
+    // "roster" gives us this player's news and reuses the injury-alert and
+    // trending-down logic the dashboard already has.
+    const playerId = player?.player_id;
+    const soloRoster = useMemo(
+        () => (playerId ? { players: [playerId] } : null),
+        [playerId],
+    );
+    const { personalNews, isLoading: newsLoading } = usePlayerNews(soloRoster, players);
 
     const [tab, setTab] = useState('gamelog');
 
@@ -427,11 +450,52 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
 
             {tab === 'news' && (
                 <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card">
-                    <header className="font-display text-md font-semibold text-text mb-2">News & Notes</header>
-                    <p className="font-mono text-2xs uppercase tracking-wider text-text-mute italic">
-                        Per-player news feed lives behind <code className="text-text-dim">/api/news</code> in production.
-                        On the live deploy, ESPN/Sleeper alerts mentioning this player surface here.
-                    </p>
+                    <header className="font-display text-md font-semibold text-text mb-3">News &amp; Notes</header>
+
+                    {newsLoading ? (
+                        <div className="space-y-2">
+                            <div className="h-14 w-full bg-bg-2 rounded-md animate-pulse" />
+                            <div className="h-14 w-full bg-bg-2 rounded-md animate-pulse" />
+                        </div>
+                    ) : personalNews.length === 0 ? (
+                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                            No recent headlines mentioning {fullName}.
+                        </p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {personalNews.map((item) => {
+                                const isAlert = item.type === 'alert';
+                                // Third-party feed text lands in an href; allow http(s) only.
+                                const href = /^https?:\/\//i.test(item.link || '') ? item.link : null;
+                                const Row = href ? 'a' : 'div';
+                                return (
+                                    <li key={item.player_id || item.link || item.title}>
+                                        <Row
+                                            {...(href ? { href, target: '_blank', rel: 'noreferrer' } : {})}
+                                            className={`block border rounded-md p-3 transition-colors duration-fast ${
+                                                isAlert
+                                                    ? 'bg-bad/10 border-bad/30'
+                                                    : `bg-bg-2 border-line ${href ? 'hover:bg-bg-3' : ''}`
+                                            }`}
+                                        >
+                                            <p className={`text-sm font-semibold ${isAlert ? 'text-bad' : 'text-text'}`}>
+                                                {isAlert && <Activity className="w-3 h-3 inline-block mr-1.5 -mt-0.5" aria-hidden="true" />}
+                                                {item.title}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1.5 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                                <span>{isAlert ? 'Status update' : timeAgo(item.pubDate)}</span>
+                                                {item.trending === 'down' && (
+                                                    <span className="text-bad bg-bad/10 px-1.5 py-0.5 rounded-sm border border-bad/30">
+                                                        Selling off · <span className="tnum">{item.count}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </Row>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
                 </section>
             )}
 
