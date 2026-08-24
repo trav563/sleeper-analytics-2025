@@ -71,7 +71,10 @@ const Navbar = () => {
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Wider than the page content on large screens: max-w-7xl caps at
+                1280px regardless of viewport, so on a 1600px+ display the tabs
+                were being squeezed out while hundreds of pixels sat unused. */}
+            <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center gap-3 h-16">
                     <div className="flex items-center gap-5 lg:gap-7 min-w-0">
                         <Link
