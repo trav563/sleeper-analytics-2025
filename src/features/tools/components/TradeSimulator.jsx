@@ -4,6 +4,8 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { ArrowLeftRight, Check, RotateCcw } from 'lucide-react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { fetchSleeper } from '../../../utils/sleeper';
+import { fetchMarketValues } from '../../../utils/fantasyCalc';
+import { calculateFallbackValue } from '../utils/playerValue';
 import { displayTeamName } from '../../../utils/nflData';
 import { Button } from '../../../components/ui/Button';
 import { theme } from '../../../lib/theme';
@@ -20,6 +22,18 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
         staleTime: 60 * 60 * 1000,
         enabled: !!league,
     });
+
+    const isSuperflex = league?.roster_positions?.includes('SUPER_FLEX');
+    // league.settings.type: 0 redraft, 1 keeper, 2 dynasty
+    const isDynasty = league?.settings?.type === 1 || league?.settings?.type === 2;
+
+    const { data: marketValues } = useQuery({
+        queryKey: ['fantasyCalc', league?.league_id],
+        queryFn: () => fetchMarketValues(isSuperflex, rosters?.length || 12, 0.5),
+        staleTime: 60 * 60 * 1000,
+        enabled: !!league && isDynasty,
+    });
+    const useDynastyValues = isDynasty && !!marketValues && Object.keys(marketValues).length > 0;
 
     const pprField = useMemo(() => {
         const rec = league?.scoring_settings?.rec ?? 0;
@@ -64,14 +78,19 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
                 const pts = stats?.[pprField] ?? stats?.pts_ppr ?? 0;
                 const ppg = gp > 0 ? parseFloat((pts / gp).toFixed(1)) : 0;
 
-                return { pid, name: `${p.first_name} ${p.last_name}`, pos: p.position, team: p.team || 'FA', age: p.age || '?', ppg, gp };
+                // Dynasty value already prices age in; the formula fallback
+                // applies an explicit age curve when there's no market value.
+                const dynValue = marketValues?.[pid]
+                    ?? calculateFallbackValue(ppg, p.age, p.position, isSuperflex, p.search_rank);
+
+                return { pid, name: `${p.first_name} ${p.last_name}`, pos: p.position, team: p.team || 'FA', age: p.age || null, ppg, gp, dynValue };
             })
             .filter(Boolean)
             .sort((a, b) => b.ppg - a.ppg);
     };
 
-    const team1Players = useMemo(() => getPlayerList(roster1), [roster1, players, seasonStats, pprField]);
-    const team2Players = useMemo(() => getPlayerList(roster2), [roster2, players, seasonStats, pprField]);
+    const team1Players = useMemo(() => getPlayerList(roster1), [roster1, players, seasonStats, pprField, marketValues, isSuperflex]);
+    const team2Players = useMemo(() => getPlayerList(roster2), [roster2, players, seasonStats, pprField, marketValues, isSuperflex]);
 
     const togglePlayer = (side, pid) => {
         const [selected, setSelected] = side === 1 ? [team1Selected, setTeam1Selected] : [team2Selected, setTeam2Selected];
@@ -96,9 +115,21 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
         return sum + (p?.ppg || 0);
     }, 0), [team2Selected, team2Players]);
 
-    const ppgDiff = Math.abs(team1PPG - team2PPG);
-    const maxPPG = Math.max(team1PPG, team2PPG) || 1;
-    const fairnessRatio = ppgDiff / maxPPG;
+    // In a dynasty league, judge the trade on dynasty value (age-aware) and
+    // keep PPG on screen for reference. Redraft still judges on PPG.
+    const team1Value = useMemo(() => [...team1Selected].reduce((sum, pid) => {
+        const p = team1Players.find(pl => pl.pid === pid);
+        return sum + (p?.dynValue || 0);
+    }, 0), [team1Selected, team1Players]);
+
+    const team2Value = useMemo(() => [...team2Selected].reduce((sum, pid) => {
+        const p = team2Players.find(pl => pl.pid === pid);
+        return sum + (p?.dynValue || 0);
+    }, 0), [team2Selected, team2Players]);
+
+    const side1 = useDynastyValues ? team1Value : team1PPG;
+    const side2 = useDynastyValues ? team2Value : team2PPG;
+    const fairnessRatio = Math.abs(side1 - side2) / (Math.max(side1, side2) || 1);
     const fairnessColor = fairnessRatio <= 0.15 ? 'text-good' : fairnessRatio <= 0.3 ? 'text-warn' : 'text-bad';
     const fairnessLabel = fairnessRatio <= 0.15 ? 'Fair Trade' : fairnessRatio <= 0.3 ? 'Slight Edge' : 'Lopsided';
 
@@ -155,7 +186,9 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
                 </div>
                 <p className="text-xs text-text-dim mt-1">
                     Select players from each team to simulate a trade
-                    {hasStats && <span className="text-text-mute"> — values based on <span className="tnum">{prevSeason}</span> season PPG</span>}
+                    {useDynastyValues
+                        ? <span className="text-text-mute"> — judged on dynasty market value (age-adjusted); <span className="tnum">{prevSeason}</span> PPG shown for reference</span>
+                        : hasStats && <span className="text-text-mute"> — values based on <span className="tnum">{prevSeason}</span> season PPG</span>}
                 </p>
             </header>
 
@@ -213,7 +246,9 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
                                             <span className="truncate max-w-[100px]">{p.name}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                            {p.ppg > 0 && <span className="font-mono text-2xs text-text-mute tnum">{p.ppg} PPG</span>}
+                                            <span className="font-mono text-2xs text-text-mute tnum">
+                                                {p.age ? `${p.age}yo` : ''}{p.age && p.ppg > 0 ? ' · ' : ''}{p.ppg > 0 ? `${p.ppg} PPG` : ''}
+                                            </span>
                                             {isSelected && <Check className="w-3 h-3" />}
                                         </div>
                                     </button>
@@ -227,19 +262,35 @@ const TradeSimulator = ({ league, rosters, users, players }) => {
                     <div className="space-y-4 pt-3 border-t border-line">
                         <div className="bg-bg-2 rounded-md p-4 border border-line">
                             <div className="flex justify-between items-center mb-2">
-                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Combined PPG</span>
+                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                    {useDynastyValues ? 'Dynasty value · combined PPG' : 'Combined PPG'}
+                                </span>
                                 {team1Selected.size > 0 && team2Selected.size > 0 && (
                                     <span className={`font-mono text-2xs uppercase tracking-wider font-bold ${fairnessColor}`}>{fairnessLabel}</span>
                                 )}
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="text-right flex-1">
-                                    <div className="tnum font-display text-lg font-bold text-signal">{team1PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span></div>
+                                    {useDynastyValues && (
+                                        <div className="tnum font-display text-lg font-bold text-signal">{team1Value.toLocaleString()}</div>
+                                    )}
+                                    <div className={useDynastyValues
+                                        ? 'tnum font-mono text-2xs text-text-dim'
+                                        : 'tnum font-display text-lg font-bold text-signal'}>
+                                        {team1PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span>
+                                    </div>
                                     <div className="font-mono text-2xs text-text-mute uppercase tracking-wider">{displayTeamName(owner1)} sends</div>
                                 </div>
                                 <div className="w-px h-8 bg-line-strong" />
                                 <div className="flex-1">
-                                    <div className="tnum font-display text-lg font-bold text-signal-2">{team2PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span></div>
+                                    {useDynastyValues && (
+                                        <div className="tnum font-display text-lg font-bold text-signal-2">{team2Value.toLocaleString()}</div>
+                                    )}
+                                    <div className={useDynastyValues
+                                        ? 'tnum font-mono text-2xs text-text-dim'
+                                        : 'tnum font-display text-lg font-bold text-signal-2'}>
+                                        {team2PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span>
+                                    </div>
                                     <div className="font-mono text-2xs text-text-mute uppercase tracking-wider">{displayTeamName(owner2)} sends</div>
                                 </div>
                             </div>

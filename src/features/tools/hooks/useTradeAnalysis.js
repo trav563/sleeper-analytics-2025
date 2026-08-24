@@ -1,46 +1,7 @@
 import { useMemo } from 'react';
 import { activeRosterIds } from '../../../utils/leagueMath';
 import { buildPickLedger } from '../utils/pickLedger';
-
-// --- VALUATION HELPERS ---
-
-// Player Value Calculation (Fallback only)
-const calculateFallbackValue = (ppg, age, position, isSuperflex = true, searchRank = 9999) => {
-    // If no PPG data, estimate value from search_rank (lower rank = higher value)
-    if (!ppg || ppg <= 0) {
-        if (searchRank >= 9999 || !searchRank) return 0;
-        // Exponential decay: top players get high value, drops off fast
-        // Rank 1 → ~9000, Rank 25 → ~5500, Rank 75 → ~3000, Rank 150 → ~1500, Rank 300 → ~600
-        let value = 9000 * Math.exp(-0.018 * searchRank);
-
-        const safeAge = age || 25;
-        if (safeAge < 24) value *= 1.3;
-        else if (safeAge > 28) value *= 0.8;
-
-        if (isSuperflex && position === 'QB') value *= 1.3;
-
-        return Math.round(Math.max(0, value));
-    }
-
-    // 1. Base Score
-    let value = ppg * 150;
-
-    // 2. Age Multipliers (Dynasty Context)
-    const safeAge = age || 25;
-
-    if (safeAge < 24) value *= 1.5;        // Youth Premium
-    else if (safeAge <= 27) value *= 1.2;  // Prime
-    else if (safeAge <= 30) value *= 0.9;  // Post-Apex
-    else value *= 0.6;                     // Cliff
-
-    // 3. Superflex Bonus
-    if (isSuperflex && position === 'QB') {
-        value += 1500;
-    }
-
-    return Math.round(value);
-};
-
+import { calculateFallbackValue } from '../utils/playerValue';
 
 export function useTradeAnalysis(league, rosters, players, seasonMatchups, currentWeek, tradedPicks, marketValues = {}, isTradeWindowOpen = true) {
     // 0. Detect League Settings

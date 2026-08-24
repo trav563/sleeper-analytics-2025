@@ -105,7 +105,10 @@ const RosterClogger = ({ rosters, players, league, drafts }) => {
             if (age < 24 || exp < 2) return;
             if (rank < 300) return;
 
-            const isSuperflex = league.settings?.type === 2 || league.roster_positions?.includes('SUPER_FLEX');
+            // settings.type === 2 means DYNASTY, not superflex — those are
+            // unrelated axes, and conflating them protected every QB in every
+            // dynasty league from ever being a cut candidate.
+            const isSuperflex = league.roster_positions?.includes('SUPER_FLEX');
             if (player.position === 'QB' && isSuperflex) return;
 
             let reason = null;
