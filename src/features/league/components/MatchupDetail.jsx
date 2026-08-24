@@ -396,7 +396,16 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     });
     const myProjFinal = myScore + myProjRem;
     const oppProjFinal = oppScore + oppProjRem;
-    const margin = (myScore - oppScore).toFixed(1);
+    // Before anyone has scored, a live margin is always 0.0 — which reads as
+    // broken next to a projection-based win probability. Show the PROJECTED
+    // margin until real points exist, and label it as such.
+    const hasScored = myScore > 0 || oppScore > 0;
+    const marginValue = hasScored ? myScore - oppScore : myProjFinal - oppProjFinal;
+    const margin = marginValue.toFixed(1);
+    const marginLabel = hasScored ? 'Margin' : 'Proj margin';
+    // Tone from the margin's own sign, not from `winning` — at 0-0 `winning`
+    // is false, which rendered a "+0.0" in red.
+    const marginTone = marginValue > 0 ? 'good' : marginValue < 0 ? 'bad' : 'mute';
 
     const winning = myScore > oppScore;
     const remainingMine = (myMatchup.starters || []).filter((pid, idx) => {
@@ -564,8 +573,10 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             </div>
                         </div>
                         <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                            Margin <span className={`tnum font-bold ${winning ? 'text-good' : 'text-bad'}`}>
-                                {Number(margin) >= 0 ? '+' : ''}{margin}
+                            {marginLabel} <span className={`tnum font-bold ${
+                                marginTone === 'good' ? 'text-good' : marginTone === 'bad' ? 'text-bad' : 'text-text-mute'
+                            }`}>
+                                {marginValue > 0 ? '+' : ''}{margin}
                             </span>
                         </div>
                     </div>
@@ -668,7 +679,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             <div className="grid grid-cols-3 gap-3 text-center">
                                 <Stat label="Current" value={`${myScore.toFixed(1)} – ${oppScore.toFixed(1)}`} />
                                 <Stat label="Projected" value={`${myProjFinal.toFixed(1)} – ${oppProjFinal.toFixed(1)}`} />
-                                <Stat label="Margin" value={(Number(margin) >= 0 ? '+' : '') + margin} tone={Number(margin) >= 0 ? 'good' : 'bad'} />
+                                <Stat label={marginLabel} value={(marginValue > 0 ? '+' : '') + margin} tone={marginTone} />
                             </div>
                         </SectionShell>
 
