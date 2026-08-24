@@ -761,41 +761,58 @@ export default async function handler(req, res) {
             playerNews, weekContext, lockState
         }, analysisType, constraint);
 
-        // Stream via Vercel AI Gateway. streamText() returns immediately;
-        // provider errors fire during textStream iteration. We try the
-        // primary first; if iteration throws BEFORE any chunk has been
-        // written to the response (so headers haven't been flushed), we
-        // restart with the fallback model. If the throw happens mid-stream,
-        // we surface the error via SSE.
-        const tryStream = async (modelId) => {
+        // Stream via Vercel AI Gateway.
+        //
+        // The AI SDK does NOT throw provider errors out of textStream — it hands
+        // them to onError and ends the stream. Iterating and trusting a clean
+        // finish therefore reports a hard failure as a successful EMPTY analysis:
+        // HTTP 200, `{done:true}`, no text, blank card, no explanation. So we
+        // capture via onError AND treat a zero-length generation as a failure,
+        // because some models return neither text nor an error.
+        const tryModel = async (modelId) => {
+            let captured = null;
             const result = streamText({
                 model: modelId,
                 prompt,
                 maxOutputTokens: 4096,
                 abortSignal: AbortSignal.timeout(55_000),
+                onError: (e) => { captured = e?.error ?? e; },
             });
-            // Buffer the first chunk so we can detect setup-time errors before
-            // committing to streaming the response back to the client.
+
+            // Buffer the first chunk so a setup-time failure is detected before
+            // any bytes are committed to the response.
             const iterator = result.textStream[Symbol.asyncIterator]();
-            const first = await iterator.next();
-            return { iterator, first };
+            let first;
+            try {
+                first = await iterator.next();
+            } catch (err) {
+                captured = captured || err;
+                first = { done: true };
+            }
+            if (captured) throw captured;
+            // Nothing at all came back, and nothing complained. Treat as failure
+            // so the fallback gets a turn rather than shipping an empty card.
+            if (first.done || !first.value) {
+                throw new Error(`${modelId} produced no output`);
+            }
+            return { iterator, first, getError: () => captured };
         };
+
+        // Retry on transient/capacity/permission conditions — including the
+        // gateway's "Free tier users do not have access to this model", which is
+        // per-model and may differ between primary and fallback.
+        const RETRYABLE = /429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE|404|not.?found|no output|free tier|access to this model|credit/i;
 
         let stream;
         let usedFallback = false;
         try {
-            stream = await tryStream(PRIMARY_MODEL);
+            stream = await tryModel(PRIMARY_MODEL);
         } catch (err) {
-            const msg = err?.message || '';
-            // Includes 404/NOT_FOUND so a retired/renamed primary model falls
-            // back to Claude instead of surfacing a hard 500.
-            if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit|SAFETY|blocked|503|UNAVAILABLE|404|not.?found/i.test(msg)) {
-                console.warn(`[ai] primary ${PRIMARY_MODEL} failed (${msg.slice(0, 200)}); falling back to ${FALLBACK_MODEL}`);
-                stream = await tryStream(FALLBACK_MODEL);
-                usedFallback = true;
-            } else {
-                throw err;
-            }
+            const msg = err?.message || String(err);
+            if (!RETRYABLE.test(msg)) throw err;
+            console.warn(`[ai] primary ${PRIMARY_MODEL} failed (${msg.slice(0, 200)}); falling back to ${FALLBACK_MODEL}`);
+            stream = await tryModel(FALLBACK_MODEL);
+            usedFallback = true;
         }
 
         res.setHeader('Content-Type', 'text/event-stream');
@@ -804,13 +821,18 @@ export default async function handler(req, res) {
         res.setHeader('X-Remaining', String(rateCheck.remaining));
 
         // Flush the buffered first chunk, then drain the rest.
-        if (!stream.first.done && stream.first.value) {
-            res.write(`data: ${JSON.stringify({ text: stream.first.value })}\n\n`);
-        }
+        res.write(`data: ${JSON.stringify({ text: stream.first.value })}\n\n`);
         while (true) {
             const { done, value } = await stream.iterator.next();
             if (done) break;
             if (value) res.write(`data: ${JSON.stringify({ text: value })}\n\n`);
+        }
+
+        // An error can still land mid-stream, after headers are committed.
+        const late = stream.getError();
+        if (late) {
+            console.error(`[ai] ${usedFallback ? FALLBACK_MODEL : PRIMARY_MODEL} failed mid-stream:`, late?.message || late);
+            res.write(`data: ${JSON.stringify({ error: 'The analysis was cut short. Please try again.' })}\n\n`);
         }
 
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
@@ -825,20 +847,30 @@ export default async function handler(req, res) {
         // internals, name env vars, or name a provider (the fallback may be
         // what failed). Only known-safe, user-actionable translations are shown.
         let userMessage = 'Analysis failed. Please try again.';
-        if (/quota|rate.?limit|429|RESOURCE_EXHAUSTED/i.test(raw)) {
+        let status = 500;
+        if (/free tier|access to this model|insufficient.*credit|top-?up/i.test(raw)) {
+            // Account-level: no amount of retrying fixes it, and it is not the
+            // visitor's problem. Loud in the log so it is obvious to us.
+            console.error('[ai] MODEL ACCESS DENIED — AI Gateway credit required. Both models rejected.');
+            userMessage = 'AI analysis is temporarily unavailable.';
+            status = 503;
+        } else if (/quota|rate.?limit|429|RESOURCE_EXHAUSTED/i.test(raw)) {
             userMessage = 'The AI service is busy right now. Wait ~60 seconds and try again.';
+            status = 429;
         } else if (/SAFETY|blocked|safety_settings/i.test(raw)) {
             userMessage = 'The AI provider blocked this analysis (safety filter). Try a different card or constraint.';
         } else if (/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED/i.test(raw)) {
             userMessage = 'AI analysis is temporarily unavailable.';
-        } else if (/timeout|ETIMEDOUT|ECONNRESET|503|UNAVAILABLE/i.test(raw)) {
+            status = 503;
+        } else if (/timeout|ETIMEDOUT|ECONNRESET|503|UNAVAILABLE|no output/i.test(raw)) {
             userMessage = 'The AI service is unavailable right now. Try again in a moment.';
+            status = 503;
         }
         if (res.headersSent) {
             res.write(`data: ${JSON.stringify({ error: userMessage })}\n\n`);
             res.end();
         } else {
-            res.status(500).json({
+            res.status(status).json({
                 error: userMessage,
                 code: error?.status || error?.code || null
             });
