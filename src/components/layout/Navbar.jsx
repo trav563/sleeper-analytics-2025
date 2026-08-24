@@ -72,20 +72,26 @@ const Navbar = () => {
     return (
         <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
+                <div className="flex justify-between items-center gap-3 h-16">
                     <div className="flex items-center gap-5 lg:gap-7 min-w-0">
                         <Link
                             to={leagueId ? `/league/${leagueId}` : "/"}
                             className="flex items-center gap-2 group shrink-0"
                         >
                             <Trophy className="h-6 w-6 text-signal group-hover:text-signal/80 transition-colors duration-fast flex-shrink-0" />
-                            <span className="font-display text-xl font-bold tracking-snug whitespace-nowrap text-text">
+                            {/* Icon-only below xl: the wordmark costs ~145px, which is
+                                the difference between all eight tabs fitting and the
+                                last two spilling into the scroll region. */}
+                            <span className="hidden xl:inline font-display text-xl font-bold tracking-snug whitespace-nowrap text-text">
                                 League Analysis
                             </span>
+                            <span className="sr-only">League Analysis</span>
                         </Link>
 
                         {leagueId && (
-                            <div className="hidden md:flex items-center gap-0.5">
+                            // min-w-0 + scroll: without them the nowrap tabs refuse to
+                            // shrink and the opaque selectors paint over the last tabs.
+                            <div className="hidden md:flex items-center gap-0.5 min-w-0 overflow-x-auto no-scrollbar">
                                 {navItems.map((item) => {
                                     const active = isActive(item.exact ? '' : item.href.split('/').pop());
                                     return (
@@ -94,7 +100,7 @@ const Navbar = () => {
                                             to={item.href}
                                             className={cn(
                                                 "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold ring-offset-bg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
-                                                "h-9 px-2.5",
+                                                "h-9 px-2 xl:px-2.5",
                                                 active
                                                     ? "bg-bg-3 text-signal"
                                                     : "text-text-dim hover:bg-bg-2 hover:text-text"
@@ -109,9 +115,9 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+                    <div className="flex items-center gap-2 lg:gap-3 min-w-0">
                         {user && (
-                            <div className="hidden md:flex items-center gap-2 lg:gap-3">
+                            <div className="hidden md:flex items-center gap-2 lg:gap-3 min-w-0">
                                 {/* League Switcher — hidden when only one league */}
                                 {leagues.length > 1 && (
                                     <select
@@ -119,7 +125,7 @@ const Navbar = () => {
                                         onChange={handleLeagueSwitch}
                                         title="Switch league"
                                         aria-label="Switch league"
-                                        className="bg-bg-2 text-text text-xs rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast max-w-[140px] truncate"
+                                        className="bg-bg-2 text-text text-xs rounded-md border border-line focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast max-w-[120px] lg:max-w-[140px] truncate shrink"
                                     >
                                         <option value="" disabled>League</option>
                                         {leagues.map((league) => (
@@ -138,7 +144,7 @@ const Navbar = () => {
                                         title="Switch season"
                                         aria-label="Switch season"
                                         className={cn(
-                                            "bg-bg-2 text-xs rounded-md border focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast",
+                                            "bg-bg-2 text-xs rounded-md border focus:ring-1 focus:ring-signal focus:border-signal px-2 py-1.5 transition-colors duration-fast max-w-[120px] truncate shrink",
                                             isHistoricalView ? "border-warn/40 text-warn" : "border-line text-text"
                                         )}
                                     >
@@ -150,14 +156,17 @@ const Navbar = () => {
                                     </select>
                                 )}
 
+                                {/* Revealed at 2xl, not xl: at xl the container stops
+                                    growing (max-w-7xl) while these add ~250px, which is
+                                    what pushed the nav tabs under the dropdowns. */}
                                 {isHistoricalView && (
-                                    <span className="hidden xl:inline-flex items-center font-mono text-2xs uppercase tracking-wider font-bold text-warn bg-warn/10 border border-warn/30 rounded-sm px-2 py-0.5">
+                                    <span className="hidden 2xl:inline-flex items-center font-mono text-2xs uppercase tracking-wider font-bold text-warn bg-warn/10 border border-warn/30 rounded-sm px-2 py-0.5 shrink-0">
                                         Historical
                                     </span>
                                 )}
 
-                                <div className="flex items-center gap-2 pl-1">
-                                    <div className="hidden xl:block text-right leading-tight">
+                                <div className="flex items-center gap-2 pl-1 shrink-0">
+                                    <div className="hidden 2xl:block text-right leading-tight">
                                         <p className="text-sm font-semibold text-text">{user.display_name}</p>
                                         <p className="font-mono text-2xs text-text-mute mt-0.5">@{user.username}</p>
                                     </div>

@@ -12,13 +12,14 @@ import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups
 import { fetchLeagueMatchups } from '../utils/sleeper';
 
 const DashboardPage = () => {
-    const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, loading, error, user, league } = useOutletContext();
+    const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, seasonStarted, loading, error, user, league } = useOutletContext();
     const [selectedUserId, setSelectedUserId] = useState('');
 
-    const currentNFLWeek = currentWeek || state?.display_week || state?.week || 1;
+    const currentNFLWeek = currentWeek || 1;
     const isHistoricalSeason = league?.season && state?.season &&
         Number(league.season) < Number(state.season);
-    const anchorLabel = isHistoricalSeason ? '(Final)' : '(Current)';
+    // Before kickoff week 1 is upcoming, not "current" — don't imply games exist.
+    const anchorLabel = isHistoricalSeason ? '(Final)' : seasonStarted ? '(Current)' : '(Upcoming)';
     const [selectedWeek, setSelectedWeek] = useState(currentNFLWeek);
     const [viewMatchups, setViewMatchups] = useState([]);
     const [loadingMatchups, setLoadingMatchups] = useState(false);

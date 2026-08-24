@@ -3,7 +3,7 @@ import WeeklyRecap from '../features/recap/components/WeeklyRecap';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
 
 const RecapPage = () => {
-    const { league, rosters, users, players, currentWeek } = useOutletContext();
+    const { league, rosters, users, players, currentWeek, seasonStarted } = useOutletContext();
     const { seasonMatchups, loading: seasonMatchupsLoading } = useSeasonMatchups(league?.league_id, currentWeek);
 
     return (
@@ -14,6 +14,7 @@ const RecapPage = () => {
                 users={users}
                 players={players}
                 currentWeek={currentWeek}
+                seasonStarted={seasonStarted}
                 seasonMatchups={seasonMatchups}
                 seasonMatchupsLoading={seasonMatchupsLoading}
             />

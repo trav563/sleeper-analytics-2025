@@ -2,18 +2,11 @@ import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
 import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
 
-export function useWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
-    const recapWeek = currentWeek > 1 ? currentWeek - 1 : 1; // Default to week 1 if current is 1, though usually we want prev week
-    // Ideally if currentWeek is 1 and season hasn't started, we show nothing. 
-    // If season is over, we show last week.
-    // For now, let's just stick to currentWeek - 1, and if < 1, return null. But for testing, let's allow week 1 if needed or handle logic.
-    // Actually, safer to just target 'week' passed in if we want flexibility, but requirement said 'previous completed week'.
-    // Let's assume we pass the *target* week to this hook, or we handle the -1 inside.
-
-    // Let's rely on the caller to pass the specific week data (matchups), so we just process what we get.
-    // But we need to know WHICH week it is for context.
-
-    const analysis = useMemo(() => {
+/**
+ * Pure recap computation, extracted from the hook so it can be unit tested.
+ * Returns null when there is nothing to roast.
+ */
+export function computeWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
         if (!league || !matchups || matchups.length === 0 || !players || !rosters) return null;
 
         // 1. "The Robbery" (Bad Luck)
@@ -70,7 +63,9 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
 
         // 2. "The Dynasty Flex" (Top Rookie)
         let topRookie = null;
-        let maxRookiePoints = -1;
+        // Seed at 0, not -1: a week where nobody scored must produce no award
+        // rather than crowning a 0.00-point "winner".
+        let maxRookiePoints = 0;
 
         matchups.forEach(m => {
             // Check starters
@@ -119,7 +114,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
 
         // 3. "Manager Malpractice" (Lineup Efficiency)
         let worstManager = null;
-        let maxDiff = -1;
+        let maxDiff = 0;
 
         matchups.forEach(m => {
             // Calculate Optimal Score
@@ -374,7 +369,7 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
 
         // 11. "Boom Game" (Highest Single Player Performance - Starters Only)
         let boomGame = null;
-        let highestPlayerScore = -1;
+        let highestPlayerScore = 0;
 
         matchups.forEach(m => {
             const squadPoints = m.players_points || {};
@@ -443,10 +438,13 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         }
 
         return { robbery, topRookie, worstManager, bagCarrier, coinFlipFail, cardioKing, tankCommander, luckyCharm, closeCall, ghost, boomGame, overachiever, underachiever };
+}
 
-    }, [league, matchups, rosters, users, players, seasonMatchups, currentWeek]);
-
-    return analysis;
+export function useWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
+    return useMemo(
+        () => computeWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups),
+        [league, matchups, rosters, users, players, seasonMatchups, currentWeek]
+    );
 }
 
 // Helper for Flex logic

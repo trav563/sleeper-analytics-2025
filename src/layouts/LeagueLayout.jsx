@@ -5,22 +5,10 @@ import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
 import { fetchLeagueTransactions } from '../utils/sleeper';
+import { deriveCurrentWeek, isSeasonStarted } from '../utils/seasonState';
 import PageTransition from '../components/PageTransition';
 import RouteErrorBoundary from '../components/RouteErrorBoundary';
 import ErrorState from '../components/ui/ErrorState';
-
-/** For past seasons anchor to end-of-regular-season; for the live season use NFL state. */
-function deriveCurrentWeek(league, state) {
-    const leagueSeason = league?.season ? Number(league.season) : null;
-    const nflSeason = state?.season ? Number(state.season) : null;
-    const isHistoricalSeason = leagueSeason && nflSeason && leagueSeason < nflSeason;
-    if (isHistoricalSeason) {
-        return league?.settings?.playoff_week_start
-            ? league.settings.playoff_week_start - 1
-            : 17;
-    }
-    return state?.display_week ?? state?.week ?? state?.leg ?? 1;
-}
 
 const LeagueLayout = () => {
     const { leagueId } = useParams();
@@ -43,12 +31,15 @@ const LeagueLayout = () => {
         }
     }, [leagueId, user, loadHistory, findChainContaining, selectActiveChain]);
 
+    const currentWeek = deriveCurrentWeek(league, state);
+    const seasonStarted = isSeasonStarted(league, state);
+
     useEffect(() => {
         const controller = new AbortController();
         const getTransactions = async () => {
-            if (leagueId && state?.display_week) {
+            if (leagueId && currentWeek) {
                 try {
-                    const data = await fetchLeagueTransactions(leagueId, state.display_week, { signal: controller.signal });
+                    const data = await fetchLeagueTransactions(leagueId, currentWeek, { signal: controller.signal });
                     setTransactions(data);
                 } catch (err) {
                     if (!controller.signal.aborted) console.error("Failed to fetch transactions", err);
@@ -57,7 +48,7 @@ const LeagueLayout = () => {
         };
         getTransactions();
         return () => controller.abort();
-    }, [leagueId, state?.display_week]);
+    }, [leagueId, currentWeek]);
 
     if (loading) {
         return (
@@ -106,7 +97,8 @@ const LeagueLayout = () => {
                         players,
                         user,
                         state,
-                        currentWeek: deriveCurrentWeek(league, state),
+                        currentWeek,
+                        seasonStarted,
                         matchups,
                         transactions,
                         tradedPicks,

@@ -47,7 +47,7 @@ const PlayerHeadshot = ({ playerId, lastName, ringTone = 'border-line' }) => (
     </div>
 );
 
-const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatchups, seasonMatchupsLoading }) => {
+const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStarted = true, seasonMatchups, seasonMatchupsLoading }) => {
     const [tab, setTab] = useState('weekly');
     const [selectedWeek, setSelectedWeek] = useState(null);
     const [matchups, setMatchups] = useState([]);
@@ -92,12 +92,13 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
     }, [stats, league?.league_id, selectedWeek]);
 
     const availableWeeks = useMemo(() => {
+        if (!seasonStarted) return [];
         if (!currentWeek || currentWeek < 1) return [];
         const weeks = [];
         const max = currentWeek > 1 ? currentWeek - 1 : 1;
         for (let w = max; w >= 1; w--) weeks.push(w);
         return weeks;
-    }, [currentWeek]);
+    }, [currentWeek, seasonStarted]);
 
     const getCardData = (category) => {
         const s = stats?.[category];
@@ -161,7 +162,9 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonMatch
     };
 
     const leagueUrl = league ? `${window.location.origin}/league/${league.league_id}` : '';
-    const hasWeeklyData = stats && (stats.robbery || stats.worstManager || stats.tankCommander || stats.boomGame);
+    // Nothing to roast before kickoff — preseason weeks return all-zero
+    // matchups, which would otherwise render awards for 0.00-point "games".
+    const hasWeeklyData = seasonStarted && stats && (stats.robbery || stats.worstManager || stats.tankCommander || stats.boomGame);
 
     return (
         <div className="space-y-6">

@@ -42,7 +42,9 @@ const GMPerformance = ({ league, players, users, rosters }) => {
 
     useEffect(() => {
         async function loadDraft() {
-            if (!activeLeagueData?.draft_id) return;
+            // Clear stale picks — otherwise switching to a season with no draft
+            // renders the previous season's picks against the new season's stats.
+            if (!activeLeagueData?.draft_id) { setPicks([]); return; }
             setLoadingDraft(true);
             try {
                 const data = await fetchDraftPicks(activeLeagueData.draft_id);
@@ -143,6 +145,11 @@ const GMPerformance = ({ league, players, users, rosters }) => {
     const getOwner = (rosterId) => users.find(u => u.user_id === rosters.find(r => r.roster_id === rosterId)?.owner_id);
     const selectedOwner = getOwner(selectedRosterId);
 
+    // Nothing to plot: either the class has no draft on record, or its players
+    // haven't scored yet (rookies always start here).
+    const isEmpty = chartData.length === 0;
+    const noDraftYet = !picks || picks.length === 0;
+
     if (loadingDraft || loadingStats || loadingHistory) {
         return (
             <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
@@ -217,16 +224,31 @@ const GMPerformance = ({ league, players, users, rosters }) => {
                     )}
                     <div className="min-w-0">
                         <h3 className="font-display text-lg font-bold text-text truncate">{displayTeamName(selectedOwner)}</h3>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-2xs uppercase tracking-wider mt-1">
-                            <span className="text-good"><span className="tnum">{summary.wins}</span> Steals</span>
-                            <span className="text-text-mute" aria-hidden="true">·</span>
-                            <span className="text-text-dim"><span className="tnum">{summary.solid}</span> Solid</span>
-                            <span className="text-text-mute" aria-hidden="true">·</span>
-                            <span className="text-bad"><span className="tnum">{summary.busts}</span> Busts</span>
-                        </div>
+                        {!isEmpty && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-2xs uppercase tracking-wider mt-1">
+                                <span className="text-good"><span className="tnum">{summary.wins}</span> Steals</span>
+                                <span className="text-text-mute" aria-hidden="true">·</span>
+                                <span className="text-text-dim"><span className="tnum">{summary.solid}</span> Solid</span>
+                                <span className="text-text-mute" aria-hidden="true">·</span>
+                                <span className="text-bad"><span className="tnum">{summary.busts}</span> Busts</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
+                {isEmpty ? (
+                    <div className="text-center p-12 space-y-3">
+                        <TrendingUp className="w-10 h-10 text-text-mute mx-auto" aria-hidden="true" />
+                        <h3 className="font-display text-lg font-semibold text-text">
+                            {noDraftYet ? `No ${selectedSeason} Draft Yet` : `No ROI Yet for the ${selectedSeason} Class`}
+                        </h3>
+                        <p className="text-sm text-text-dim max-w-md mx-auto">
+                            {noDraftYet
+                                ? `This season doesn't have a completed draft on record, so there are no picks to grade.`
+                                : `Draft ROI compares each pick against the points it went on to score. The ${selectedSeason} class hasn't played any games yet — check back once the season is under way.`}
+                        </p>
+                    </div>
+                ) : (
                 <div className="h-96 w-full relative">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
@@ -348,21 +370,24 @@ const GMPerformance = ({ league, players, users, rosters }) => {
                         </div>
                     )}
                 </div>
+                )}
 
-                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4 font-mono text-2xs uppercase tracking-wider text-text-mute">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-text-dim" /> On Roster
+                {!isEmpty && (
+                    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-text-dim" /> On Roster
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full border-2 border-text-dim" /> Traded / Dropped
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span style={{ color: POSITION_FILL.QB }} className="font-bold">QB</span>
+                            <span style={{ color: POSITION_FILL.RB }} className="font-bold">RB</span>
+                            <span style={{ color: POSITION_FILL.WR }} className="font-bold">WR</span>
+                            <span style={{ color: POSITION_FILL.TE }} className="font-bold">TE</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full border-2 border-text-dim" /> Traded / Dropped
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span style={{ color: POSITION_FILL.QB }} className="font-bold">QB</span>
-                        <span style={{ color: POSITION_FILL.RB }} className="font-bold">RB</span>
-                        <span style={{ color: POSITION_FILL.WR }} className="font-bold">WR</span>
-                        <span style={{ color: POSITION_FILL.TE }} className="font-bold">TE</span>
-                    </div>
-                </div>
+                )}
             </section>
         </div>
     );

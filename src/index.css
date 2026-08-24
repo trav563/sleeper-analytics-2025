@@ -253,6 +253,16 @@
     );
 }
 
+/* Scrollable-but-chromeless: used by the navbar tab strip so tabs can shrink
+   into a scroll region instead of overflowing under the header controls. */
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .live-dot { animation: none; }
 }
