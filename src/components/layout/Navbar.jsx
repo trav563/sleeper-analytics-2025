@@ -61,7 +61,7 @@ const Navbar = () => {
     const navItems = [
         { href: `/league/${leagueId}`, label: 'Dashboard', icon: LayoutDashboard, exact: true },
         { href: `/league/${leagueId}/matchup`, label: 'Matchup', icon: Swords },
-        { href: `/league/${leagueId}/lineup`, label: 'Lineup', icon: Users },
+        { href: `/league/${leagueId}/my-team`, label: 'My Team', icon: Users },
         { href: `/league/${leagueId}/standings`, label: 'Standings', icon: Crown },
         { href: `/league/${leagueId}/analytics`, label: 'Analytics', icon: BarChart2 },
         { href: `/league/${leagueId}/recap`, label: 'The Roast', icon: Flame },

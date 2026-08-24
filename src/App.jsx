@@ -9,7 +9,6 @@ const LeagueLayout = lazy(() => import('./layouts/LeagueLayout'));
 
 const Home = lazy(() => import('./pages/Home'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const LineupPage = lazy(() => import('./pages/LineupPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
@@ -19,7 +18,7 @@ const RecapPage = lazy(() => import('./pages/RecapPage').catch(() => ({ default:
 
 // Direction A pages
 const MatchupPage = lazy(() => import('./pages/MatchupPage'));
-const TeamPage = lazy(() => import('./pages/TeamPage'));
+const MyTeamPage = lazy(() => import('./pages/MyTeamPage'));
 const StandingsPage = lazy(() => import('./pages/StandingsPage'));
 const PlayerPage = lazy(() => import('./pages/PlayerPage'));
 
@@ -49,11 +48,11 @@ const App = () => {
               {/* League Routes */}
               <Route path="league/:leagueId" element={<LeagueLayout />}>
                 <Route index element={<DashboardPage />} />
-                <Route path="lineup" element={<LineupPage />} />
                 <Route path="matchup" element={<MatchupPage />} />
                 <Route path="matchup/:week" element={<MatchupPage />} />
                 <Route path="standings" element={<StandingsPage />} />
-                <Route path="team/:rosterId" element={<TeamPage />} />
+                <Route path="my-team" element={<MyTeamPage />} />
+                <Route path="team/:rosterId" element={<MyTeamPage />} />
                 <Route path="player/:playerId" element={<PlayerPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="history" element={<HistoryPage />} />

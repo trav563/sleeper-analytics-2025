@@ -81,6 +81,14 @@ export function playerHeadshotUrl(playerId) {
 }
 
 /**
+ * NFL team logo (used for D/ST, whose "player id" is a team abbreviation).
+ */
+export function teamLogoUrl(teamAbbr) {
+    if (!teamAbbr) return null;
+    return `https://sleepercdn.com/images/team_logos/nfl/${String(teamAbbr).toLowerCase()}.png`;
+}
+
+/**
  * Get display name for a team/user
  */
 export function displayTeamName(user) {

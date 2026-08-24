@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl, getByeMap } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
+import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { deriveCurrentWeek } from '../../../utils/seasonState';
@@ -494,10 +495,9 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
                     }`}>
                         {row.slot}
                     </span>
-                    <span
-                        className="hidden md:block w-7 h-7 rounded-full ring-1 ring-line shrink-0"
-                        style={{ background: `oklch(62% 0.18 ${(player.team?.charCodeAt(0) || 0) * 13 % 360})` }}
-                    />
+                    <span className="hidden md:block">
+                        <PlayerHeadshot playerId={row.pid} name={player.last_name} size={28} />
+                    </span>
                     <div className="min-w-0">
                         <div className="text-sm font-semibold text-text truncate">
                             {player.first_name?.[0]}. {player.last_name}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
+import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
 import { LiveDot } from '../../../components/ui/LiveDot';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { computeWinProbability, formatWinProbabilityPercent } from '../../../lib/winProbability';
@@ -804,8 +805,10 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
         <button
             type="button"
             onClick={() => navigate(`/league/${leagueId}/player/${player.pid}`)}
-            className={`min-w-0 ${side === 'me' ? 'text-right' : 'text-left'} group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal rounded-sm`}
+            className={`min-w-0 w-full flex items-center gap-2 ${side === 'me' ? 'flex-row-reverse text-right' : 'text-left'} group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal rounded-sm`}
         >
+            <PlayerHeadshot playerId={player.pid} name={player.name} size={32} />
+            <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-text truncate group-hover:text-signal transition-colors duration-fast">
                 {player.name}
             </div>
@@ -820,6 +823,7 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
                     Proj <span className="text-text-dim">{player.proj.toFixed(1)}</span>
                 </div>
             )}
+            </div>
         </button>
     );
 };

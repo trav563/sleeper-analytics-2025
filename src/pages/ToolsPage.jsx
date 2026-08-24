@@ -9,6 +9,7 @@ import TradeRetro from '../features/tools/components/TradeRetro';
 import RosterClogger from '../features/tools/components/RosterClogger';
 import ScheduleGenerator from '../features/tools/components/ScheduleGenerator';
 import HistoricalBanner from '../components/layout/HistoricalBanner';
+import LineupChecker from '../features/league/components/LineupChecker';
 
 const ToolsPage = () => {
     const { leagueId } = useParams();
@@ -30,6 +31,9 @@ const ToolsPage = () => {
     return (
         <div className="space-y-6">
             <HistoricalBanner message="These tools are forward-looking and assume the active season." />
+
+            {!isHistoricalSeason && <LineupChecker leagueId={leagueId} />}
+
             <ScheduleGenerator
                 league={league}
                 rosters={rosters}

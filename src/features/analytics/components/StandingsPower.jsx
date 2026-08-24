@@ -173,7 +173,9 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                                 <button
                                     type="button"
                                     onClick={() => navigate(`/league/${league.league_id}/team/${row.rosterId}`)}
-                                    className={`w-full text-left grid items-center gap-2 px-4 py-2.5 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal grid-cols-[40px_28px_1fr_50px] md:grid-cols-[40px_36px_1fr_60px_70px_70px_80px_50px] ${
+                                    title={`View ${row.name}'s team`}
+                                    aria-label={`View ${row.name}'s team`}
+                                    className={`group w-full text-left grid items-center gap-2 px-4 py-2.5 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal grid-cols-[40px_28px_1fr_50px] md:grid-cols-[40px_36px_1fr_60px_70px_70px_80px_50px] ${
                                         isMe ? 'bg-bg-2/40' : ''
                                     } border-b border-line/60`}
                                 >
@@ -186,7 +188,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                                         <Pip seed={row.rosterId} name={row.name} size={28} ring={isMe} />
                                     )}
                                     <div className="min-w-0">
-                                        <div className={`text-sm truncate ${isMe ? 'text-text font-bold' : 'text-text font-semibold'}`}>
+                                        <div className={`text-sm truncate group-hover:text-signal transition-colors duration-fast ${isMe ? 'text-text font-bold' : 'text-text font-semibold'}`}>
                                             {row.name}
                                         </div>
                                         <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-0.5">
