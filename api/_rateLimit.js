@@ -58,6 +58,26 @@ export function _resetDenyCache() {
 }
 
 /**
+ * Resolve the Redis REST credentials.
+ *
+ * Vercel's Upstash marketplace integration injects the KV_REST_API_* names;
+ * a hand-configured Upstash database uses UPSTASH_REDIS_REST_*. Accept either
+ * so the endpoint works however it was provisioned, rather than requiring the
+ * same secret to be duplicated under a second name.
+ *
+ * Deliberately NOT KV_REST_API_READ_ONLY_TOKEN: INCR and EXPIRE are writes, so
+ * the read-only token would fail every call — and because we fail closed, that
+ * looks exactly like an outage. KV_URL / REDIS_URL are the TCP protocol URLs
+ * and don't speak REST.
+ */
+export function redisCredentials(env = process.env) {
+    return {
+        url: env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL || '',
+        token: env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN || '',
+    };
+}
+
+/**
  * @param {string} clientKey  IP address. Never include user-supplied identity:
  *   keying on anything the caller controls multiplies quota instead of
  *   limiting it, since they can just rotate the value.
@@ -69,8 +89,7 @@ export async function checkRateLimit(clientKey, { fetchImpl = fetch, now = Date.
         denyUntil.delete(clientKey);
     }
 
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const { url, token } = redisCredentials();
     if (!url || !token) {
         console.error('[rate-limit] Upstash not configured — refusing request');
         return { allowed: false, reason: 'AI analysis is temporarily unavailable.', remaining: 0, unavailable: true };

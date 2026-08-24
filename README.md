@@ -97,8 +97,15 @@ Server-side only — never exposed to the client. Set them in Vercel, not in a c
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `AI_GATEWAY_API_KEY` | for AI | Vercel AI Gateway auth (`VERCEL_OIDC_TOKEN` works on Vercel) |
-| `UPSTASH_REDIS_REST_URL` | for AI | Durable rate limiting |
-| `UPSTASH_REDIS_REST_TOKEN` | for AI | Durable rate limiting |
+| `KV_REST_API_URL` | for AI | Redis REST endpoint — durable rate limiting |
+| `KV_REST_API_TOKEN` | for AI | Redis REST token, **write access** |
+
+The Redis pair is whatever your provisioning method injects: Vercel's Upstash
+marketplace integration sets `KV_REST_API_URL` / `KV_REST_API_TOKEN`, while a
+hand-configured Upstash database uses `UPSTASH_REDIS_REST_URL` / `_TOKEN`. Either
+is accepted. Do **not** point it at `KV_REST_API_READ_ONLY_TOKEN` — the limiter
+issues `INCR`/`EXPIRE`, and a read-only token makes every request fail closed,
+which is indistinguishable from an outage.
 
 The AI endpoint **fails closed**: without Upstash configured it returns 503 rather than falling back to a per-instance limiter that gets weaker as Vercel scales out.
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-    checkRateLimit, clientIp, _resetDenyCache,
+    checkRateLimit, clientIp, redisCredentials, _resetDenyCache,
     RATE_LIMIT_PER_DAY, RATE_LIMIT_PER_HOUR,
 } from './_rateLimit.js';
 
@@ -47,8 +47,19 @@ describe('checkRateLimit', () => {
 
     describe('fails closed', () => {
         it('when Upstash is not configured', async () => {
-            delete process.env.UPSTASH_REDIS_REST_URL;
+            // Clear BOTH conventions — leaving KV_* set would make this pass
+            // for the wrong reason.
+            for (const k of ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN',
+                'KV_REST_API_URL', 'KV_REST_API_TOKEN']) delete process.env[k];
             const r = await checkRateLimit('c', { fetchImpl: upstash(1, 1), now: NOON });
+            expect(r.allowed).toBe(false);
+            expect(r.unavailable).toBe(true);
+        });
+
+        it('when only the URL is set but no token', async () => {
+            delete process.env.UPSTASH_REDIS_REST_TOKEN;
+            delete process.env.KV_REST_API_TOKEN;
+            const r = await checkRateLimit('c2', { fetchImpl: upstash(1, 1), now: NOON });
             expect(r.allowed).toBe(false);
             expect(r.unavailable).toBe(true);
         });
@@ -113,6 +124,40 @@ describe('checkRateLimit', () => {
             const r = await checkRateLimit('g', { fetchImpl: upstash(1, 1), now: NOON + 5 });
             expect(r.allowed).toBe(false);
         });
+    });
+});
+
+describe('redisCredentials', () => {
+    it('reads the Vercel marketplace names (KV_REST_API_*)', () => {
+        expect(redisCredentials({ KV_REST_API_URL: 'u', KV_REST_API_TOKEN: 't' }))
+            .toEqual({ url: 'u', token: 't' });
+    });
+
+    it('reads hand-configured Upstash names', () => {
+        expect(redisCredentials({ UPSTASH_REDIS_REST_URL: 'u', UPSTASH_REDIS_REST_TOKEN: 't' }))
+            .toEqual({ url: 'u', token: 't' });
+    });
+
+    it('prefers UPSTASH_* when both are present', () => {
+        expect(redisCredentials({
+            UPSTASH_REDIS_REST_URL: 'explicit', UPSTASH_REDIS_REST_TOKEN: 'explicit-t',
+            KV_REST_API_URL: 'injected', KV_REST_API_TOKEN: 'injected-t',
+        })).toEqual({ url: 'explicit', token: 'explicit-t' });
+    });
+
+    it('never picks the read-only token — INCR/EXPIRE are writes', () => {
+        expect(redisCredentials({
+            KV_REST_API_URL: 'u', KV_REST_API_READ_ONLY_TOKEN: 'readonly',
+        }).token).toBe('');
+    });
+
+    it('ignores the TCP protocol URLs, which do not speak REST', () => {
+        expect(redisCredentials({ KV_URL: 'redis://x', REDIS_URL: 'redis://y' }))
+            .toEqual({ url: '', token: '' });
+    });
+
+    it('returns empty strings when nothing is set, so the caller fails closed', () => {
+        expect(redisCredentials({})).toEqual({ url: '', token: '' });
     });
 });
 
