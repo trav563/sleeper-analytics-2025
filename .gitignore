@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Secrets. `*.local` above already covers .env.local (what `vercel env pull`
+# writes by default), but not a bare .env — and this repo is public.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
