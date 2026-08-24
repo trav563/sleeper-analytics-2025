@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useSleeper } from '../../context/SleeperContext';
-import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown, Sun, Moon } from 'lucide-react';
+import { Trophy, User, BarChart2, History, Wrench, Users, Menu, X, LayoutDashboard, Flame, Swords, Crown, Sun, Moon, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 import { useTheme } from '../../context/ThemeContext';
@@ -187,6 +187,21 @@ const Navbar = () => {
                                     )}
                                 </div>
                             </div>
+                        )}
+
+                        {/* Desktop sign-out. The mobile menu has its own; without this
+                            a signed-in tester on a shared desktop had no way out. */}
+                        {user && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => { signOut(); navigate('/'); }}
+                                className="hidden md:inline-flex min-w-[44px] min-h-[44px] text-text-dim hover:text-text hover:bg-bg-2"
+                                aria-label="Sign out"
+                                title="Sign out"
+                            >
+                                <LogOut className="h-5 w-5" />
+                            </Button>
                         )}
 
                         {/* Theme toggle (visible at all breakpoints) */}
