@@ -110,12 +110,7 @@ const PrivacyPage = () => (
                 browser. Clearing site data for this domain does the same thing.
             </p>
             <p>
-                To change what's in your league, change it in Sleeper — this app only reads. Question
-                about any of this?{' '}
-                <a href="mailto:trav563@gmail.com" className="text-signal hover:underline">
-                    Get in touch
-                </a>
-                .
+                To change what's in your league, change it in Sleeper — this app only reads.
             </p>
         </Section>
 

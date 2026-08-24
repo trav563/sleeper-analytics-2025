@@ -151,7 +151,7 @@ export function useAnalyzeTeam({
                 }
                 if (!serverMessage) {
                     if (response.status === 429) serverMessage = 'Rate limit reached. Try again later.';
-                    else if (response.status === 500) serverMessage = 'AI service error. Check that AI_GATEWAY_API_KEY is set in Vercel.';
+                    else if (response.status === 500) serverMessage = 'AI analysis is temporarily unavailable. Please try again later.';
                     else serverMessage = `Request failed (${response.status}).`;
                 }
                 throw new Error(serverMessage);
@@ -198,7 +198,7 @@ export function useAnalyzeTeam({
                 setCachedAt(Date.now());
                 setCooldownRemaining(cooldownMs);
             } else {
-                throw new Error('No response from AI service. Check that AI_GATEWAY_API_KEY is configured in Vercel.');
+                throw new Error('AI analysis is temporarily unavailable. Please try again later.');
             }
 
         } catch (err) {
