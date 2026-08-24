@@ -5,6 +5,7 @@ import { Pip } from '../../../components/ui/Pip';
 import { LiveDot } from '../../../components/ui/LiveDot';
 import { computeWinProbability, formatWinProbabilityPercent } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
+import { useWeekProjections } from '../../league/hooks/useWeekProjections';
 
 const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
 
@@ -14,6 +15,8 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
  * 72px score with glow, PROJ · CEILING sub, win-prob bar at bottom).
  */
 const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, seasonMatchups, selectedUserId }) => {
+    /* Real weekly projections scored with this league's settings. */
+    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
     const navigate = useNavigate();
     const { details: liveDetails } = useGameLiveDetails(week);
 
@@ -90,9 +93,11 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
             const isDone = status === 'STATUS_FINAL';
             if (isDone) return;
             const stats = playerStats[pid];
-            if (!stats || stats.n === 0) return;
-            proj += stats.sum / stats.n;
-            ceiling += stats.max;
+            const seasonAvg = stats && stats.n > 0 ? stats.sum / stats.n : 0;
+            // Prefer Sleeper's weekly projection (league-scored); fall back to
+            // the player's season average when there isn't one.
+            proj += projFor(pid) || seasonAvg;
+            ceiling += stats?.max || projFor(pid) || 0;
         });
         return { proj, ceiling };
     };

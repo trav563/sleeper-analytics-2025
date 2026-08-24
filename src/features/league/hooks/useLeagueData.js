@@ -1,5 +1,6 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { deriveCurrentWeek } from '../../../utils/seasonState';
 import {
     fetchNFLState,
     fetchLeagueUsers,
@@ -20,8 +21,6 @@ export function useLeagueData(leagueId) {
         queryFn: fetchNFLState,
         staleTime: 60 * 60 * 1000, // 1 hour (State doesn't change often)
     });
-
-    const displayWeek = state?.display_week || state?.week || 1;
 
     // 2. Players Master List (Cache: 24h)
     const { data: players, isLoading: loadingPlayers, error: errorPlayers } = useQuery({
@@ -66,6 +65,10 @@ export function useLeagueData(leagueId) {
         enabled: !!leagueId,
         staleTime: 60 * 60 * 1000, // 1 hour — drafts rarely change
     });
+
+    // Shared derivation: anchors to week 1 before kickoff instead of
+    // following Sleeper's PRESEASON display_week.
+    const displayWeek = deriveCurrentWeek(league, state);
 
     // 4. Matchups (Dynamic Cache)
     // The display week only has live scores during the regular season of the

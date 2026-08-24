@@ -7,6 +7,7 @@ import { LiveDot } from '../../../components/ui/LiveDot';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { computeWinProbability, formatWinProbabilityPercent } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
+import { useWeekProjections } from '../hooks/useWeekProjections';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { theme } from '../../../lib/theme';
 
@@ -39,11 +40,6 @@ const sumProjFromAvg = (starters, avgByPid) => {
         if (!pid || pid === '0') return acc;
         return acc + (avgByPid[pid] || 0);
     }, 0);
-};
-
-// Back-compat helper for callers that pass seasonMatchups directly.
-const sumProjFromSeason = (starters, seasonMatchups) => {
-    return sumProjFromAvg(starters, buildPlayerSeasonAvg(seasonMatchups));
 };
 
 const bucketStarter = (m, idx, players, gameStatuses) => {
@@ -170,6 +166,30 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
     /* Build position-by-position rows. Computed unconditionally so we don't
        trip rules-of-hooks; the early-return below skips the render. */
+    /* Per-player season-average map (built once) — the fallback when Sleeper
+       has no projection for a player (or before the season starts). */
+    const playerAvg = useMemo(() => buildPlayerSeasonAvg(seasonMatchups), [seasonMatchups]);
+
+    /* Real weekly projections, scored with THIS league's settings. */
+    const { projFor: leagueProjFor, hasProjections } = useWeekProjections(
+        league?.season, week, league?.scoring_settings
+    );
+    /* Prefer a real projection; fall back to the player's season average. */
+    const projFor = useMemo(
+        () => (pid) => leagueProjFor(pid) || playerAvg[pid] || 0,
+        [leagueProjFor, playerAvg]
+    );
+    const projMap = useMemo(() => {
+        // sumProjFromAvg takes a pid->points map; give it the blended values.
+        const out = {};
+        const ids = new Set([
+            ...(myMatchup?.starters || []),
+            ...(oppMatchup?.starters || []),
+        ]);
+        ids.forEach((pid) => { if (pid && pid !== '0') out[pid] = projFor(pid); });
+        return out;
+    }, [projFor, myMatchup, oppMatchup]);
+
     const positionRows = useMemo(() => {
         if (!myMatchup) return [];
         const myStarters = myMatchup.starters || [];
@@ -199,6 +219,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     status: myStatus.status,
                     live: myStatus.live,
                     pid: myPid,
+                    proj: projFor(myPid),
                 } : null,
                 opp: opp ? {
                     name: `${opp.first_name} ${opp.last_name}`,
@@ -207,6 +228,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     status: oppStatus.status,
                     live: oppStatus.live,
                     pid: oppPid,
+                    proj: projFor(oppPid),
                 } : null,
             });
         }
@@ -215,10 +237,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             const bi = orderedPositions.indexOf(b.slot);
             return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels]);
-
-    /* Per-player season-average map (built once) for fast projection lookups. */
-    const playerAvg = useMemo(() => buildPlayerSeasonAvg(seasonMatchups), [seasonMatchups]);
+    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels, projFor]);
 
     /* Win-probability checkpoint trajectory. Each checkpoint is one call to
        computeWinProbability with progressively more "actual" points and less
@@ -231,8 +250,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
         const myPoints = myMatchup.starters_points || [];
         const oppPoints = oppMatchup?.starters_points || [];
 
-        const myFullProj = sumProjFromAvg(myStarters, playerAvg);
-        const oppFullProj = sumProjFromAvg(oppStarters, playerAvg);
+        const myFullProj = sumProjFromAvg(myStarters, projMap);
+        const oppFullProj = sumProjFromAvg(oppStarters, projMap);
 
         // Pregame checkpoint: predict purely from season averages.
         const pregameWP = computeWinProbability({
@@ -295,8 +314,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     if (finishedPids.has(pid)) oppActual += oppPoints[i] || 0;
                     else oppRemaining.push(pid);
                 });
-                const myProjRemaining = sumProjFromAvg(myRemaining, playerAvg);
-                const oppProjRemaining = sumProjFromAvg(oppRemaining, playerAvg);
+                const myProjRemaining = sumProjFromAvg(myRemaining, projMap);
+                const oppProjRemaining = sumProjFromAvg(oppRemaining, projMap);
                 const myWP = computeWinProbability({
                     myCurrent: myActual,
                     oppCurrent: oppActual,
@@ -324,8 +343,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     else oppRemaining.push(s.pid);
                 }
             });
-            const myProjRemaining = sumProjFromAvg(myRemaining, playerAvg);
-            const oppProjRemaining = sumProjFromAvg(oppRemaining, playerAvg);
+            const myProjRemaining = sumProjFromAvg(myRemaining, projMap);
+            const oppProjRemaining = sumProjFromAvg(oppRemaining, projMap);
             const myWP = computeWinProbability({
                 myCurrent: myActual,
                 oppCurrent: oppActual,
@@ -336,7 +355,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
         });
 
         return checkpoints;
-    }, [myMatchup, oppMatchup, players, liveDetails, playerAvg, week, currentNFLWeek]);
+    }, [myMatchup, oppMatchup, players, liveDetails, projMap, week, currentNFLWeek]);
 
     /* No matchup found */
     if (!myMatchup) {
@@ -364,7 +383,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             const b = bucketStarter(m, idx, players, gameStatuses);
             return b.status !== 'DONE' && b.status !== 'EMPTY';
         });
-        return sumProjFromSeason(remainingStarters, seasonMatchups);
+        return sumProjFromAvg(remainingStarters, projMap);
     };
     const myProjRem = projRemaining(myMatchup);
     const oppProjRem = projRemaining(oppMatchup);
@@ -656,7 +675,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             title="Win Probability"
                             sub={anyLive
                                 ? `Live · ${winProbCheckpoints.length} checkpoints`
-                                : winProbCheckpoints.length <= 1 ? 'Pregame · projection-based' : `${winProbCheckpoints.length} checkpoints`}
+                                : winProbCheckpoints.length <= 1
+                                    ? (hasProjections ? 'Pregame · league-scored projections' : 'Pregame · season averages')
+                                    : `${winProbCheckpoints.length} checkpoints`}
                         >
                             <WinProbCurve
                                 checkpoints={winProbCheckpoints}
@@ -680,9 +701,11 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
                                     <th scope="col" className="px-2 py-2">Slot</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                     <th scope="col" className="px-2 py-2">vs</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                 </tr>
                             </thead>
@@ -691,11 +714,17 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                     <tr key={row.slotIndex} className="border-b border-line/60 last:border-0">
                                         <td className="px-2 py-2 font-mono text-2xs uppercase tracking-wider text-signal">{row.slot}</td>
                                         <td className="px-2 py-2 text-text truncate">{row.me?.name || '—'}</td>
+                                        <td className="px-2 py-2 text-right tnum text-text-mute">
+                                            {row.me?.proj ? row.me.proj.toFixed(1) : '—'}
+                                        </td>
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.me?.pts || 0) > (row.opp?.pts || 0) ? 'text-good' : 'text-text'}`}>
                                             {(row.me?.pts || 0).toFixed(1)}
                                         </td>
                                         <td className="px-2 py-2 font-mono text-2xs uppercase text-text-mute">vs</td>
                                         <td className="px-2 py-2 text-text truncate">{row.opp?.name || '—'}</td>
+                                        <td className="px-2 py-2 text-right tnum text-text-mute">
+                                            {row.opp?.proj ? row.opp.proj.toFixed(1) : '—'}
+                                        </td>
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.opp?.pts || 0) > (row.me?.pts || 0) ? 'text-good' : 'text-text'}`}>
                                             {(row.opp?.pts || 0).toFixed(1)}
                                         </td>
@@ -786,6 +815,11 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
             <div className={`tnum text-lg font-extrabold tracking-tight mt-0.5 ${winning ? 'text-good' : 'text-text'}`}>
                 {(player.pts || 0).toFixed(1)}
             </div>
+            {player.proj > 0 && (
+                <div className="font-mono text-2xs tnum text-text-mute">
+                    Proj <span className="text-text-dim">{player.proj.toFixed(1)}</span>
+                </div>
+            )}
         </button>
     );
 };

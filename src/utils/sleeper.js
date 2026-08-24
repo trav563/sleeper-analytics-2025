@@ -205,6 +205,17 @@ export const fetchSeasonStats = async (season) => {
 };
 
 /**
+ * Weekly projections: player_id -> raw projected stat line (plus precomputed
+ * pts_ppr/half/std). Score it with the league's own settings via
+ * src/utils/scoring.js rather than reading the precomputed fields.
+ * @param {string} season
+ * @param {number|string} week
+ */
+export const fetchWeekProjections = async (season, week) => {
+    return fetchSleeper(`/projections/nfl/regular/${season}/${week}`);
+};
+
+/**
  * Fetch trending players (add/drop)
  * @param {string} type - 'add' or 'drop'
  * @param {number} lookbackHours - hours to look back (default 24)

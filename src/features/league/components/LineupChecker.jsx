@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useLeagueData } from '../hooks/useLeagueData';
 import { useLineupStatus } from '../hooks/useLineupStatus';
+import { deriveCurrentWeek } from '../../../utils/seasonState';
 import StatusSection from './StatusSection';
 import TeamLineupModal from './TeamLineupModal';
 
@@ -11,7 +12,7 @@ const LineupChecker = ({ leagueId }) => {
 
     const { state, users, rosters, matchups, players, league, loading, error, refresh } = useLeagueData(leagueId);
 
-    const week = state?.display_week || state?.week || state?.leg;
+    const week = deriveCurrentWeek(league, state);
     const seasonType = state?.season_type || "regular";
     const isPreseason = seasonType === "pre";
 

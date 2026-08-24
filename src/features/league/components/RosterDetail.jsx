@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl, getByeMap } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
+import { useWeekProjections } from '../hooks/useWeekProjections';
+import { deriveCurrentWeek } from '../../../utils/seasonState';
 
 const POSITION_GROUPS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 const ROSTER_HUE = (rosterId) => (Number(rosterId) * 47) % 360;
@@ -40,7 +42,7 @@ const labelForScore = (score) => {
 
 const RosterDetail = ({ league, rosters, users, players, state, roster, currentWeekMatchups, seasonMatchups }) => {
     const navigate = useNavigate();
-    const week = state?.display_week || state?.week || 1;
+    const week = deriveCurrentWeek(league, state);
     const owner = users?.find((u) => u.user_id === roster?.owner_id);
     const coOwners = (roster?.co_owners || [])
         .map((id) => users?.find((u) => u.user_id === id))
@@ -146,6 +148,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
             return { pos, pct, label: labelForScore(pct), ppg };
         });
     }, [seasonMatchups, players, roster?.roster_id]);
+
+    /* Real weekly projections scored with this league's settings. */
+    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     /* Season-aware bye map (generated from nflverse; see npm run update-byes). */
     const byeMap = useMemo(() => getByeMap(league?.season), [league?.season]);
@@ -269,6 +274,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                         title="Starters"
                         rows={grouped.starters}
                         playerSeason={playerSeason}
+                        projFor={projFor}
                         myMatchup={myMatchup}
                         gameStatuses={gameStatuses}
                         navigate={navigate}
@@ -282,6 +288,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             title="Bench"
                             rows={grouped.bench}
                             playerSeason={playerSeason}
+                            projFor={projFor}
                             myMatchup={myMatchup}
                             gameStatuses={gameStatuses}
                             navigate={navigate}
@@ -295,6 +302,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             title="Taxi"
                             rows={grouped.taxi}
                             playerSeason={playerSeason}
+                            projFor={projFor}
                             navigate={navigate}
                             leagueId={league?.league_id}
                             byeMap={byeMap}
@@ -306,6 +314,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             title="IR"
                             rows={grouped.ir}
                             playerSeason={playerSeason}
+                            projFor={projFor}
                             navigate={navigate}
                             leagueId={league?.league_id}
                             byeMap={byeMap}
@@ -434,17 +443,25 @@ const SectionShell = ({ title, eyebrow, action, children }) => (
     </section>
 );
 
-const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, byeMap, showLive = false }) => (
+const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, byeMap, projFor, showLive = false }) => (
     <div>
-        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold px-4 pt-3 pb-1.5 bg-bg-2/40">
-            {title}
+        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold px-4 pt-3 pb-1.5 bg-bg-2/40 flex items-center justify-between gap-2">
+            <span>{title}</span>
+            {/* Label the numeric columns — they were four unlabeled figures. */}
+            <span className="hidden md:grid grid-cols-[60px_60px_60px_44px] gap-2 font-normal text-right">
+                <span>{showLive ? 'Live' : ''}</span>
+                <span>Proj</span>
+                <span>Szn</span>
+                <span>Bye</span>
+            </span>
         </div>
         {rows.map((row, i) => {
             const player = row.player;
             const livePts = showLive && player ? (myMatchup?.players_points?.[row.pid] ?? 0) : null;
             const seasonInfo = player ? playerSeason[row.pid] : null;
             const seasonAvg = seasonInfo && seasonInfo.n > 0 ? seasonInfo.sum / seasonInfo.n : null;
-            const proj = seasonAvg != null ? seasonAvg : null;
+            // A real projection when Sleeper has one; season average otherwise.
+            const proj = projFor?.(row.pid) || seasonAvg;
             const status = player?.team ? gameStatuses?.[player.team] : null;
             const isLive = status === 'STATUS_IN_PROGRESS' || status === 'STATUS_HALFTIME';
 
