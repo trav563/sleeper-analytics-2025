@@ -13,14 +13,19 @@ const FALLBACK_MODEL = 'anthropic/claude-haiku-4.5';
 
 // Gemini 3 Flash is a reasoning model, and maxOutputTokens is a budget SHARED
 // between invisible reasoning and visible text — at a 20-token budget it spent
-// all 17 on reasoning and emitted nothing. Measured on a dynasty trade prompt,
-// the default burned 911 reasoning tokens against 285 of text (~76% invisible),
-// and reasoning bills at the output rate. Disabling it produced equal-quality
-// answers, because the prompt hands the model computed projections, PPG and
-// grades — it is judging and summarizing, not deriving.
-// Raise this if a card's answers ever get shallow. Ignored by the Claude
-// fallback, which takes a different reasoning option shape.
-const THINKING_BUDGET = 0;
+// all 17 on reasoning and emitted nothing, which is why an empty generation has
+// to be treated as a failure below.
+//
+// Reasoning bills at the output rate, so capping it looks like an easy ~2x
+// saving. It is not: with thinkingBudget 0 the roster card characterised QB
+// depth as "thin" via Anthony Richardson's low usage, when the actual answer is
+// Tyler Shough at 18.6 projected. Both are on the roster, so it wasn't a
+// hallucination — it just reached for the less relevant player and drew the
+// wrong conclusion. Picking the right player out of three is the judgment we
+// are paying the model for.
+//
+// null = model default (dynamic reasoning). A number sets a hard token cap.
+const THINKING_BUDGET = null;
 
 // ── In-memory cache for shared data (stats, players, projections) ──
 const dataCache = new Map();
@@ -787,9 +792,11 @@ export default async function handler(req, res) {
                 prompt,
                 maxOutputTokens: 4096,
                 abortSignal: AbortSignal.timeout(55_000),
-                providerOptions: {
-                    google: { thinkingConfig: { thinkingBudget: THINKING_BUDGET } },
-                },
+                ...(THINKING_BUDGET === null ? {} : {
+                    providerOptions: {
+                        google: { thinkingConfig: { thinkingBudget: THINKING_BUDGET } },
+                    },
+                }),
                 onError: (e) => { captured = e?.error ?? e; },
             });
 
