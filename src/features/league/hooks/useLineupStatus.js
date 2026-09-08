@@ -47,73 +47,68 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
 
             const hasEmptySlots = rawStarters.some(pid => !pid || pid === "" || pid === null || pid === undefined || pid === "0");
 
-            let status = hasEmptySlots ? "INCOMPLETE" : "OK";
+            // Every problem is collected — a lineup can have an empty slot AND
+            // injured starters, and the modal shows all of them.
             const flagged = [];
 
             if (hasEmptySlots) {
-                flagged.push({ pid: "empty", name: "Empty Slot", reason: "Empty Slot" });
+                flagged.push({ pid: "empty", name: "Empty Slot", reason: "Empty Slot", severity: "INCOMPLETE" });
             }
 
-            if (!hasEmptySlots) {
-                const nonEmptyStarters = starters.filter(Boolean);
-                const playersPoints = m.players_points || {};
+            const playersPoints = m.players_points || {};
+            const weatherFlagged = new Set();
 
-                for (const pid of nonEmptyStarters) {
-                    // Skip checks if player has already played (has points)
-                    const playerPoints = playersPoints[pid] || 0;
-                    if (playerPoints > 0) {
-                        continue;
+            for (const pid of starters) {
+                // Skip checks if player has already played (has points)
+                const playerPoints = playersPoints[pid] || 0;
+                if (playerPoints > 0) {
+                    continue;
+                }
+
+                if (isDSTStarterId(pid)) {
+                    if (byeTeamsThisWeek.has(pid)) {
+                        flagged.push({ pid, name: `${pid} D/ST`, reason: "BYE", severity: "INCOMPLETE" });
                     }
+                    continue;
+                }
 
-                    if (isDSTStarterId(pid)) {
-                        if (byeTeamsThisWeek.has(pid)) {
-                            status = "INCOMPLETE";
-                            flagged.push({ pid, name: `${pid} D/ST`, reason: "BYE" });
-                            break;
-                        }
-                        continue;
-                    }
+                const p = players[pid];
+                if (!p) continue;
 
-                    const p = players[pid];
-                    if (!p) continue;
+                const name = `${p.first_name || ""} ${p.last_name || ""}`.trim();
+                const team = p.team;
 
-                    const team = p.team;
-                    if (team && byeTeamsThisWeek.has(team)) {
-                        status = "INCOMPLETE";
-                        flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "BYE" });
-                        break;
-                    }
+                if (team && byeTeamsThisWeek.has(team)) {
+                    flagged.push({ pid, name, reason: "BYE", severity: "INCOMPLETE" });
+                    continue;
+                }
 
-                    const isPUP = (p.injury_status || "").toLowerCase() === "pup" ||
-                        (p.status || "").toLowerCase() === "pup";
+                const bucket = classifyInjury(p);
+                if (bucket === "INCOMPLETE") {
+                    flagged.push({ pid, name, reason: (p.injury_status || p.status || "Out").toString(), severity: "INCOMPLETE" });
+                } else if (bucket === "POTENTIAL") {
+                    flagged.push({ pid, name, reason: (p.injury_status || p.status || "Questionable").toString(), severity: "POTENTIAL" });
+                }
 
-                    if (isPUP) {
-                        status = "INCOMPLETE";
-                        flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: "PUP" });
-                        break;
-                    }
-
-                    const bucket = classifyInjury(p);
-                    if (bucket === "INCOMPLETE") {
-                        status = "INCOMPLETE";
-                        flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: (p.injury_status || p.status || "Out").toString() });
-                        break;
-                    } else if (bucket === "POTENTIAL" && status !== "INCOMPLETE") {
-                        status = "POTENTIAL";
-                        flagged.push({ pid, name: `${p.first_name || ""} ${p.last_name || ""}`.trim(), reason: p.injury_status || "Questionable" });
-                    }
-
-                    // Weather check (POTENTIAL only, never INCOMPLETE)
-                    const teamWeather = weatherData[team];
-                    if (teamWeather?.isAdverse && !teamWeather?.isIndoor && status !== "INCOMPLETE") {
-                        if (status !== "POTENTIAL") status = "POTENTIAL";
-                        const weatherNote = teamWeather.displayValue || 'Adverse weather';
-                        if (!flagged.some(f => f.reason?.startsWith('Weather'))) {
-                            flagged.push({ pid: `weather-${team}`, name: `${team} Game`, reason: `Weather: ${weatherNote}` });
-                        }
-                    }
+                // Weather check (POTENTIAL only, never INCOMPLETE). One flag per
+                // NFL team, not one per affected starter.
+                const teamWeather = weatherData[team];
+                if (teamWeather?.isAdverse && !teamWeather?.isIndoor && !weatherFlagged.has(team)) {
+                    weatherFlagged.add(team);
+                    const weatherNote = teamWeather.displayValue || 'Adverse weather';
+                    flagged.push({ pid: `weather-${team}`, name: `${team} Game`, reason: `Weather: ${weatherNote}`, severity: "POTENTIAL" });
                 }
             }
+
+            // The summary card renders flagged[0] as the chip, so the worst
+            // problem has to lead — and a player problem always outranks a
+            // weather note, which is never the thing you act on.
+            const rank = (f) => (f.severity === "INCOMPLETE" ? 0 : 2) + (f.reason?.startsWith("Weather") ? 1 : 0);
+            flagged.sort((a, b) => rank(a) - rank(b));
+
+            const status = flagged.some(f => f.severity === "INCOMPLETE") ? "INCOMPLETE"
+                : flagged.some(f => f.severity === "POTENTIAL") ? "POTENTIAL"
+                    : "OK";
 
             out.push({
                 roster_id: m.roster_id,
@@ -127,7 +122,7 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
         }
 
         return out;
-    }, [matchups, players, rosterById, userById, byeTeamsThisWeek]);
+    }, [matchups, players, rosterById, userById, byeTeamsThisWeek, weatherData]);
 
     const grouped = useMemo(() => {
         const g = { OK: [], POTENTIAL: [], INCOMPLETE: [] };
