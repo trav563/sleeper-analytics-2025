@@ -104,18 +104,30 @@ export function isDSTStarterId(pid) {
     return /^[A-Z]{2,4}$/.test(pid); // e.g., "PHI", "KC" as D/ST codes
 }
 
+// Sleeper's real vocabularies, verified against /players/nfl:
+//   injury_status: Questionable | Doubtful | Out | IR | PUP | Sus | NA | COV | DNR
+//   status:        Active | Inactive | Injured Reserve |
+//                  Physically Unable to Perform | Non Football Injury | Practice Squad
+// The previous version tested injury_status abbreviations ("ir", "pup") against
+// the long-form `status` field, so that branch never fired.
+const OUT_INJURY_STATUS = new Set(["out", "ir", "pup", "sus"]);
+const OUT_ROSTER_STATUS = new Set([
+    "inactive", "injured reserve", "physically unable to perform",
+    "non football injury", "practice squad", "suspended",
+]);
+// On the injury report with no game designation assigned yet — startable, but
+// not healthy. Jacobs (NA + Groin, status Active) is the case this exists for.
+const UNRESOLVED_INJURY_STATUS = new Set(["na", "cov", "dnr"]);
+const RISKY_INJURY_STATUS = new Set(["questionable", "doubtful"]);
+
 /**
- * Classify player injury status
+ * Classify player injury status into OK / POTENTIAL / INCOMPLETE.
  */
 export function classifyInjury(player) {
-    const inj = String(player?.injury_status || "").toLowerCase();
-    const status = String(player?.status || "").toLowerCase();
+    const inj = String(player?.injury_status || "").trim().toLowerCase();
+    const status = String(player?.status || "").trim().toLowerCase();
 
-    // Treat IR/Suspended/PUP as OUT as requested
-    if (["out", "ir", "suspended", "pup"].includes(inj) || ["ir", "suspension", "pup"].includes(status))
-        return "INCOMPLETE";
-
-    if (["questionable", "doubtful"].includes(inj)) return "POTENTIAL";
-
+    if (OUT_INJURY_STATUS.has(inj) || OUT_ROSTER_STATUS.has(status)) return "INCOMPLETE";
+    if (RISKY_INJURY_STATUS.has(inj) || UNRESOLVED_INJURY_STATUS.has(inj)) return "POTENTIAL";
     return "OK";
 }

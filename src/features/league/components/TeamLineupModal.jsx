@@ -7,10 +7,6 @@ const STATUS_TONE = {
     OK: 'text-good',
     INCOMPLETE: 'text-bad',
     POTENTIAL: 'text-warn',
-    PUP: 'text-warn',
-    OUT: 'text-bad',
-    QUESTIONABLE: 'text-warn',
-    DOUBTFUL: 'text-bad',
 };
 
 const POSITION_ORDER = {
@@ -83,17 +79,7 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, le
         const status = classifyInjury(player);
         const reason = player.injury_status || player.status || (status === "INCOMPLETE" ? "Out" : null);
 
-        // Explicitly check for PUP status
-        const isPUP = (player.injury_status || "").toLowerCase() === "pup" ||
-            (player.status || "").toLowerCase() === "pup";
-
-        return {
-            pid,
-            name: fullName,
-            position,
-            status: isPUP ? "INCOMPLETE" : status,
-            reason: isPUP ? "PUP" : reason,
-        };
+        return { pid, name: fullName, position, status, reason };
     });
 
     // Sort by position order
@@ -147,12 +133,9 @@ const TeamLineupModal = ({ team, matchup, players, onClose, byeTeamsThisWeek, le
 
                     <ul className="space-y-1.5">
                         {sortedStarters.map((player) => {
-                            const tone = player.reason === "PUP" || player.reason === "Empty Slot"
-                                ? STATUS_TONE.INCOMPLETE
-                                : STATUS_TONE[player.status] || 'text-text-dim';
-                            const reasonLabel = player.reason === "Active"
-                                ? "Active"
-                                : (player.reason || (player.status === "OK" ? (player.position === "DEF" ? "Active" : "Healthy") : ""));
+                            const tone = STATUS_TONE[player.status] || 'text-text-dim';
+                            const reasonLabel = player.reason
+                                || (player.position === "DEF" ? "Active" : "Healthy");
                             return (
                                 <li
                                     key={player.pid}

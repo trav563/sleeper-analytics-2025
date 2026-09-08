@@ -12,10 +12,16 @@ const REASON_TONE = {
     IR:             'bg-bad/15 text-bad border-bad/40',
     Out:            'bg-bad/15 text-bad border-bad/30',
     PUP:            'bg-bad/15 text-bad border-bad/30',
+    Sus:            'bg-bad/15 text-bad border-bad/30',
+    Inactive:       'bg-bad/15 text-bad border-bad/30',
     'Empty Slot':   'bg-bad/15 text-bad border-bad/30',
     BYE:            'bg-signal-2/15 text-signal-2 border-signal-2/30',
     Doubtful:       'bg-signal-2/15 text-signal-2 border-signal-2/30',
     Questionable:   'bg-warn/15 text-warn border-warn/30',
+    // On the injury report, no game designation assigned yet.
+    NA:             'bg-warn/15 text-warn border-warn/30',
+    COV:            'bg-warn/15 text-warn border-warn/30',
+    DNR:            'bg-warn/15 text-warn border-warn/30',
 };
 const defaultReasonTone = 'bg-bg-3 text-text-dim border-line';
 const toneFor = (reason) =>

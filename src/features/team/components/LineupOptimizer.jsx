@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Sliders, ArrowRight, AlertTriangle } from 'lucide-react';
 import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
-import { getByeMap } from '../../../utils/nflData';
+import { getByeMap, classifyInjury } from '../../../utils/nflData';
 
 /** Which players may fill a given lineup slot. */
 const SLOT_ELIGIBILITY = {
@@ -17,7 +17,6 @@ const SLOT_ELIGIBILITY = {
     SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'],
 };
 
-const OUT_STATUSES = new Set(['Out', 'IR', 'PUP', 'Sus', 'NA', 'Doubtful']);
 
 /**
  * Greedy optimal lineup by projected points: fill the most constrained slots
@@ -73,6 +72,7 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
                     position: p.position,
                     team: p.team,
                     injury: p.injury_status || p.status,
+                    injuryLevel: classifyInjury(p),
                 };
             })
             .filter(Boolean);
@@ -89,6 +89,7 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
                 position: p?.position,
                 team: p?.team,
                 injury: p?.injury_status || p?.status,
+                injuryLevel: classifyInjury(p),
                 proj: projFor(pid),
             };
         });
@@ -108,11 +109,15 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
 
         const alerts = current.filter(
             (c) => SLOT_ELIGIBILITY[c.slot] && !c.empty &&
-                (byeTeams.has(c.team) || OUT_STATUSES.has(c.injury))
-        ).map((c) => ({
-            ...c,
-            reason: byeTeams.has(c.team) ? 'On bye' : c.injury,
-        }));
+                (byeTeams.has(c.team) || c.injuryLevel !== 'OK')
+        ).map((c) => {
+            const onBye = byeTeams.has(c.team);
+            return {
+                ...c,
+                reason: onBye ? 'On bye' : c.injury,
+                level: onBye ? 'INCOMPLETE' : c.injuryLevel,
+            };
+        });
 
         return { swaps: swaps.sort((a, b) => b.gain - a.gain), alerts, currentTotal, optimalTotal };
     }, [roster, players, league, projFor, byeTeams]);
@@ -120,6 +125,7 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
     if (!analysis) return null;
     const { swaps, alerts, currentTotal, optimalTotal } = analysis;
     const gain = optimalTotal - currentTotal;
+    const hasBlockingAlert = alerts.some((a) => a.level === 'INCOMPLETE');
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
@@ -148,8 +154,8 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
             </header>
 
             {alerts.length > 0 && (
-                <div className="px-4 py-3 border-b border-line bg-bad/5">
-                    <div className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-wider text-bad mb-2">
+                <div className={`px-4 py-3 border-b border-line ${hasBlockingAlert ? 'bg-bad/5' : 'bg-warn/5'}`}>
+                    <div className={`flex items-center gap-1.5 font-mono text-2xs uppercase tracking-wider mb-2 ${hasBlockingAlert ? 'text-bad' : 'text-warn'}`}>
                         <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Needs attention
                     </div>
                     <ul className="space-y-1.5">
@@ -157,7 +163,7 @@ const LineupOptimizer = ({ league, roster, players, week, projFor }) => {
                             <li key={a.pid} className="flex items-center gap-2 text-sm">
                                 <PlayerHeadshot playerId={a.pid} name={a.name} size={24} />
                                 <span className="text-text">{a.name}</span>
-                                <span className="font-mono text-2xs uppercase tracking-wider text-bad ml-auto">{a.reason}</span>
+                                <span className={`font-mono text-2xs uppercase tracking-wider ml-auto ${a.level === 'INCOMPLETE' ? 'text-bad' : 'text-warn'}`}>{a.reason}</span>
                             </li>
                         ))}
                     </ul>
