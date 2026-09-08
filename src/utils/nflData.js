@@ -19,6 +19,20 @@ export function getByeMap(season) {
     return byeWeeks[String(season)] || {};
 }
 
+/**
+ * Teams on bye in one week of a season, from that same generated data.
+ * Returns null when the season isn't covered — callers must not read that as
+ * "nobody is on bye". An empty array means the week genuinely has no byes.
+ * @param {string|number} season
+ * @param {string|number} week
+ * @returns {string[]|null}
+ */
+export function getByeTeams(season, week) {
+    const map = byeWeeks[String(season)];
+    if (!map) return null;
+    return map[String(week)] || [];
+}
+
 // Indoor stadiums — skip weather alerts for these teams (domes/retractable roofs)
 export const INDOOR_STADIUMS = new Set([
     'ARI', 'ATL', 'DAL', 'DET', 'HOU', 'IND', 'LAC', 'LAR', 'LV', 'MIN', 'NO'

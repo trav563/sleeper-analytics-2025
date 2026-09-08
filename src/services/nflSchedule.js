@@ -1,11 +1,29 @@
-import { ALL_NFL_TEAMS, INDOOR_STADIUMS } from '../utils/nflData';
+import { ALL_NFL_TEAMS, INDOOR_STADIUMS, getByeTeams } from '../utils/nflData';
+
+// No NFL week has ever had more than 6 teams on bye. A scoreboard implying
+// more than this is a partial response, not a bye-heavy week.
+const MAX_PLAUSIBLE_BYE_TEAMS = 8;
 
 /**
- * Fetches the NFL schedule for a specific week from ESPN and determines which teams are on bye.
- * @param {number} weekNumber - The week number to fetch (e.g., 1, 2, 14).
- * @returns {Promise<string[]>} - A promise that resolves to an array of team abbreviations on bye.
+ * Teams on bye for a given week.
+ *
+ * The generated schedule data (src/data/byeWeeks.json, refreshed with
+ * `npm run update-byes`) is authoritative: it is season-aware, complete, and
+ * cannot fail. ESPN is consulted only for seasons that data does not cover —
+ * and since its scoreboard is season-blind, it can only stand in for the
+ * season currently in progress.
+ *
+ * @param {number} weekNumber - The week number (e.g. 1, 2, 14).
+ * @param {string|number} season - The league season, e.g. "2026".
+ * @returns {Promise<string[]|null>} Team abbreviations on bye, or null when
+ *   byes could not be determined. Callers must surface null rather than
+ *   treating it as "nobody is on bye", which silently passes every lineup
+ *   starting a bye-week player.
  */
-export const getTeamsOnBye = async (weekNumber) => {
+export const getTeamsOnBye = async (weekNumber, season) => {
+    const known = getByeTeams(season, weekNumber);
+    if (known) return known;
+
     try {
         const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
         if (!response.ok) {
@@ -35,11 +53,18 @@ export const getTeamsOnBye = async (weekNumber) => {
         // Compare against all teams to find who is missing
         const byeTeams = ALL_NFL_TEAMS.filter(team => !playingTeams.has(team));
 
+        // An empty or truncated scoreboard reads as "most of the league is on
+        // bye", which would flag every lineup in the app. Report unknown.
+        if (byeTeams.length > MAX_PLAUSIBLE_BYE_TEAMS) {
+            console.warn(`Bye lookup: week ${weekNumber} scoreboard looks incomplete (${byeTeams.length} teams absent)`);
+            return null;
+        }
+
         return byeTeams;
 
     } catch (error) {
         console.error("Error fetching bye weeks:", error);
-        return []; // Return empty array on error to avoid breaking the app
+        return null; // Unknown — never "nobody is on bye".
     }
 };
 

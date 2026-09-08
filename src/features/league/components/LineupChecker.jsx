@@ -94,7 +94,7 @@ const LineupChecker = ({ leagueId }) => {
     const seasonType = state?.season_type || "regular";
     const isPreseason = seasonType === "pre";
 
-    const { grouped, byeTeamsThisWeek } = useLineupStatus(week, users, rosters, matchups, players);
+    const { grouped, byeTeamsThisWeek, byesUnavailable } = useLineupStatus(week, users, rosters, matchups, players, league?.season);
 
     const getMatchupForTeam = useCallback((team) => {
         if (!team || !matchups) return null;
@@ -166,6 +166,12 @@ const LineupChecker = ({ leagueId }) => {
 
             {!loading && !error && (
                 <>
+                    {byesUnavailable && (
+                        <div className="px-4 py-2.5 border-b border-line bg-warn/5 flex items-start gap-2 text-xs text-warn">
+                            <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
+                            <span>Bye weeks unavailable for this season — lineups below were checked for injuries only.</span>
+                        </div>
+                    )}
                     <div className="px-4 py-2.5 border-b border-line flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-2xs uppercase tracking-wider text-text-mute">
                         {counts.map((c) => (
                             <span key={c.key} className="inline-flex items-center gap-1.5">

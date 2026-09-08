@@ -2,8 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { getTeamsOnBye, getGameWeather } from '../../../services/nflSchedule';
 import { isDSTStarterId, classifyInjury, displayTeamName, avatarUrl } from '../../../utils/nflData';
 
-export function useLineupStatus(week, users, rosters, matchups, players) {
+export function useLineupStatus(week, users, rosters, matchups, players, season) {
     const [byeTeamsThisWeek, setByeTeamsThisWeek] = useState(new Set());
+    // getTeamsOnBye returns null when it can't determine byes. Tracked so the
+    // UI can say so, rather than reporting lineups clean on missing data.
+    const [byesUnavailable, setByesUnavailable] = useState(false);
     const [weatherData, setWeatherData] = useState({});
 
     // Fetch dynamic bye weeks + weather
@@ -13,11 +16,12 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
         const fetchData = async () => {
             if (!week) return;
             const [teams, weather] = await Promise.all([
-                getTeamsOnBye(week),
+                getTeamsOnBye(week, season),
                 getGameWeather(week).catch(() => ({})),
             ]);
             if (mounted) {
-                setByeTeamsThisWeek(new Set(teams));
+                setByeTeamsThisWeek(new Set(teams || []));
+                setByesUnavailable(teams === null);
                 setWeatherData(weather || {});
             }
         };
@@ -27,7 +31,7 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
         return () => {
             mounted = false;
         };
-    }, [week]);
+    }, [week, season]);
 
     const userById = useMemo(() => new Map(users.map((u) => [u.user_id, u])), [users]);
     const rosterById = useMemo(() => new Map(rosters.map((r) => [r.roster_id, r])), [rosters]);
@@ -134,6 +138,7 @@ export function useLineupStatus(week, users, rosters, matchups, players) {
         teams,
         grouped,
         byeTeamsThisWeek,
+        byesUnavailable,
         userById,
         rosterById
     };
