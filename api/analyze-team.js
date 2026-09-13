@@ -302,7 +302,7 @@ export function buildPrompt(data, analysisType, constraint) {
     const record = `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`;
     const fpts = myStats?.totalPoints || 0;
     const gp = wins + losses + ties;
-    const ppg = gp > 0 ? (fpts / gp).toFixed(1) : 'N/A (preseason)';
+    const ppg = gp > 0 ? (fpts / gp).toFixed(1) : 'N/A (no completed games)';
 
     // ── Standings ──
     const standings = [...finalStats].sort((a, b) => b.winPct - a.winPct || b.totalPoints - a.totalPoints);
@@ -349,7 +349,7 @@ export function buildPrompt(data, analysisType, constraint) {
     if (opponentRoster) {
         const oppOwner = users.find(u => u.user_id === opponentRoster.owner_id);
         const oppName = cleanName(oppOwner?.metadata?.team_name || oppOwner?.display_name || oppOwner?.username, 'Opponent');
-        const oppW = opponentRoster.settings?.wins || 0, oppL = opponentRoster.settings?.losses || 0;
+        const oppRecord = finalStats.find(r => r.rosterId === opponentRoster.roster_id)?.record || '0-0';
 
         const oppLines = [];
         rosterPositions.forEach((slot, idx) => {
@@ -361,7 +361,7 @@ export function buildPrompt(data, analysisType, constraint) {
             oppLines.push(`| ${slot} | ${d.name} | ${d.pos} | ${d.age} | ${d.statsLine} | ${d.injury} |`);
         });
 
-        opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppW}-${oppL})
+        opponentSection = `OPPONENT THIS WEEK: ${oppName} (Record: ${oppRecord}, completed weeks only)
 | Slot | Player | Pos | Age | Stats & Projection | Injury |
 |------|--------|-----|-----|--------------------|--------|
 ${oppLines.join('\n')}`;
@@ -371,13 +371,13 @@ ${oppLines.join('\n')}`;
     const leagueRostersText = rosters.filter(r => r.roster_id !== userRoster.roster_id).map(r => {
         const o = users.find(u => u.user_id === r.owner_id);
         const name = cleanName(o?.metadata?.team_name || o?.display_name || o?.username, `Team ${r.roster_id}`);
-        const w = r.settings?.wins || 0, l = r.settings?.losses || 0;
+        const completedRecord = finalStats.find(t => t.rosterId === r.roster_id)?.record || '0-0';
         const keyPlayers = ownedPlayerIds(r).filter(pid => pid && pid !== '0').map(pid => {
             const p = players[pid];
             if (!p) return null;
             return `${p.position}:${pName(p)} (age ${p.age ?? 'unknown'}, market ${marketSnapshot?.values?.[pid] ?? 'unavailable'}, ${r.reserve?.includes(pid) ? 'IR' : r.taxi?.includes(pid) ? 'taxi' : r.starters?.includes(pid) ? 'starter' : 'bench'})`;
         }).filter(Boolean).join(', ');
-        return `${name} (${w}-${l}): ${keyPlayers}`;
+        return `${name} (${completedRecord}, completed weeks only): ${keyPlayers}`;
     }).join('\n');
 
     // ── Free agents ──
@@ -491,7 +491,7 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
 ## Summary
 - [1-2 sentences on overall waiver strategy for this week]`,
 
-        playoff: gp === 0 ? `You MUST use EXACTLY this format. This is PRESEASON — no games have been played yet. Do NOT use markdown tables.
+        playoff: gp === 0 ? `You MUST use EXACTLY this format. There are no completed games yet. Live Week 1 games may be in progress; do not mistake that for preseason or infer final records. Do NOT use markdown tables.
 
 ## Season Preview
 - **League Size:** ${numTeams} teams
@@ -503,7 +503,7 @@ Use this EXACT numbered format (5-7 targets from the FREE AGENTS list ONLY):
 - **Weaknesses:** [Position groups that need improvement before the season]
 - **Key question marks:** [Players whose roles or health are uncertain]
 
-## Offseason Action Plan
+## Next Steps
 - **Move 1:** [Specific action to take]
 - **Move 2:** [Another specific action]
 - **Ceiling:** [Best case scenario for this roster]` :

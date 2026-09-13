@@ -13,6 +13,15 @@ const data = { league, userRoster: roster, opponentRoster: other, players, users
     currentStats: {}, prevStats: {}, weekProjections: {}, allMatchupHistory: {}, pprField: 'pts_ppr', playerNews: [], weekContext: {} };
 
 describe('dedicated analysis instructions', () => {
+    it('uses completed records throughout the prompt during live Week 1', () => {
+        const liveOther = { ...other, settings: { wins: 1, losses: 0 } };
+        const context = { ...data, opponentRoster: liveOther, rosters: [roster, liveOther] };
+        const prompt = buildPrompt(context, 'roster');
+        expect(prompt).toContain('Record: 0-0, completed weeks only');
+        expect(prompt).not.toContain('(1-0)');
+        expect(buildPrompt(context, 'playoff')).not.toContain('This is PRESEASON');
+        expect(buildPrompt(context, 'roster', 'trade-up')).toContain('(0-0, completed weeks only)');
+    });
     it('keeps grades and both trade modes separate', () => {
         const grades = buildPrompt(data,'roster');
         const trades = buildPrompt(data,'roster','trade-up');
