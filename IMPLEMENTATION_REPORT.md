@@ -1,12 +1,12 @@
 # App audit implementation — September 13, 2026
 
-The approved correctness and navigation changes are implemented locally. No deployment, dependency additions, or model changes were made.
+The approved correctness and navigation changes were validated locally and on a staged Vercel production deployment before live-domain promotion. No dependency additions or model changes were made.
 
 ## Recommendations and AI responses
 
 - Dashboard roster grades, trade-up ideas, and sell-high candidates have separate instructions, titles, and controls above the result. Users can return to grades.
 - Dashboard AI, Trade Finder, Simulator, and market-based tools share dynasty/redraft, reception scoring, league-size, and QB-format settings. Results identify their value source and retrieval time. DynastyProcess fallback identifies its scoring/league-size approximation; redraft requests never fall back to dynasty prices.
-- Trade candidates are generated before the model explains them. Screening checks full ownership (including IR/taxi), values, lineup requirements, useful incoming depth, gains for both teams, and no newly unfillable starting positions. Weekly availability is checked separately from long-term ownership.
+- Trade candidates are generated and rendered directly from verified objects. Concrete trade output bypasses the language model, which cannot invent additional packages. Screening checks full ownership (including IR/taxi), values, lineup requirements, useful incoming depth, gains for both teams, and no newly unfillable starting positions. Weekly availability is checked separately from long-term ownership.
 - Named defaults are `TRADE_VALUE_TOLERANCE = 0.15`, `CONSOLIDATION_PREMIUM = 0.10`, and `MARKET_MAX_AGE_MS = 24 hours`. These are conservative screening rules, not acceptance probabilities. Precise recommendations are withheld when prices are missing or stale. Candidate generation currently uses players only, so no unverified picks are proposed.
 - Incidental AI trade advice is restricted to the same screened candidates. Waiver/drop candidates protect starters, IR/taxi assets, young dynasty players, rookies, and valuable stashes.
 - SSE responses require explicit successful completion with the provider finish reason. Interrupted, token-limited, empty, malformed, and failed responses are incomplete and retryable. Only complete responses are cached; versioned keys retire older results. Requests are aborted and isolated across league, team, week, mode, and constraint changes.
@@ -35,7 +35,7 @@ The approved correctness and navigation changes are implemented locally. No depl
 
 | Check | Result |
 |---|---|
-| Automated tests | **303 passed in 28 files** (baseline: 230) |
+| Automated tests | **308 passed in 29 files** (baseline: 230) |
 | Production build | **Passed** |
 | ESLint | **0 errors, 18 warnings** (baseline: 38 errors, 31 warnings) |
 | Responsive widths | **375, 390, 430, 768, 1280, 1440px** |
@@ -49,7 +49,7 @@ Regression coverage includes format-specific valuations, unavailable/fallback va
 
 ## Acceptance limits
 
-- The local Vite preview does not host the serverless AI endpoint. Successful provider streams, fallback, provider errors, and incomplete streams were tested using mocked endpoint integrations; real provider output still needs a deployed-environment acceptance check.
+- Real Vercel acceptance checks passed for roster grades, trade-up ideas, and sell-high candidates: all returned HTTP 200 with explicit complete/stop SSE events. Roster grades used only the two intended sections; both trade modes returned verified no-deal results. Early provider checks exposed unsolicited advice, invented offers, and token exhaustion; the release now renders concrete trades deterministically, isolates AI response scope, and allows an 8192-token reasoning/output budget. Provider fallback and error paths remain covered by mocked integration tests.
 - Browser checks used desktop viewport emulation, not physical iOS/Android devices. Real browser chrome, device safe-area insets, signed-in account flows, and every historical-season combination remain acceptance checks.
 - Completed-week finality deliberately follows Sleeper's week rollover rather than guessing from nonzero scores. Values report retrieval time, not a provider publication timestamp. Market fit and age do not guarantee another manager will accept an offer.
 - Eighteen nonblocking lint warnings remain, including existing unused-variable/JSX detection and Fast Refresh export warnings. Lint rules were not broadly suppressed; the configuration addition declares Node globals for server/scripts.

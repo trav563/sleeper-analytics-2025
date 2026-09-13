@@ -1,7 +1,7 @@
 import { CONSOLIDATION_PREMIUM } from './tradeCandidates.js';
 
 // Concrete offers are rendered from verified objects, never from model prose.
-const label = value => String(value || 'Unknown').replace(/[\r\n*_`<>\[\]]/g, ' ').trim();
+const label = value => String(value || 'Unknown').replace(/[\r\n*_`<>[\]]/g, ' ').trim();
 const asset = p => `${label(p.name || `${p.first_name || ''} ${p.last_name || ''}`)} (${p.position}, age ${p.age ?? 'unknown'}${p.ownershipStatus && p.ownershipStatus !== 'Active' ? `, ${p.ownershipStatus}` : ''}; value ${p.tradeValue.toLocaleString()})`;
 
 export function formatTradeResponse({ mode, candidates, teamName, opponentName, valuesAvailable }) {
