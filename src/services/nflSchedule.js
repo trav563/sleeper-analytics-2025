@@ -1,4 +1,5 @@
 import { ALL_NFL_TEAMS, INDOOR_STADIUMS, getByeTeams } from '../utils/nflData';
+import { rateLimitedFetch } from '../utils/rateLimitedFetch';
 
 // No NFL week has ever had more than 6 teams on bye. A scoreboard implying
 // more than this is a partial response, not a bye-heavy week.
@@ -25,7 +26,7 @@ export const getTeamsOnBye = async (weekNumber, season) => {
     if (known) return known;
 
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        const response = await rateLimitedFetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch schedule: ${response.statusText}`);
         }
@@ -75,7 +76,7 @@ export const getTeamsOnBye = async (weekNumber, season) => {
  */
 export const getGameStatuses = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        const response = await rateLimitedFetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch schedule: ${response.statusText}`);
         }
@@ -137,7 +138,7 @@ export const getGameStatuses = async (weekNumber, season) => {
  */
 export const getGameLiveDetails = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        const response = await rateLimitedFetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) throw new Error('Game context unavailable');
 
         const data = await response.json();
@@ -191,7 +192,7 @@ export const getGameLiveDetails = async (weekNumber, season) => {
  */
 export const getGameWeather = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        const response = await rateLimitedFetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) throw new Error('Game context unavailable');
 
         const data = await response.json();

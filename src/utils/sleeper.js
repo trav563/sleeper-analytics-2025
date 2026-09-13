@@ -1,4 +1,5 @@
 import { readPlayersCache, writePlayersCache } from './playersCache';
+import { rateLimitedFetch } from './rateLimitedFetch';
 
 const BASE_URL = 'https://api.sleeper.app/v1';
 
@@ -11,16 +12,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export const fetchSleeper = async (endpoint, { retries = 2, signal } = {}) => {
     let attempt = 0;
-    // Retry transient failures (network errors, 429, 5xx) with exponential
-    // backoff; 4xx other than 429 fail fast. This protects the direct-fetch
+    // Retry transient network/5xx failures. 429 responses establish a shared
+    // provider cooldown in rateLimitedFetch and fail fast. This protects direct-fetch
     // callers that have no retry of their own — React Query layers its own
     // retry on top of the hooked queries.
     while (true) {
         try {
-            const response = await fetch(`${BASE_URL}${endpoint}`, { signal });
+            const response = await rateLimitedFetch(`${BASE_URL}${endpoint}`, { signal });
             if (response.ok) return await response.json();
 
-            const retryable = response.status === 429 || response.status >= 500;
+            const retryable = response.status >= 500;
             if (retryable && attempt < retries) {
                 const retryAfter = Number(response.headers.get('retry-after'));
                 const wait = retryAfter > 0 && retryAfter <= 10
@@ -88,7 +89,8 @@ export const fetchLeagueRosters = async (leagueId, opts) => {
  *   the live week, where score freshness matters. Past weeks are immutable.
  */
 export const fetchLeagueMatchups = async (leagueId, week, fresh = false, opts) => {
-    const bust = fresh ? `?_=${Date.now()}` : '';
+    // All viewers can reuse a CDN entry within a 30-second freshness window.
+    const bust = fresh ? `?_=${Math.floor(Date.now() / 30_000)}` : '';
     return fetchSleeper(`/league/${leagueId}/matchups/${week}${bust}`, opts);
 };
 
@@ -106,7 +108,7 @@ export const fetchWinnersBracket = async (leagueId) => {
  * Fetch current NFL state (week, season type, etc.)
  */
 export const fetchNFLState = async () => {
-    const timestamp = Date.now();
+    const timestamp = Math.floor(Date.now() / 60_000);
     return fetchSleeper(`/state/nfl?_=${timestamp}`);
 };
 

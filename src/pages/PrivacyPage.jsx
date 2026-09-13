@@ -76,6 +76,7 @@ const PrivacyPage = () => (
                 <li>Your Sleeper profile (username, user ID, avatar) so you don't re-enter it</li>
                 <li>Cached AI analyses — automatically deleted after 7 days</li>
                 <li>Cached playoff-odds simulations</li>
+                <li>Recorded win-probability history for up to 32 matchups, capped at 1,440 observations each. Histories older than 45 days are discarded when history is next loaded or updated. This history stays in your browser and is not uploaded.</li>
                 <li>Anything you've saved in the schedule generator</li>
                 <li>Your light/dark theme choice</li>
             </ul>

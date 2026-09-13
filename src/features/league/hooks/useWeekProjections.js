@@ -9,11 +9,11 @@ import { projectedPointsOrNull } from '../../../utils/scoring';
  * Returns { projections, projFor, loading, hasProjections } where projFor(pid)
  * gives that player's projected points for the week (0 when unknown).
  */
-export function useWeekProjections(season, week, scoringSettings) {
+export function useWeekProjections(season, week, scoringSettings, enabled = true) {
     const { data, isLoading } = useQuery({
         queryKey: ['weekProjections', season, week],
         queryFn: () => fetchWeekProjections(season, week),
-        enabled: !!season && !!week,
+        enabled: enabled && !!season && !!week,
         // Projections drift during the week and freeze once it's played.
         staleTime: 6 * 60 * 60 * 1000,
         gcTime: 24 * 60 * 60 * 1000,

@@ -38,7 +38,7 @@ describe('game context for live projections', () => {
         fetch.mockResolvedValue(ok(payload));
         const games = await getGameLiveDetails(2, '2025');
         expect(games.WAS).toMatchObject({ statusName: 'STATUS_END_PERIOD', period: 3, displayClock: '0:00' });
-        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('week=2&seasontype=2&dates=2025'));
+        expect(fetch.mock.calls[0][0]).toContain('week=2&seasontype=2&dates=2025');
     });
 
     it('propagates failed game context so consumers can identify delayed estimates', async () => {

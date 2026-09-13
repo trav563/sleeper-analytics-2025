@@ -12,7 +12,7 @@ import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { projectMatchup, starterPoints, gamePhase, formatProjection } from '../../../lib/liveProjection';
-import { theme } from '../../../lib/theme';
+import { WinProbabilityChart } from './WinProbabilityChart';
 
 /* ---------- helpers ---------- */
 const bucketStarter = (m, idx, players, gameStatuses) => {
@@ -136,7 +136,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
     /* Build position-by-position rows. Computed unconditionally so we don't
        trip rules-of-hooks; the early-return below skips the render. */
-    const { projections, hasProjections } = useWeekProjections(
+    const { projections } = useWeekProjections(
         league?.season, week, league?.scoring_settings
     );
     const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails }),
@@ -219,8 +219,6 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     }) : null;
     const myProjFinal = myProjection.final;
     const oppProjFinal = oppProjection.final;
-    // No historical clock snapshots are available: show only the current estimate.
-    const winProbCheckpoints = winProb == null ? [] : [{ label: 'Current estimate', myWP: winProb }];
     // Before anyone has scored, a live margin is always 0.0 — which reads as
     // broken next to a projection-based win probability. Show the PROJECTED
     // margin until real points exist, and label it as such.
@@ -510,16 +508,23 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
                         <SectionShell
                             title="Win Probability"
-                            sub={hasProjections ? 'Current estimate' : 'Projection data unavailable'}
+                            sub="Recorded trend"
                         >
-                            {winProb != null ? <WinProbCurve
-                                checkpoints={winProbCheckpoints}
+                            <WinProbabilityChart
+                                leagueId={league?.league_id}
+                                season={league?.season}
+                                week={week}
+                                matchupId={myMatchup.matchup_id}
+                                canRecord={!isHistoricalSeason && Number(week) === Number(currentNFLWeek)}
+                                complete={[...myProjection.bySlot, ...oppProjection.bySlot].every(p => ['DONE', 'EMPTY'].includes(p.phase))}
+                                myRosterId={myRoster?.roster_id}
+                                oppRosterId={oppRoster?.roster_id}
                                 winProb={winProb}
                                 myName={displayTeamName(myUser)}
                                 oppName={displayTeamName(oppUser)}
                                 myHue={myHue}
                                 oppHue={oppHue}
-                            /> : <p className="text-sm text-text-mute">Waiting for complete projection and game data.</p>}
+                            />
                         </SectionShell>
                     </aside>
                 </div>
@@ -677,70 +682,6 @@ const Stat = ({ label, value, tone }) => {
             <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">{label}</div>
             <div className={`tnum font-display text-md font-bold ${t} mt-0.5`}>{value}</div>
         </div>
-    );
-};
-
-const WinProbCurve = ({ checkpoints = [], winProb, myName, oppName, myHue = 45, oppHue = 200 }) => {
-    const myColor = `oklch(72% 0.16 ${myHue})`;
-    const oppColor = `oklch(72% 0.16 ${oppHue})`;
-    const W = 320;
-    const H = 100;
-
-    // Build polyline points from checkpoints. Single checkpoint (pregame only)
-    // renders as just two pips so the user sees "this is the prediction, no data yet".
-    const myPoints = checkpoints.map((c, i) => {
-        const x = checkpoints.length > 1 ? (i / (checkpoints.length - 1)) * W : W / 2;
-        const y = H - c.myWP * H;
-        return [x, y];
-    });
-    const oppPoints = checkpoints.map((c, i) => {
-        const x = checkpoints.length > 1 ? (i / (checkpoints.length - 1)) * W : W / 2;
-        const y = H - (1 - c.myWP) * H;
-        return [x, y];
-    });
-    const toPath = (pts) => pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-
-    const lastIdx = checkpoints.length - 1;
-    const lastMyWP = lastIdx >= 0 ? checkpoints[lastIdx].myWP : (winProb ?? 0.5);
-    const lastOppWP = 1 - lastMyWP;
-
-    return (
-        <>
-            <svg viewBox={`0 0 ${W} ${H + 10}`} width="100%" height="110" preserveAspectRatio="none">
-                <line x1="0" x2={W} y1={H / 2} y2={H / 2} stroke={theme.color.line} strokeDasharray="2 3" />
-                {checkpoints.length > 1 && (
-                    <>
-                        <path d={toPath(oppPoints)} fill="none" stroke={oppColor} strokeWidth="2" strokeOpacity="0.85" />
-                        <path d={toPath(myPoints)} fill="none" stroke={myColor} strokeWidth="2.5" />
-                    </>
-                )}
-                {myPoints.map(([x, y], i) => (
-                    <circle key={`m${i}`} cx={x} cy={y} r={i === lastIdx ? 4 : 2.5} fill={myColor} />
-                ))}
-                {oppPoints.map(([x, y], i) => (
-                    <circle key={`o${i}`} cx={x} cy={y} r={i === lastIdx ? 3.5 : 2} fill={oppColor} />
-                ))}
-            </svg>
-            {checkpoints.length > 1 && (
-                <div className="flex justify-between font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                    {checkpoints.map((c, i) => (
-                        <span key={i} className="tnum">{c.label}</span>
-                    ))}
-                </div>
-            )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 font-mono text-2xs">
-                <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded-sm" style={{ background: myColor }} />
-                    <span className="text-text truncate max-w-[120px]">{myName || 'You'}</span>
-                    <span className="tnum text-text-dim">{Math.round(lastMyWP * 100)}%</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded-sm" style={{ background: oppColor }} />
-                    <span className="text-text truncate max-w-[120px]">{oppName || 'Opp'}</span>
-                    <span className="tnum text-text-dim">{Math.round(lastOppWP * 100)}%</span>
-                </span>
-            </div>
-        </>
     );
 };
 
