@@ -48,6 +48,19 @@ function season({
 
 const find = (list, a, b) => list.find((r) => pairKey(r.aId, r.bId) === pairKey(a, b));
 
+describe('confirmed rivalry scores', () => {
+    it('includes completed zero ties and negative scores, but excludes the live week', () => {
+        const frame = { ...season({ games: { 1: game(1, 0, 2, 0), 2: game(1, -2, 2, -5), 3: game(1, 120, 2, 5) } }), completedWeek: 2 };
+        const ab = find(buildRivalries({ seasons: [frame], currentOwnerIds: ['a', 'b'] }), 'a', 'b');
+        expect(ab.reg).toMatchObject({ g: 2, w: 1, l: 0, t: 1 });
+    });
+
+    it('does not turn missing completed scores into zero ties', () => {
+        const frame = { ...season({ games: { 1: game(1, null, 2, 0) } }), completedWeek: 1 };
+        expect(find(buildRivalries({ seasons: [frame], currentOwnerIds: ['a', 'b'] }), 'a', 'b').reg.g).toBe(0);
+    });
+});
+
 describe('pairKey', () => {
     it('is order-independent', () => {
         expect(pairKey('a', 'b')).toBe(pairKey('b', 'a'));

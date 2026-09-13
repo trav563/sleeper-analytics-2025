@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Layers } from 'lucide-react';
-import { activeRosterIds } from '../../../utils/leagueMath';
+import { ownedPlayerIds } from '../../../utils/valuation';
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 const POS_TONE = {
@@ -25,7 +25,7 @@ const BANDS = [
 const RosterConstruction = ({ roster, players, marketValues }) => {
     const data = useMemo(() => {
         if (!roster || !players) return null;
-        const activeIds = activeRosterIds(roster);
+        const activeIds = ownedPlayerIds(roster);
         const starters = new Set((roster.starters || []).filter((p) => p && p !== '0'));
 
         const byPosition = POSITIONS.map((pos) => {
@@ -65,7 +65,7 @@ const RosterConstruction = ({ roster, players, marketValues }) => {
                     <h3 className="font-display text-lg font-semibold text-text">Roster Construction</h3>
                 </div>
                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                    Age profile by position · where your value sits
+                    Age and value · includes IR/taxi ownership
                 </p>
             </header>
 
@@ -99,7 +99,7 @@ const RosterConstruction = ({ roster, players, marketValues }) => {
                     <div className="pt-3 border-t border-line">
                         <div className="flex items-center justify-between font-mono text-2xs uppercase tracking-wider text-text-mute mb-1.5">
                             <span>Starters <span className="tnum text-signal">{starterValue.toLocaleString()}</span></span>
-                            <span>Bench <span className="tnum text-text-dim">{benchValue.toLocaleString()}</span></span>
+                            <span>Depth / IR / taxi <span className="tnum text-text-dim">{benchValue.toLocaleString()}</span></span>
                         </div>
                         <div className="h-2 rounded-full bg-bg-3 overflow-hidden flex" title={`${starterPct.toFixed(0)}% of roster value is in your starting lineup`}>
                             <div className="h-full bg-signal" style={{ width: `${starterPct}%` }} />

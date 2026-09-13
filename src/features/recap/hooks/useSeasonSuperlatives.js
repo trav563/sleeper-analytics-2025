@@ -85,7 +85,7 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
                 const squadPoints = m.players_points || {};
 
                 // Season Tank: lowest team score
-                if (m.points > 0 && (!seasonTank || m.points < seasonTank.score)) {
+                if (Number.isFinite(m.points) && (!seasonTank || m.points < seasonTank.score)) {
                     seasonTank = {
                         manager: managerStats[m.roster_id].manager,
                         score: m.points,
@@ -204,5 +204,5 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
             luckiestManager: luckiestManager ? { ...luckiestManager, count: luckiestManager.luckyWins } : null,
             weeksAnalyzed: weeks.length,
         };
-    }, [league, seasonMatchups, rosters, users, players, currentWeek]);
+    }, [league, seasonMatchups, rosters, users, players]);
 }

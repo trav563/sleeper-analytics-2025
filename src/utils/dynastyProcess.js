@@ -1,4 +1,4 @@
-import { pickKeyFromName } from './fantasyCalc';
+import { pickKeyFromName } from './fantasyCalc.js';
 
 // DynastyProcess publishes weekly dynasty values (GPL-3.0) as CSVs:
 // https://github.com/dynastyprocess/data
@@ -44,7 +44,7 @@ export function parseCsv(text) {
  * @param {boolean} isSuperflex selects value_2qb vs value_1qb
  */
 export async function fetchDynastyProcessValues(isSuperflex = true) {
-    const [valuesRes, idsRes] = await Promise.all([fetch(VALUES_URL), fetch(IDS_URL)]);
+    const [valuesRes, idsRes] = await Promise.all([fetch(VALUES_URL, { signal: AbortSignal.timeout(8000) }), fetch(IDS_URL, { signal: AbortSignal.timeout(8000) })]);
     if (!valuesRes.ok || !idsRes.ok) throw new Error('DynastyProcess fetch failed');
     const [valuesText, idsText] = await Promise.all([valuesRes.text(), idsRes.text()]);
 

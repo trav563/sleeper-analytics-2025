@@ -1,3 +1,4 @@
+import { completedStandings } from '../../../utils/completedStandings';
 import { useMemo, useState } from 'react';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
@@ -15,56 +16,16 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
     const stats = useMemo(() => {
         if (loading || !rosters || !seasonMatchups) return [];
 
-        const teamStats = {};
-
-        rosters.forEach(r => {
-            teamStats[r.roster_id] = {
-                rosterId: r.roster_id,
-                ownerId: r.owner_id,
-                wins: r.settings.wins,
-                losses: r.settings.losses,
-                ties: r.settings.ties,
-                fpts: r.settings.fpts + (r.settings.fpts_decimal || 0) / 100,
-                allPlayWins: 0,
-                allPlayLosses: 0,
-                allPlayTies: 0
-            };
-        });
-
-        Object.values(seasonMatchups).forEach(weekMatchups => {
-            if (!weekMatchups) return;
-
-            const scores = weekMatchups.map(m => ({
-                roster_id: m.roster_id,
-                points: m.points
-            })).sort((a, b) => b.points - a.points);
-
-            scores.forEach(teamA => {
-                if (!teamStats[teamA.roster_id]) return;
-
-                scores.forEach(teamB => {
-                    if (teamA.roster_id === teamB.roster_id) return;
-
-                    if (teamA.points > teamB.points) {
-                        teamStats[teamA.roster_id].allPlayWins++;
-                    } else if (teamA.points < teamB.points) {
-                        teamStats[teamA.roster_id].allPlayLosses++;
-                    } else {
-                        teamStats[teamA.roster_id].allPlayTies++;
-                    }
-                });
-            });
-        });
-
-        return Object.values(teamStats).map(stat => {
-            const owner = userById.get(stat.ownerId);
+        return completedStandings(rosters, seasonMatchups).map(stat => {
+            const ownerId = rosters.find(r => r.roster_id === stat.rosterId)?.owner_id;
+            const owner = userById.get(ownerId);
             const allPlayWinPct = (stat.allPlayWins + stat.allPlayTies * 0.5) / (stat.allPlayWins + stat.allPlayLosses + stat.allPlayTies || 1);
             const totalGames = stat.wins + stat.losses + stat.ties;
             const expectedWins = allPlayWinPct * totalGames;
-            const luckIndex = stat.wins - expectedWins;
+            const luckIndex = (stat.wins + stat.ties * 0.5) - expectedWins;
 
             return {
-                ...stat,
+                ...stat, ownerId,
                 name: displayTeamName(owner),
                 avatar: avatarUrl(owner?.avatar),
                 actualRecord: `${stat.wins}-${stat.losses}${stat.ties > 0 ? `-${stat.ties}` : ''}`,
@@ -100,7 +61,8 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                 </p>
             </header>
 
-            <div className="overflow-x-auto">
+            <div className="md:hidden divide-y divide-line">{stats.map(team => <details key={team.rosterId} className="p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">{team.name}<span className="block text-xs text-text-dim mt-1">Record {team.actualRecord} · Luck {team.luckIndex}</span></summary><dl className="grid grid-cols-2 text-sm gap-2 mt-3"><dt>All-play record</dt><dd>{team.allPlayRecord}</dd><dt>Points for</dt><dd>{team.totalPoints.toFixed(1)}</dd><dt>Luck</dt><dd>{team.luckIndex} wins above expected</dd></dl></details>)}</div>
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">

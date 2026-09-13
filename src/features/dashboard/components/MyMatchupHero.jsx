@@ -14,11 +14,68 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
  * dir-a.jsx MyMatchupHero composition (large pip, full team name,
  * 72px score with glow, PROJ · CEILING sub, win-prob bar at bottom).
  */
+    const TeamSide = ({ league, navigate, user, roster, score, projFinal, ceilFinal, isWinning, mirror = false }) => {
+        const recordLabel = roster
+            ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
+            : (mirror ? 'Opp' : 'You');
+        const goTeam = (e) => {
+            e.stopPropagation();
+            if (league?.league_id && roster?.roster_id) {
+                navigate(`/league/${league.league_id}/team/${roster.roster_id}`);
+            }
+        };
+        return (
+            <div className={`flex flex-col items-center text-center gap-2 md:gap-5 min-w-0 md:flex-row md:items-center ${mirror ? 'md:flex-row-reverse md:text-right' : 'md:text-left'}`}>
+                <button
+                    type="button"
+                    onClick={goTeam}
+                    className="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-signal/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                    aria-label={`View ${displayTeamName(user)}`}
+                >
+                    {user?.avatar ? (
+                        <img
+                            src={avatarUrl(user.avatar)}
+                            alt=""
+                            className="w-12 h-12 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line"
+                        />
+                    ) : (
+                        <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={48} />
+                    )}
+                </button>
+                <div className="min-w-0">
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim font-bold">
+                        {recordLabel}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={goTeam}
+                        className={`block font-display text-sm md:text-xl font-bold tracking-snug text-text truncate max-w-[140px] md:max-w-[280px] mx-auto hover:text-signal transition-colors duration-fast ${mirror ? 'md:ml-auto md:mx-0 md:text-right' : 'md:mx-0 md:text-left'}`}
+                    >
+                        {displayTeamName(user)}
+                    </button>
+                    <div
+                        className={`tnum font-display text-4xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
+                        style={isWinning ? { textShadow: '0 0 28px rgba(245,179,1,0.33)' } : undefined}
+                    >
+                        {score.toFixed(1)}
+                    </div>
+                    <div className="font-mono text-2xs text-text-dim mt-1">
+                        Proj <span className="tnum text-text-dim">{projFinal.toFixed(1)}</span>
+                        {ceilFinal > projFinal && (
+                            <> · Ceiling <span className="tnum text-text-dim">{ceilFinal.toFixed(1)}</span></>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
 const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, seasonMatchups, selectedUserId }) => {
     /* Real weekly projections scored with this league's settings. */
     const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
     const navigate = useNavigate();
-    const { details: liveDetails } = useGameLiveDetails(week);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
 
     const { myRoster, myMatchup, oppRoster, oppMatchup, myUser, oppUser } = useMemo(() => {
         if (!Array.isArray(viewMatchups) || !rosters) return {};
@@ -137,69 +194,13 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     }, '');
 
     /* Renders one side of the hero (mirror = right side, desktop only). */
-    const TeamSide = ({ user, roster, score, projFinal, ceilFinal, isWinning, mirror = false }) => {
-        const recordLabel = roster
-            ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
-            : (mirror ? 'Opp' : 'You');
-        const goTeam = (e) => {
-            e.stopPropagation();
-            if (league?.league_id && roster?.roster_id) {
-                navigate(`/league/${league.league_id}/team/${roster.roster_id}`);
-            }
-        };
-        return (
-            <div className={`flex flex-col items-center text-center gap-2 md:gap-5 min-w-0 md:flex-row md:items-center ${mirror ? 'md:flex-row-reverse md:text-right' : 'md:text-left'}`}>
-                <button
-                    type="button"
-                    onClick={goTeam}
-                    className="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-signal/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                    aria-label={`View ${displayTeamName(user)}`}
-                >
-                    {user?.avatar ? (
-                        <img
-                            src={avatarUrl(user.avatar)}
-                            alt=""
-                            className="w-12 h-12 md:w-[72px] md:h-[72px] rounded-full ring-1 ring-line"
-                        />
-                    ) : (
-                        <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={48} />
-                    )}
-                </button>
-                <div className="min-w-0">
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim font-bold">
-                        {recordLabel}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={goTeam}
-                        className={`block font-display text-sm md:text-xl font-bold tracking-snug text-text truncate max-w-[140px] md:max-w-[280px] mx-auto hover:text-signal transition-colors duration-fast ${mirror ? 'md:ml-auto md:mx-0 md:text-right' : 'md:mx-0 md:text-left'}`}
-                    >
-                        {displayTeamName(user)}
-                    </button>
-                    <div
-                        className={`tnum font-display text-4xl md:text-[72px] font-extrabold tracking-tight leading-none mt-1 ${isWinning ? 'text-signal' : 'text-text'}`}
-                        style={isWinning ? { textShadow: '0 0 28px rgba(245,179,1,0.33)' } : undefined}
-                    >
-                        {score.toFixed(1)}
-                    </div>
-                    <div className="font-mono text-2xs text-text-dim mt-1">
-                        Proj <span className="tnum text-text-dim">{projFinal.toFixed(1)}</span>
-                        {ceilFinal > projFinal && (
-                            <> · Ceiling <span className="tnum text-text-dim">{ceilFinal.toFixed(1)}</span></>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     const goMatchup = () => navigate(`/league/${league?.league_id}/matchup`);
     return (
         <div
             role="button"
             tabIndex={0}
             onClick={goMatchup}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goMatchup(); } }}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); goMatchup(); } }}
             className="cursor-pointer w-full text-left rounded-xl border border-line p-5 md:p-6 shadow-card relative overflow-hidden transition-colors duration-fast hover:border-line-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
             style={{
                 background: `
@@ -233,7 +234,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
 
             {/* Teams + center pod */}
             <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-6 items-center">
-                <TeamSide
+                <TeamSide league={league} navigate={navigate}
                     user={myUser}
                     roster={myRoster}
                     score={myScore}
@@ -256,7 +257,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     </div>
                 </div>
 
-                <TeamSide
+                <TeamSide league={league} navigate={navigate}
                     user={oppUser}
                     roster={oppRoster}
                     score={oppScore}

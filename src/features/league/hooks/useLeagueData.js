@@ -1,3 +1,5 @@
+import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
+import { useEffect, useRef } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { deriveCurrentWeek } from '../../../utils/seasonState';
@@ -19,7 +21,7 @@ export function useLeagueData(leagueId) {
     const { data: state, isLoading: loadingState, error: errorState } = useQuery({
         queryKey: ['nflState'],
         queryFn: fetchNFLState,
-        staleTime: 60 * 60 * 1000, // 1 hour (State doesn't change often)
+        staleTime: 60000, refetchInterval: 60000, refetchIntervalInBackground: false,
     });
 
     // 2. Players Master List (Cache: 24h)
@@ -70,6 +72,9 @@ export function useLeagueData(leagueId) {
     // following Sleeper's PRESEASON display_week.
     const displayWeek = deriveCurrentWeek(league, state);
 
+    const { details: liveDetails, error: gameStatusError } = useGameLiveDetails(displayWeek, league?.season);
+    const gamesActive = Object.values(liveDetails).some(g => ['STATUS_IN_PROGRESS', 'STATUS_HALFTIME', 'STATUS_END_PERIOD'].includes(g.statusName));
+
     // 4. Matchups (Dynamic Cache)
     // The display week only has live scores during the regular season of the
     // league's own season. Historical leagues and the offseason/preseason serve
@@ -78,13 +83,26 @@ export function useLeagueData(leagueId) {
         state?.season_type === 'regular' &&
         (!league?.season || !state?.season || league.season === state.season);
     const matchupsStaleTime = isLiveWeek ? 60 * 1000 : 24 * 60 * 60 * 1000;
+    const finalGames = Object.entries(liveDetails).filter(([, game]) => ['STATUS_FINAL', 'STATUS_FULL_TIME'].includes(game.statusName)).map(([team]) => team).sort().join(',');
+    const previousFinals = useRef(null);
+    useEffect(() => {
+        const key = `${leagueId}:${displayWeek}`;
+        const previous = previousFinals.current;
+        // Fetch the final score even when the last active game ends and polling stops.
+        if (isLiveWeek && previous?.key === key && previous.finals !== finalGames) {
+            queryClient.invalidateQueries({ queryKey: ['leagueMatchups', leagueId, displayWeek] });
+        }
+        previousFinals.current = { key, finals: finalGames };
+    }, [leagueId, displayWeek, finalGames, isLiveWeek, queryClient]);
 
-    const { data: matchups, isLoading: loadingMatchups, error: errorMatchups } = useQuery({
+    const { data: matchups, isLoading: loadingMatchups, error: errorMatchups, dataUpdatedAt: scoresUpdatedAt } = useQuery({
         queryKey: ['leagueMatchups', leagueId, displayWeek],
         // fresh=true bypasses the CDN edge cache so live scores aren't stale
         queryFn: () => fetchLeagueMatchups(leagueId, displayWeek, isLiveWeek),
         enabled: !!leagueId && !!displayWeek,
         staleTime: matchupsStaleTime,
+        refetchInterval: isLiveWeek && gamesActive ? 60000 : false,
+        refetchIntervalInBackground: false,
     });
 
     // Aggregate Loading & Error States.
@@ -94,7 +112,7 @@ export function useLeagueData(leagueId) {
     const loadingCore = loadingState || loadingLeague || loadingUsers || loadingRosters || loadingPicks || loadingMatchups;
     const loading = loadingCore || loadingPlayers;
 
-    const error = errorState || errorPlayers || errorLeague || errorUsers || errorRosters || errorPicks || errorMatchups;
+    const error = errorState || errorPlayers || errorLeague || errorUsers || errorRosters || errorPicks || (!matchups && errorMatchups);
 
     // Invalidate this league's queries (and shared NFL state) to force a
     // refetch. The players blob is excluded — it changes daily at most.
@@ -121,6 +139,6 @@ export function useLeagueData(leagueId) {
         loadingCore,
         loadingPlayers,
         error: error ? { message: 'Failed to load data' } : null, // Simplify error object
-        refresh
+        refresh, scoresUpdatedAt, scoresError: !!errorMatchups, gameStatusError
     };
 }

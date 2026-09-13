@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { Trophy, AlertTriangle, TrendingUp, TrendingDown, Download, Copy, Dumbbell, Percent, Shuffle, Sparkles, Timer, Ghost, Flame } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useWeeklyRecap } from '../hooks/useWeeklyRecap';
-import { fetchLeagueMatchups } from '../../../utils/sleeper';
+
 import { WEEKLY_COPY, getSeededCopy, fillTemplate } from '../data/roastCopy';
 import { toPng } from 'html-to-image';
 import QRCode from 'react-qr-code';
@@ -49,39 +49,16 @@ const PlayerHeadshot = ({ playerId, lastName, ringTone = 'border-line' }) => (
 
 const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStarted = true, seasonMatchups, seasonMatchupsLoading }) => {
     const [tab, setTab] = useState('weekly');
-    const [selectedWeek, setSelectedWeek] = useState(null);
-    const [matchups, setMatchups] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [chosenWeek, setSelectedWeek] = useState(null);
+    const availableWeeks = Object.keys(seasonMatchups || {}).map(Number).filter(w => w < currentWeek).sort((a, b) => b - a);
+    const selectedWeek = availableWeeks.includes(chosenWeek) ? chosenWeek : availableWeeks[0];
+    const matchups = seasonMatchups?.[selectedWeek] || [];
+    const loading = seasonMatchupsLoading;
     const captureRef = useRef(null);
-
-    useEffect(() => {
-        if (!currentWeek) return;
-        const target = currentWeek > 1 ? currentWeek - 1 : 1;
-        setSelectedWeek(target);
-    }, [currentWeek]);
-
-    useEffect(() => {
-        if (!league?.league_id || !selectedWeek) {
-            setLoading(false);
-            return;
-        }
-        const load = async () => {
-            setLoading(true);
-            try {
-                const data = await fetchLeagueMatchups(league.league_id, selectedWeek);
-                setMatchups(data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, [league, selectedWeek]);
 
     const stats = useWeeklyRecap(league, matchups, rosters, users, players, selectedWeek, seasonMatchups);
 
-    const roastCopy = useMemo(() => {
+    const roastCopy = (() => {
         if (!stats || !league?.league_id || !selectedWeek) return {};
         const seed = `${league.league_id}-${selectedWeek}`;
         const picks = {};
@@ -89,16 +66,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStart
             picks[key] = getSeededCopy(WEEKLY_COPY, key, seed);
         });
         return picks;
-    }, [stats, league?.league_id, selectedWeek]);
-
-    const availableWeeks = useMemo(() => {
-        if (!seasonStarted) return [];
-        if (!currentWeek || currentWeek < 1) return [];
-        const weeks = [];
-        const max = currentWeek > 1 ? currentWeek - 1 : 1;
-        for (let w = max; w >= 1; w--) weeks.push(w);
-        return weeks;
-    }, [currentWeek, seasonStarted]);
+    })();
 
     const getCardData = (category) => {
         const s = stats?.[category];

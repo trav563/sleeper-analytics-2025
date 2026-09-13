@@ -1,9 +1,10 @@
+import { useMarketValues } from '../../tools/hooks/useMarketValues';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Users, Flame, ChevronRight } from 'lucide-react';
 import { playerHeadshotUrl } from '../../../utils/nflData';
 import { fetchTrendingPlayers } from '../../../utils/sleeper';
-import { fetchMarketValues } from '../../../utils/fantasyCalc';
+
 
 // Position chips repointed to broadcast tokens
 const POS_TONE = {
@@ -25,15 +26,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
         staleTime: 60 * 60 * 1000,
     });
 
-    const { data: marketValues } = useQuery({
-        queryKey: ['fantasyCalc', league?.league_id],
-        queryFn: () => fetchMarketValues(
-            league?.roster_positions?.includes('SUPER_FLEX'),
-            rosters?.length || 12,
-            0.5
-        ),
-        staleTime: 60 * 60 * 1000,
-    });
+    const { data: marketValues } = useMarketValues(league, rosters?.length);
 
     if (!roster) {
         return (

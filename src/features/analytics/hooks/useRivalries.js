@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
+import { lastCompletedWeek } from '../../../utils/seasonState';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { fetchLeagueMatchups, fetchWinnersBracket } from '../../../utils/sleeper';
+import { fetchLeagueMatchups, fetchWinnersBracket, fetchNFLState } from '../../../utils/sleeper';
 import {
     buildRivalries,
     buildPlayoffKeys,
@@ -9,7 +11,7 @@ import {
 } from '../../../utils/rivalries';
 
 /** Fetch every week plus the championship bracket for one season. */
-async function loadSeason(league) {
+async function loadSeason(league, state) {
     const playoffWeekStart = league.playoff_week_start || DEFAULT_PLAYOFF_WEEK_START;
 
     // league.rosters is keyed by owner_id, so invert it.
@@ -20,7 +22,7 @@ async function loadSeason(league) {
 
     const [weeks, bracket] = await Promise.all([
         Promise.all(
-            Array.from({ length: MAX_SCORED_WEEK }, (_, i) =>
+            Array.from({ length: Math.min(MAX_SCORED_WEEK, lastCompletedWeek(league, state)) }, (_, i) =>
                 fetchLeagueMatchups(league.league_id, i + 1)
             )
         ),
@@ -32,7 +34,7 @@ async function loadSeason(league) {
     ]);
 
     return {
-        season: league.season,
+        season: league.season, completedWeek: lastCompletedWeek(league, state),
         playoffWeekStart,
         rosterIdToOwnerId,
         weeks,
@@ -40,7 +42,7 @@ async function loadSeason(league) {
     };
 }
 
-const loadSeasons = (leagueHistory) => Promise.all(leagueHistory.map(loadSeason));
+const loadSeasons = (leagueHistory, state) => Promise.all(leagueHistory.map(league => loadSeason(league, state)));
 
 /**
  * Fetches every season in a league's history once, then derives head-to-head
@@ -52,6 +54,7 @@ const loadSeasons = (leagueHistory) => Promise.all(leagueHistory.map(loadSeason)
  * @param {string[]} currentOwnerIds - owners to include in the output.
  */
 export function useRivalries(leagueHistory, currentOwnerIds) {
+    const { data: state, error: stateError } = useQuery({ queryKey: ['nflState'], queryFn: fetchNFLState, staleTime: 60000 });
     // One piece of state tagged with the chain it belongs to, so `loading` and
     // `error` are derived rather than stored — no setState in the effect body,
     // and a chain switch can't briefly show the previous league's numbers.
@@ -61,8 +64,8 @@ export function useRivalries(leagueHistory, currentOwnerIds) {
     // bailed on "we already have some data", so switching leagues never
     // refetched.
     const chainKey = useMemo(
-        () => (leagueHistory || []).map((l) => l.league_id).join(','),
-        [leagueHistory]
+        () => state ? (leagueHistory || []).map(l => `${l.league_id}:${lastCompletedWeek(l, state)}`).join(',') : '',
+        [leagueHistory, state]
     );
 
     // Cache the in-flight/settled promise per chain. Context can hand back a
@@ -76,7 +79,7 @@ export function useRivalries(leagueHistory, currentOwnerIds) {
         let cancelled = false;
         let request = requestsRef.current.get(chainKey);
         if (!request) {
-            request = loadSeasons(leagueHistory);
+            request = loadSeasons(leagueHistory, state);
             requestsRef.current.set(chainKey, request);
         }
 
@@ -105,12 +108,12 @@ export function useRivalries(leagueHistory, currentOwnerIds) {
         return () => {
             cancelled = true;
         };
-    }, [chainKey, leagueHistory]);
+    }, [chainKey, leagueHistory, state]);
 
     const current = result?.chainKey === chainKey ? result : null;
     const seasons = current?.seasons ?? null;
-    const error = current?.error ?? null;
-    const loading = !!chainKey && !current;
+    const error = stateError || current?.error || null;
+    const loading = (!state && !stateError) || (!!chainKey && !current);
 
     // Stringified so a fresh array of the same ids doesn't rebuild everything.
     const ownerKey = useMemo(

@@ -17,7 +17,7 @@ export function useLineupStatus(week, users, rosters, matchups, players, season)
             if (!week) return;
             const [teams, weather] = await Promise.all([
                 getTeamsOnBye(week, season),
-                getGameWeather(week).catch(() => ({})),
+                getGameWeather(week, season).catch(() => ({})),
             ]);
             if (mounted) {
                 setByeTeamsThisWeek(new Set(teams || []));

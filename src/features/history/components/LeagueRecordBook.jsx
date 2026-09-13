@@ -1,3 +1,4 @@
+import { lastCompletedWeek } from '../../../utils/seasonState';
 import { useState, useEffect, useMemo } from 'react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { fetchLeagueMatchups, fetchLeagueUsers } from '../../../utils/sleeper';
@@ -46,10 +47,12 @@ const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
     </section>
 );
 
-const LeagueRecordBook = ({ users }) => {
-    const { leagueHistory } = useSleeper();
+const LeagueRecordBook = ({ users, state, leagueId }) => {
+    const { leagueHistory, error: historyError, loadHistory } = useSleeper();
     const [historicalMatchups, setHistoricalMatchups] = useState({}); // league_id -> matchups
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [retry, setRetry] = useState(0);
 
     // Fetch matchups (and that season's users, for departed managers) for all
     // historical leagues. Refetches whenever the active league chain changes so
@@ -62,13 +65,14 @@ const LeagueRecordBook = ({ users }) => {
 
             setHistoricalMatchups({});
             setLoading(true);
+            setError(null);
             const newHistory = {};
 
             try {
                 const promises = leagueHistory.map(async (league) => {
                     // 18 covers every modern Sleeper season incl. late playoff weeks;
                     // unplayed weeks just come back empty.
-                    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+                    const weeks = Array.from({ length: lastCompletedWeek(league, state) }, (_, i) => i + 1);
                     const weekPromises = weeks.map(w => fetchLeagueMatchups(league.league_id, w, false, { signal }));
                     const [weeksData, seasonUsers] = await Promise.all([
                         Promise.all(weekPromises),
@@ -80,7 +84,7 @@ const LeagueRecordBook = ({ users }) => {
                 await Promise.all(promises);
                 if (!signal.aborted) setHistoricalMatchups(newHistory);
             } catch (e) {
-                if (!signal.aborted) console.error("Failed to fetch historical matchups for records", e);
+                if (!signal.aborted) setError("The record book could not load. Please retry.");
             } finally {
                 if (!signal.aborted) setLoading(false);
             }
@@ -88,7 +92,7 @@ const LeagueRecordBook = ({ users }) => {
 
         fetchAllHistory();
         return () => controller.abort();
-    }, [leagueHistory]);
+    }, [leagueHistory, state, retry]);
 
     const records = useMemo(() => {
         if (!leagueHistory || Object.keys(historicalMatchups).length === 0) return null;
@@ -127,7 +131,7 @@ const LeagueRecordBook = ({ users }) => {
                     if (pair.length !== 2) return;
                     const [m1, m2] = pair;
 
-                    if (m1.points === 0 && m2.points === 0) return;
+                    if (!Number.isFinite(m1.points) || !Number.isFinite(m2.points)) return;
 
                     [m1, m2].forEach(m => {
                         if (m.points > highestScore.value) {
@@ -142,7 +146,7 @@ const LeagueRecordBook = ({ users }) => {
                                 detail: 'Points'
                             };
                         }
-                        if (m.points > 0 && m.points < lowestScore.value) {
+                        if (m.points < lowestScore.value) {
                             const r = Object.values(rosters).find(r => r.roster_id === m.roster_id);
                             const u = findUser(r?.owner_id);
                             lowestScore = {
@@ -207,11 +211,11 @@ const LeagueRecordBook = ({ users }) => {
             });
         });
 
-        return { highestScore, lowestScore, closestMatch, longestStreak };
+        return { highestScore: highestScore.value === -Infinity ? null : highestScore, lowestScore: lowestScore.value === Infinity ? null : lowestScore, closestMatch: closestMatch.value === Infinity ? null : closestMatch, longestStreak: longestStreak.value ? longestStreak : null };
     }, [leagueHistory, historicalMatchups, users]);
 
-    if (!leagueHistory) return null;
-    if (loading) return (
+    if (error || historyError) return <section className="rounded-xl border border-line p-5" role="alert"><h2 className="text-xl font-bold">League Record Book</h2><p className="my-3">{error || historyError}</p><button className="min-h-11 text-signal" onClick={() => error ? setRetry(n => n + 1) : loadHistory(leagueId)}>Retry history</button></section>;
+    if (loading || !leagueHistory) return (
         <div className="space-y-4" aria-busy="true">
             <div className="flex items-center gap-2.5">
                 <Loader2 className="w-5 h-5 text-signal animate-spin" aria-hidden="true" />

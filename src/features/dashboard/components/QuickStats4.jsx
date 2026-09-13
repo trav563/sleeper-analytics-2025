@@ -1,6 +1,7 @@
+import { useMarketValues } from '../../tools/hooks/useMarketValues';
 import { useMemo, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchMarketValues } from '../../../utils/fantasyCalc';
+
+
 import { fetchLeagueRosters } from '../../../utils/sleeper';
 import { usePlayoffOdds } from '../hooks/usePlayoffOdds';
 import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
@@ -18,7 +19,7 @@ const computeStreak = (rosterId, seasonMatchups) => {
         if (!me || me.matchup_id == null) continue;
         const opp = data.find((m) => m.matchup_id === me.matchup_id && m.roster_id !== rosterId);
         if (!opp) continue;
-        if ((me.points || 0) === 0 && (opp.points || 0) === 0) continue;
+        if (me.points === opp.points) break;
         const won = (me.points || 0) > (opp.points || 0);
         const result = won ? 'W' : 'L';
         if (kind === null) { kind = result; count = 1; }
@@ -39,16 +40,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
     );
 
     /* Market values + previous-season rosters needed for usePlayoffOdds. */
-    const { data: marketValues } = useQuery({
-        queryKey: ['fantasyCalc', league?.league_id],
-        queryFn: () => fetchMarketValues(
-            league?.roster_positions?.includes('SUPER_FLEX'),
-            rosters?.length || 12,
-            0.5
-        ),
-        staleTime: 60 * 60 * 1000,
-        enabled: !!league,
-    });
+    const { data: marketValues } = useMarketValues(league, rosters?.length);
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
     useEffect(() => {
         if (!league?.previous_league_id) return;
@@ -78,22 +70,10 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
         const oddsStatus = myOdds?.status;
         const streak = computeStreak(myRoster.roster_id, seasonMatchups);
 
-        const wins = myRoster.settings?.wins ?? 0;
-        const losses = myRoster.settings?.losses ?? 0;
-        const pf = (myRoster.settings?.fpts ?? 0) + (myRoster.settings?.fpts_decimal ?? 0) / 100;
-        const pa = (myRoster.settings?.fpts_against ?? 0) + (myRoster.settings?.fpts_against_decimal ?? 0) / 100;
-        const margin = pf - pa;
-
-        // Rank in PF across the league for the sub-line.
-        const sortedByPf = [...(rosters || [])].sort((a, b) => {
-            const aPf = (a.settings?.fpts ?? 0) + (a.settings?.fpts_decimal ?? 0) / 100;
-            const bPf = (b.settings?.fpts ?? 0) + (b.settings?.fpts_decimal ?? 0) / 100;
-            return bPf - aPf;
-        });
-        const pfRank = sortedByPf.findIndex((r) => r.roster_id === myRoster.roster_id) + 1;
-        const pfSub = pfRank === 1
-            ? 'league high'
-            : pfRank > 0 ? `#${pfRank} PF` : '';
+        const margin = (myRanking?.pf || 0) - (myRanking?.pa || 0);
+        const sortedByPf = [...rankings].sort((a, b) => b.pf - a.pf);
+        const pfRank = ranked ? sortedByPf.findIndex(r => r.rosterId === myRoster.roster_id) + 1 : 0;
+        const pfSub = pfRank === 1 ? 'league high' : pfRank > 0 ? `#${pfRank} PF` : 'no completed weeks';
 
         return [
             {
@@ -106,7 +86,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
             {
                 label: 'Playoff',
                 value: oddsPct,
-                sub: isProjection ? 'preseason' : oddsStatus === 'Clinched' ? 'clinched' : oddsStatus === 'Eliminated' ? 'eliminated' : 'monte carlo',
+                sub: isProjection ? 'projection' : oddsStatus === 'Clinched' ? 'clinched' : oddsStatus === 'Eliminated' ? 'eliminated' : 'monte carlo',
                 subTone: oddsStatus === 'Clinched' ? 'good' : oddsStatus === 'Eliminated' ? 'bad' : 'mute',
                 valueTone: oddsStatus === 'Clinched' ? 'good' : oddsStatus === 'Eliminated' ? 'bad' : 'text',
             },
@@ -125,7 +105,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                 valueTone: 'text',
             },
         ];
-    }, [myRoster, rankings, ranked, odds, oddsLoading, isProjection, seasonMatchups, rosters]);
+    }, [myRoster, rankings, ranked, odds, oddsLoading, isProjection, seasonMatchups]);
 
     if (cells.length === 0) return null;
 

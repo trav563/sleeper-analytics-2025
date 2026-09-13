@@ -1,3 +1,7 @@
+import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
+import { completedProduction } from '../../../utils/completedStandings';
+import { assignLineup } from '../../../utils/lineupAssignment';
+import { useToolState } from '../../../hooks/useToolState';
 import { useMemo, useState, useEffect } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
@@ -40,16 +44,19 @@ function computeSeasonStats(seasonRoster, players, yearsAgo) {
     };
 }
 
-const DynastyLandscape = ({ rosters, users, players, league, state }) => {
+const DynastyLandscape = ({ rosters, users, players, league, state, currentWeek }) => {
+    const { seasonMatchups, completedWeek } = useSeasonMatchups(league?.league_id, currentWeek);
     const { leagueChains, user } = useSleeper();
-    const [useMaxPf, setUseMaxPf] = useState(false);
+    const [useMaxPf, setUseMaxPf] = useToolState(`DynastyLandscape-useMaxPf:${league?.league_id}`, false);
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
-    const [usingPrevSeason, setUsingPrevSeason] = useState(false);
+    const hasCurrentSeasonData = completedWeek > 0;
+    const usingPrevSeason = !hasCurrentSeasonData && !!prevSeasonRosters && prevSeasonRosters.leagueId === league?.previous_league_id;
+
 
     // Trail state — one (avgAge, PPG) point per (season, team) computed
     // synchronously from leagueChains. No extra fetches.
-    const [showTrail, setShowTrail] = useState(false);
-    const [selectedTrailRosterId, setSelectedTrailRosterId] = useState(null);
+    const [showTrail, setShowTrail] = useToolState(`DynastyLandscape-showTrail:${league?.league_id}`, false);
+    const [selectedTrailRosterId, setSelectedTrailRosterId] = useToolState(`DynastyLandscape-selectedTrailRosterId:${league?.league_id}`, null);
 
     // Find the chain that contains this league (for past-season rosters).
     const activeChain = useMemo(() => {
@@ -58,7 +65,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
             if (chain?.some((l) => l.league_id === league.league_id)) return chain;
         }
         return null;
-    }, [leagueChains, league?.league_id]);
+    }, [leagueChains, league]);
 
     const hasMultiSeasonHistory = (activeChain?.length || 0) > 1;
 
@@ -67,7 +74,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         if (selectedTrailRosterId || !rosters?.length) return;
         const mine = user ? rosters.find((r) => r.owner_id === user.user_id) : null;
         setSelectedTrailRosterId((mine || rosters[0])?.roster_id ?? null);
-    }, [rosters, user, selectedTrailRosterId]);
+    }, [rosters, user, selectedTrailRosterId, setSelectedTrailRosterId]);
 
     // Per-season aggregate trail. Each chain entry's roster already includes
     // settings.fpts/ppts/wins/losses/ties + players[] — no API fetches needed.
@@ -117,32 +124,20 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         return out;
     }, [activeChain, players, anchorSeason, useMaxPf]);
 
-    const hasCurrentSeasonData = useMemo(() => {
-        if (!rosters) return false;
-        return rosters.some(r => (r.settings?.fpts || 0) > 0);
-    }, [rosters]);
-
     useEffect(() => {
-        if (hasCurrentSeasonData || !league?.previous_league_id) {
-            setUsingPrevSeason(false);
-            return;
-        }
+        if (hasCurrentSeasonData || !league?.previous_league_id) return;
         let cancelled = false;
         fetchLeagueRosters(league.previous_league_id).then(data => {
-            if (!cancelled && data) {
-                setPrevSeasonRosters(data);
-                setUsingPrevSeason(true);
-            }
+            if (!cancelled && data) setPrevSeasonRosters({ leagueId: league.previous_league_id, data });
         }).catch(() => {});
         return () => { cancelled = true; };
     }, [hasCurrentSeasonData, league?.previous_league_id]);
-
-    const effectiveRosters = usingPrevSeason && prevSeasonRosters ? prevSeasonRosters : rosters;
+    const effectiveRosters = usingPrevSeason ? prevSeasonRosters.data : rosters;
 
     const data = useMemo(() => {
         if (!rosters || !users || !players || !league) return [];
 
-        const currentLeg = state?.leg || 1;
+        const finalProduction = completedProduction(rosters, seasonMatchups, league.roster_positions, players, assignLineup);
 
         const teams = rosters.map(roster => {
             const owner = users.find(u => u.user_id === roster.owner_id);
@@ -156,11 +151,12 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                 const totalRecord = (ppgRoster.settings?.wins || 0) + (ppgRoster.settings?.losses || 0) + (ppgRoster.settings?.ties || 0);
                 gamesPlayed = Math.max(1, totalRecord > 18 ? totalRecord / 2 : totalRecord);
             } else {
-                gamesPlayed = Math.max(1, currentLeg - 1);
+                gamesPlayed = finalProduction.find(t => t.rosterId === roster.roster_id)?.gamesPlayed || 0;
             }
 
-            const ppg = ((ppgRoster.settings?.fpts || 0) + (ppgRoster.settings?.fpts_decimal || 0) / 100) / gamesPlayed;
-            const maxPf = (ppgRoster.settings?.ppts || 0) + (ppgRoster.settings?.ppts_decimal || 0) / 100;
+            const completed = finalProduction.find(t => t.rosterId === roster.roster_id);
+            const ppg = usingPrevSeason ? ((ppgRoster.settings?.fpts || 0) + (ppgRoster.settings?.fpts_decimal || 0) / 100) / gamesPlayed : completed?.ppg || 0;
+            const maxPf = usingPrevSeason ? (ppgRoster.settings?.ppts || 0) + (ppgRoster.settings?.ppts_decimal || 0) / 100 : completed?.maxPoints || 0;
             const productionMetric = useMaxPf ? maxPf : ppg;
 
             // Active roster only — taxi rookies and IR vets would skew the
@@ -187,7 +183,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         });
 
         return teams.filter(t => t.age > 0);
-    }, [rosters, users, players, league, state, useMaxPf, usingPrevSeason, effectiveRosters]);
+    }, [rosters, users, players, league, seasonMatchups, useMaxPf, usingPrevSeason, effectiveRosters]);
 
     const averages = useMemo(() => {
         if (data.length === 0) return { age: 0, production: 0 };
@@ -212,7 +208,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     }, [showTrail, useMaxPf, data, averages]);
 
     const { bestId, worstId } = useMemo(() => {
-        if (data.length === 0) return { bestId: null, worstId: null };
+        if (data.length === 0 || new Set(data.map(d => d.production)).size < 2) return { bestId: null, worstId: null };
 
         const ages = data.map(d => d.age);
         const prods = data.map(d => d.production);
@@ -271,7 +267,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     // Used as the data array for the unified Scatter so trail dots compete
     // with avatars in the same hit-test pool.
 
-    const CustomNode = (props) => {
+    const renderNode = (props) => {
         const { cx, cy, payload } = props;
         // Shrink dimmed avatars so they don't visually swamp trail dots.
         const size = payload.dim ? 24 : (payload.isBest || payload.isWorst ? 48 : 40);
@@ -300,7 +296,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         );
     };
 
-    const TrailDot = (props) => {
+    const renderTrailDot = (props) => {
         const { cx, cy } = props;
         return (
             <g style={{ cursor: 'pointer' }}>
@@ -313,8 +309,8 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
     // dots) live in a single Scatter. Recharts' nearest-point hit-test then
     // operates on one unified pool, so the trail dot you actually hover wins
     // instead of losing the tie-break to a separate-Scatter snapshot point.
-    const UnifiedShape = (props) => (
-        props.payload?.isTrail ? <TrailDot {...props} /> : <CustomNode {...props} />
+    const renderShape = (props) => (
+        props.payload?.isTrail ? renderTrailDot(props) : renderNode(props)
     );
 
     const renderTrailTooltip = (d) => (
@@ -335,7 +331,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         </div>
     );
 
-    const CustomTooltip = ({ active, payload }) => {
+    const renderTooltip = ({ active, payload }) => {
         if (!active || !payload || !payload.length) return null;
         const d = payload[0].payload;
 
@@ -347,7 +343,8 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         // the axis the user is currently looking at (per-game when Trail on).
         const avg = renderAverages;
         let classification = '';
-        if (d.production >= avg.production && d.age <= avg.age) classification = 'Dynasty Elite';
+        if (new Set(data.map(t => t.production)).size < 2) classification = 'Not enough production data';
+        else if (d.production >= avg.production && d.age <= avg.age) classification = 'Dynasty Elite';
         else if (d.production >= avg.production && d.age > avg.age) classification = 'Win-Now';
         else if (d.production < avg.production && d.age <= avg.age) classification = 'Rebuilder';
         else classification = 'Danger Zone';
@@ -418,17 +415,14 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
         [selectedTrail, anchorSeason]
     );
 
-    const combinedScatterData = useMemo(
-        () => (showTrail ? [...enrichedForRender, ...trailHistorical] : enrichedForRender),
-        [enrichedForRender, trailHistorical, showTrail]
-    );
+    const combinedScatterData = showTrail ? [...enrichedForRender, ...trailHistorical] : enrichedForRender;
 
-    const selectedTeamName = useMemo(() => {
+    const selectedTeamName = (() => {
         if (!selectedTrailRosterId) return '';
         const r = rosters?.find((x) => x.roster_id === selectedTrailRosterId);
         const u = users?.find((x) => x.user_id === r?.owner_id);
         return displayTeamName(u);
-    }, [rosters, users, selectedTrailRosterId]);
+    })();
 
     const trailColor = TEAM_HUE(selectedTrailRosterId);
 
@@ -503,24 +497,26 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                             Trail
                         </span>
                         <Switch
+                            aria-label="Show season history trail"
                             checked={showTrail}
                             onCheckedChange={setShowTrail}
                             disabled={!hasMultiSeasonHistory}
-                            className="scale-75 sm:scale-90"
+
                         />
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{useMaxPf ? 'Max PF' : 'PPG'}</span>
-                        <Switch checked={useMaxPf} onCheckedChange={setUseMaxPf} className="scale-75 sm:scale-100" />
+                        <Switch aria-label="Use maximum potential points" checked={useMaxPf} onCheckedChange={setUseMaxPf}  />
                     </div>
                 </div>
             </header>
 
+            <details className="px-5 py-2 border-b border-line"><summary className="min-h-11 cursor-pointer text-sm text-signal">Team statistics</summary><ul className="divide-y divide-line">{data.map(t => <li key={t.rosterId} className="py-3 text-sm"><strong>{t.name}</strong><span className="block text-text-dim">Age {t.age} · {t.ppg} PPG · {t.production} {t.productionLabel}</span></li>)}</ul></details>
             <div className="p-2 sm:p-5 sm:pt-3">
                 <div
                     className="h-[480px] w-full text-xs"
                     role="img"
-                    aria-label="Scatter chart of every team's average roster age (horizontal axis) against production (vertical axis), split into contender and rebuild quadrants. The Dynasty Window table above lists the same teams with scores as text."
+                    aria-label="Scatter chart of every team's average roster age (horizontal axis) against production (vertical axis), split into contender and rebuild quadrants. Expand the team statistics below for the same data as text."
                 >
                     <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
@@ -564,13 +560,13 @@ const DynastyLandscape = ({ rosters, users, players, league, state }) => {
                                 />
                             </YAxis>
 
-                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: theme.color.lineStrong, strokeDasharray: '3 3' }} />
+                            <Tooltip content={renderTooltip} cursor={{ stroke: theme.color.lineStrong, strokeDasharray: '3 3' }} />
 
                             <ReferenceLine x={renderAverages.age} stroke={theme.color.textDim} strokeDasharray="3 3" />
                             <ReferenceLine y={renderAverages.production} stroke={theme.color.textDim} strokeDasharray="3 3" />
 
                             {/* Unified Scatter: snapshot avatars + trail dots in one hit-test pool */}
-                            <Scatter name="Teams" data={combinedScatterData} shape={<UnifiedShape />} />
+                            <Scatter name="Teams" data={combinedScatterData} shape={renderShape} />
                             {/* Line-only Scatter: invisible shape, just provides the dashed trail line */}
                             {showTrail && selectedTrail.length > 1 && (
                                 <Scatter

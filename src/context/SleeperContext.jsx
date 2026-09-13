@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
+import { createContext, useState, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { fetchUser, fetchUserLeagues } from '../utils/sleeper';
 import { fetchLeagueHistory } from '../services/sleeperEngine';
 import { clearLocalUserData, pruneAiAnalysisCache } from '../utils/localData';
@@ -23,7 +23,10 @@ export const SleeperProvider = ({ children }) => {
         }
     });
 
+    const [viewedTeams, setViewedTeams] = useState({});
+    const selectViewedTeam = useCallback((leagueId, rosterId) => setViewedTeams(prev => prev[leagueId] === rosterId ? prev : ({ ...prev, [leagueId]: rosterId })), []);
     const [leagues, setLeagues] = useState([]);
+    const historyRequest = useRef(0);
     const [leagueHistory, setLeagueHistory] = useState(null);
     const [leagueChains, setLeagueChains] = useState({});
     const [loading, setLoading] = useState(false);
@@ -52,8 +55,10 @@ export const SleeperProvider = ({ children }) => {
 
     /** Forget this user on this device — needed on shared machines. */
     const signOut = useCallback(() => {
+        historyRequest.current++;
         clearLocalUserData();
         setUser(null);
+        setViewedTeams({});
         setLeagues([]);
         setLeagueHistory(null);
         setLeagueChains({});
@@ -123,6 +128,7 @@ export const SleeperProvider = ({ children }) => {
 
     /** Set the active history chain. Used by LeagueLayout when navigating between leagues. */
     const selectActiveChain = useCallback((chain) => {
+        historyRequest.current++;
         setLeagueHistory(chain || []);
     }, []);
 
@@ -136,14 +142,18 @@ export const SleeperProvider = ({ children }) => {
     }, [searchUser, getLeagues]);
 
     const loadHistory = useCallback(async (currentLeagueId, userId) => {
+        const requestId = ++historyRequest.current;
         if (!currentLeagueId) {
             console.warn("Missing leagueId for history fetch");
             return;
         }
 
         setLoading(true);
+        setError(null);
+        setLeagueHistory(null);
         try {
             const { chain, truncated } = await fetchLeagueHistory(currentLeagueId, userId);
+            if (requestId !== historyRequest.current) return [];
             if (truncated) {
                 setError('League history may be incomplete — an older season failed to load.');
             }
@@ -155,17 +165,18 @@ export const SleeperProvider = ({ children }) => {
             }
             return chain;
         } catch (err) {
+            if (requestId !== historyRequest.current) return [];
             console.error("Failed to load league history:", err);
             setError("Failed to load league history");
             setLeagueHistory([]); // Ensure we don't stick on "loading"
             return [];
         } finally {
-            setLoading(false);
+            if (requestId === historyRequest.current) setLoading(false);
         }
     }, []);
 
     const value = useMemo(() => ({
-        user,
+        user, viewedTeams, selectViewedTeam,
         leagues,
         loading,
         error,
@@ -180,7 +191,7 @@ export const SleeperProvider = ({ children }) => {
         findChainContaining,
         selectActiveChain
     }), [
-        user, leagues, loading, error, season,
+        user, viewedTeams, selectViewedTeam, leagues, loading, error, season,
         searchUser, signOut, getLeagues, fetchLeagueData, loadHistory,
         leagueHistory, leagueChains, findChainContaining, selectActiveChain
     ]);

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { completedMatchups } from '../../../utils/seasonState';
 import { computeWeeklyRecap } from './useWeeklyRecap';
 
 const league = { league_id: '1', season: '2026', roster_positions: ['QB', 'RB', 'WR', 'TE', 'BN'] };
@@ -37,13 +38,10 @@ describe('computeWeeklyRecap', () => {
             [1, 0, { p1: 0, p2: 0 }],
             [2, 0, { p3: 0, p4: 0 }],
         ]);
-        const result = computeWeeklyRecap(league, matchups, rosters, users, players, 2, { 1: matchups });
-
-        expect(result.worstManager).toBeNull();
-        expect(result.boomGame).toBeNull();
-        expect(result.topRookie).toBeNull();
-        expect(result.robbery).toBeNull();
-        expect(result.tankCommander).toBeNull();
+        const final = completedMatchups({ 1: matchups }, 0);
+        expect(computeWeeklyRecap(league, final[1], rosters, users, players, 1, final)).toBeNull();
+        const completedZero = computeWeeklyRecap(league, matchups, rosters, users, players, 1, { 1: matchups });
+        expect(completedZero.tankCommander.score).toBe('0.00');
     });
 
     it('still awards normally once real scores exist', () => {

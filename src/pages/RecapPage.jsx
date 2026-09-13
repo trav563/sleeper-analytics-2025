@@ -4,7 +4,7 @@ import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups
 
 const RecapPage = () => {
     const { league, rosters, users, players, currentWeek, seasonStarted } = useOutletContext();
-    const { seasonMatchups, loading: seasonMatchupsLoading } = useSeasonMatchups(league?.league_id, currentWeek);
+    const { seasonMatchups, completedWeek, loading: seasonMatchupsLoading } = useSeasonMatchups(league?.league_id, currentWeek);
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -13,7 +13,7 @@ const RecapPage = () => {
                 rosters={rosters}
                 users={users}
                 players={players}
-                currentWeek={currentWeek}
+                currentWeek={completedWeek + 1}
                 seasonStarted={seasonStarted}
                 seasonMatchups={seasonMatchups}
                 seasonMatchupsLoading={seasonMatchupsLoading}

@@ -1,4 +1,4 @@
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { LineChart, Line } from 'recharts';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { usePowerRankings } from '../hooks/usePowerRankings';
 import { Crown, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -69,7 +69,11 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                 </details>
             </header>
 
-            <div className="overflow-x-auto">
+            <div className="sm:hidden divide-y divide-line">{rankings.map((team, index) => <details key={team.rosterId} className="p-4">
+                <summary className="min-h-11 cursor-pointer flex items-center gap-3"><strong className="text-signal tnum">{index + 1}</strong><span className="flex-1 min-w-0"><span className="block font-semibold text-sm break-words">{team.name}</span><span className="block text-xs text-text-dim mt-1">{team.record} · {team.ppg.toFixed(1)} PPG</span></span><span aria-hidden="true" className="text-signal">+</span></summary>
+                <dl className="grid grid-cols-2 gap-3 mt-3 text-sm"><div><dt className="text-text-dim">All-play</dt><dd>{(team.apWinPct * 100).toFixed(0)}%</dd></div><div><dt className="text-text-dim">Opponent PPG</dt><dd>{team.sos.toFixed(1)}</dd></div><div><dt className="text-text-dim">Power score</dt><dd>{team.composite.toFixed(1)}</dd></div><div><dt className="text-text-dim">Rank change</dt><dd>{team.rankChange}</dd></div></dl>
+            </details>)}</div>
+            <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead>
                         <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2">
@@ -111,8 +115,7 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                                     <td className="px-3 py-3">
                                         {team.trend.length > 1 ? (
                                             <div className="h-6 w-16 mx-auto" aria-hidden="true">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart data={team.trend}>
+                                                    <LineChart width={64} height={24} data={team.trend}>
                                                         <Line
                                                             type="monotone"
                                                             dataKey="rank"
@@ -122,7 +125,6 @@ const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
                                                             isAnimationActive={false}
                                                         />
                                                     </LineChart>
-                                                </ResponsiveContainer>
                                             </div>
                                         ) : (
                                             <span className="text-xs text-text-mute block text-center">—</span>

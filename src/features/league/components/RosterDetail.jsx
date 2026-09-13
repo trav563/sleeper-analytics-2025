@@ -1,3 +1,6 @@
+import { useCompletedPlayerStats } from '../../stats/hooks/useCompletedPlayerStats';
+import { lastCompletedWeek } from '../../../utils/seasonState';
+import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -44,13 +47,15 @@ const labelForScore = (score) => {
 const RosterDetail = ({ league, rosters, users, players, state, roster, currentWeekMatchups, seasonMatchups }) => {
     const navigate = useNavigate();
     const week = deriveCurrentWeek(league, state);
+    const { logs } = useCompletedPlayerStats(league?.season, lastCompletedWeek(league, state), league?.scoring_settings);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
     const owner = users?.find((u) => u.user_id === roster?.owner_id);
     const coOwners = (roster?.co_owners || [])
         .map((id) => users?.find((u) => u.user_id === id))
         .filter(Boolean);
     const hue = ROSTER_HUE(roster?.roster_id);
 
-    const { details: liveDetails } = useGameLiveDetails(week);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
     const gameStatuses = useMemo(() => {
         const map = {};
         Object.entries(liveDetails || {}).forEach(([abbr, d]) => {
@@ -66,24 +71,9 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
     }, [currentWeekMatchups, roster]);
 
     /* Per-player season totals for SZN avg + projections. */
-    const playerSeason = useMemo(() => {
-        const out = {};
-        if (!seasonMatchups) return out;
-        Object.values(seasonMatchups).forEach((ms) => {
-            if (!Array.isArray(ms)) return;
-            ms.forEach((m) => {
-                Object.entries(m.players_points || {}).forEach(([pid, pts]) => {
-                    if (!out[pid]) out[pid] = { sum: 0, n: 0, weeks: 0 };
-                    out[pid].weeks += 1;
-                    if (pts > 0) {
-                        out[pid].sum += pts;
-                        out[pid].n += 1;
-                    }
-                });
-            });
-        });
-        return out;
-    }, [seasonMatchups]);
+    const playerSeason = useMemo(() => Object.fromEntries(Object.entries(logs).map(([id, games]) => [id, {
+        sum: games.reduce((n, game) => n + game.points, 0), n: games.length, weeks: games.length,
+    }])), [logs]);
 
     /* Group players: starters / bench / taxi / IR. */
     const grouped = useMemo(() => {
@@ -133,7 +123,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
 
         const totals = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
         const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-        Object.values(seasonMatchups || {}).forEach((ms) => {
+        Object.entries(seasonMatchups || {}).forEach(([week, ms]) => {
             if (!Array.isArray(ms)) return;
             const m = ms.find((x) => x.roster_id === roster.roster_id);
             if (!m) return;
@@ -142,7 +132,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                 const p = players?.[pid];
                 if (!p?.position || !POSITION_GROUPS.includes(p.position)) return;
                 const pts = m.starters_points?.[i] || 0;
-                if (pts > 0) {
+                if (logs[pid]?.some(g => g.week === Number(week))) {
                     totals[p.position] += pts;
                     counts[p.position] += 1;
                 }
@@ -172,7 +162,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
             return { pos, pct, label: labelForScore(pct), ppg };
         });
         return { rows, projected };
-    }, [seasonMatchups, players, roster, projFor]);
+    }, [seasonMatchups, players, roster, projFor, logs]);
 
 
     /* Season-aware bye map (generated from nflverse; see npm run update-byes). */
@@ -207,21 +197,10 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
     // (AI Roster Analysis removed — covered by the dashboard's "Rate My Roster" card.)
 
     /* Hero-strip stats. */
-    const wins = roster?.settings?.wins ?? 0;
-    const losses = roster?.settings?.losses ?? 0;
-    const ties = roster?.settings?.ties ?? 0;
-    const pf = ((roster?.settings?.fpts ?? 0) + (roster?.settings?.fpts_decimal ?? 0) / 100).toFixed(1);
-    const myRank = useMemo(() => {
-        if (!Array.isArray(rosters)) return null;
-        const sorted = [...rosters].sort((a, b) => {
-            if (a.settings.wins !== b.settings.wins) return b.settings.wins - a.settings.wins;
-            const aPf = (a.settings.fpts ?? 0) + (a.settings.fpts_decimal ?? 0) / 100;
-            const bPf = (b.settings.fpts ?? 0) + (b.settings.fpts_decimal ?? 0) / 100;
-            return bPf - aPf;
-        });
-        const idx = sorted.findIndex((r) => r.roster_id === roster?.roster_id);
-        return idx >= 0 ? idx + 1 : null;
-    }, [rosters, roster?.roster_id]);
+    const ranking = rankings.find(r => r.rosterId === roster?.roster_id);
+    const wins = ranking?.wins || 0, losses = ranking?.losses || 0, ties = ranking?.ties || 0;
+    const pf = (ranking?.pf || 0).toFixed(1);
+    const myRank = ranked ? ranking?.currentRank : null;
 
     if (!roster) {
         return (
@@ -273,7 +252,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                 {/* Desktop: 5 StatCells right-aligned (record/rank/PF/playoff/streak) */}
                 <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4">
                     <HeroStat label="Record" value={`${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`} />
-                    <HeroStat label="Rank" value={myRank != null ? `#${myRank}` : '—'} tone={myRank === 1 ? 'signal' : 'text'} />
+                    <HeroStat label="Power rank" value={myRank != null ? `#${myRank}` : '—'} tone={myRank === 1 ? 'signal' : 'text'} />
                     <HeroStat label="PF" value={pf} />
                     <HeroStat label="Playoff" value="—" />
                     <HeroStat label="Streak" value="—" />

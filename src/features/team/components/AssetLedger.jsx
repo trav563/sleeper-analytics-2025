@@ -1,21 +1,25 @@
 import { useMemo } from 'react';
 import { Coins } from 'lucide-react';
 import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
-import { activeRosterIds } from '../../../utils/leagueMath';
+import { ownedPlayerIds } from '../../../utils/valuation';
 import { buildPickLedger } from '../../tools/utils/pickLedger';
+import { completedProduction } from '../../../utils/completedStandings';
+import { assignLineup } from '../../../utils/lineupAssignment';
 
 /**
  * Every tradeable asset you own, priced at dynasty market value: players plus
  * future rookie picks, with your total ranked against the league.
  */
-const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValues, isSuperflex }) => {
+const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValues, marketSnapshot, isSuperflex, seasonMatchups }) => {
     const data = useMemo(() => {
         if (!roster || !players || !rosters?.length) return null;
 
-        const { ledgerByRoster } = buildPickLedger(league, rosters, tradedPicks, marketValues || {}, isSuperflex);
+        const production = completedProduction(rosters, seasonMatchups, league.roster_positions, players, assignLineup);
+        const completedRosters = rosters.map(r => ({ ...r, settings: { ...r.settings, ppts: production.find(t => t.rosterId === r.roster_id)?.maxPoints || 0 } }));
+        const { ledgerByRoster } = buildPickLedger(league, completedRosters, tradedPicks, marketValues || {}, isSuperflex);
 
         const rosterValue = (r) =>
-            activeRosterIds(r).reduce((sum, pid) => sum + (marketValues?.[pid] || 0), 0);
+            ownedPlayerIds(r).reduce((sum, pid) => sum + (marketValues?.[pid] || 0), 0);
         const pickValue = (r) =>
             (ledgerByRoster[r.roster_id] || []).reduce((sum, p) => sum + (p.tradeValue || 0), 0);
 
@@ -24,8 +28,8 @@ const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValu
             .sort((a, b) => b.total - a.total);
         const rank = totals.findIndex((t) => t.rosterId === roster.roster_id) + 1;
 
-        const myPlayers = activeRosterIds(roster)
-            .map((pid) => ({ pid, player: players[pid], value: marketValues?.[pid] || 0 }))
+        const myPlayers = ownedPlayerIds(roster)
+            .map((pid) => ({ pid, player: players[pid], value: marketValues?.[pid] ?? null }))
             .filter((p) => p.player)
             .sort((a, b) => b.value - a.value);
 
@@ -41,12 +45,12 @@ const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValu
             rank,
             teamCount: rosters.length,
         };
-    }, [league, rosters, roster, players, tradedPicks, marketValues, isSuperflex]);
+    }, [league, rosters, roster, players, tradedPicks, marketValues, isSuperflex, seasonMatchups]);
 
     if (!data) return null;
     const { myPlayers, myPicks, playerTotal, pickTotal, rank, teamCount } = data;
 
-    if (playerTotal === 0 && pickTotal === 0) {
+    if (!marketSnapshot?.trustworthy || (playerTotal === 0 && pickTotal === 0)) {
         return (
             <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -67,7 +71,7 @@ const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValu
                         <h3 className="font-display text-lg font-semibold text-text">Asset Ledger</h3>
                     </div>
                     <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                        Dynasty market value · players + future picks
+                        {marketSnapshot?.settings?.isDynasty ? "Dynasty" : "Redraft"} market value · IR/taxi included
                     </p>
                 </div>
                 <div className="text-right">
@@ -78,6 +82,7 @@ const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValu
                 </div>
             </header>
 
+            <p className="p-4 text-xs text-text-dim">{marketSnapshot?.source || "Values unavailable"}{marketSnapshot?.fetchedAt ? ` · retrieved ${new Date(marketSnapshot.fetchedAt).toLocaleString()}` : ""}. Totals include priced assets only. Pick tiers are estimates. {marketSnapshot?.approximation}</p>
             <div className="grid grid-cols-2 divide-x divide-line border-b border-line">
                 <div className="p-3 text-center">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">Players</div>
@@ -98,7 +103,7 @@ const AssetLedger = ({ league, rosters, roster, players, tradedPicks, marketValu
                                 <PlayerHeadshot playerId={pid} name={player.last_name} size={24} />
                                 <span className="text-text truncate">{player.first_name?.[0]}. {player.last_name}</span>
                                 <span className="font-mono text-2xs text-text-mute">{player.position}</span>
-                                <span className="ml-auto font-mono tnum text-signal">{value.toLocaleString()}</span>
+                                <span className="ml-auto font-mono tnum text-signal">{value == null ? '—' : value.toLocaleString()}</span>
                             </li>
                         ))}
                     </ul>

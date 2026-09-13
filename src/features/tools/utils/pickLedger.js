@@ -40,7 +40,7 @@ export const getPickValue = (round, rankInsideLeague, totalTeams, isSuperflex = 
  * @returns {{ allPicks: Array, ledgerByRoster: Object }}
  */
 export function buildPickLedger(league, rosters, tradedPicks, marketValues = {}, isSuperflex = true) {
-    if (!league || !Array.isArray(rosters) || rosters.length === 0) {
+    if (!league || league.settings?.type === 0 || !Array.isArray(rosters) || rosters.length === 0) {
         return { allPicks: [], ledgerByRoster: {} };
     }
 
@@ -87,13 +87,14 @@ export function buildPickLedger(league, rosters, tradedPicks, marketValues = {},
         .map(r => ({ rosterId: r.roster_id, ppts: r.settings?.ppts || 0 }))
         .sort((a, b) => a.ppts - b.ppts);
 
+    const hasProductionOrder = new Set(draftOrder.map(t => t.ppts)).size > 1;
     allPicks.forEach(p => {
         const draftIndex = draftOrder.findIndex(d => d.rosterId === p.original_owner_id);
-        const rank = draftIndex !== -1 ? draftIndex + 1 : 6; // default mid
+        const rank = hasProductionOrder && draftIndex !== -1 ? draftIndex + 1 : Math.ceil(totalTeams / 2); // default mid
 
         let qual = 'Mid';
-        if (rank <= 4) qual = 'Early';
-        else if (rank >= 9) qual = 'Late';
+        if (hasProductionOrder && rank <= Math.ceil(totalTeams / 3)) qual = 'Early';
+        else if (hasProductionOrder && rank > Math.ceil(totalTeams * 2 / 3)) qual = 'Late';
 
         // Market value first (FantasyCalc carries pick prices, including a
         // real future-year discount); formula tiers as fallback.
@@ -104,6 +105,7 @@ export function buildPickLedger(league, rosters, tradedPicks, marketValues = {},
             tier: qual.toLowerCase(),
         }) ?? getPickValue(p.round, rank, totalTeams, isSuperflex);
 
+        p.estimated = true;
         p.description = `${p.year} ${ordinal(p.round)} (${qual})`;
         p.full_name = p.description; // Consistency with players
     });

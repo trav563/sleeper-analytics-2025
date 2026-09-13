@@ -10,7 +10,7 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
 /** Horizontal-scroll snapshot of every matchup this week. */
 const LeaguePulse = ({ league, week, viewMatchups, rosters, users, players }) => {
     const navigate = useNavigate();
-    const { details: liveDetails } = useGameLiveDetails(week);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
 
     const pairs = useMemo(() => {
         if (!Array.isArray(viewMatchups) || !rosters) return [];

@@ -1,4 +1,4 @@
-import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useAnalyzeTeam } from '../hooks/useAnalyzeTeam';
 
 /**
@@ -75,126 +75,40 @@ function renderMarkdown(text) {
     return out;
 }
 
-const CoachCard = ({
-    icon: Icon,
-    title,
-    description,
-    leagueId,
-    userId,
-    week,
-    analysisType,
-    cooldownMs,
-    constraints = [],
-}) => {
-    const {
-        analysis, loading, error, isOnCooldown, cooldownMinutes,
-        activeConstraint, analyze,
-    } = useAnalyzeTeam({ leagueId, userId, week, analysisType, cooldownMs });
-
-    const hasResult = !!analysis;
-    const cooldownLabel = cooldownMinutes >= 60
-        ? `${Math.floor(cooldownMinutes / 60)}h ${cooldownMinutes % 60}m`
-        : `${cooldownMinutes}m`;
-
+const CoachCard = ({ icon: Icon, title, description, leagueId, userId, week, analysisType, cooldownMs, constraints = [] }) => {
+    const { analysis, loading, error, incomplete, valuation, cachedAt, cooldownMinutes, activeConstraint, analyze, cancel } = useAnalyzeTeam({ leagueId, userId, week, analysisType, cooldownMs });
+    const activeTitle = activeConstraint === 'trade-up' ? 'Trade-up Ideas' : activeConstraint === 'sell-high' ? 'Sell-high Candidates' : title;
+    const activeDescription = activeConstraint === 'trade-up' ? 'AI · Screened consolidation packages' : activeConstraint === 'sell-high' ? 'AI · Market-value opportunities' : description;
+    const modes = [{ value: null, label: analysisType === 'roster' ? 'Roster grades' : 'Overview' }, ...constraints];
     return (
-        <section className="bg-bg-1 rounded-xl border border-line shadow-card p-4 flex flex-col">
-            <header className="flex items-start justify-between gap-3 mb-1">
-                <div className="flex items-center gap-2 min-w-0">
-                    {Icon && <Icon className="w-4 h-4 text-signal shrink-0" aria-hidden="true" />}
-                    <h3 className="font-display text-sm font-bold text-text truncate">{title}</h3>
-                </div>
-                {!loading && (
-                    <button
-                        type="button"
-                        onClick={() => analyze({ force: hasResult, constraint: activeConstraint })}
-                        disabled={isOnCooldown && !hasResult}
-                        className="inline-flex items-center gap-1 font-mono text-2xs uppercase tracking-wider font-bold text-signal hover:text-signal/80 transition-colors duration-fast disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        {hasResult ? <RefreshCw className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                        {hasResult ? 'Refresh' : 'Generate'}
-                    </button>
-                )}
+        <section className="bg-bg-1 rounded-xl border border-line shadow-card p-4 flex flex-col min-w-0">
+            <header className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 font-display text-base font-bold text-text">
+                    {Icon && <Icon className="w-5 h-5 text-signal shrink-0" aria-hidden="true" />}{activeTitle}
+                </h3>
+                <button type="button" onClick={() => loading ? cancel() : analyze({ force: !!analysis, constraint: activeConstraint })}
+                    className="min-h-11 px-2 text-sm font-semibold text-signal inline-flex items-center gap-1">
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    {loading ? 'Cancel' : analysis ? 'Refresh' : 'Generate'}
+                </button>
             </header>
-            {description && (
-                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-3">
-                    {description}
-                </p>
-            )}
-
-            {/* Body */}
-            <div className="flex-1 min-h-[120px]">
-                {loading && (
-                    <div className="flex items-center justify-center h-[120px] gap-2">
-                        <Loader2 className="w-4 h-4 text-signal animate-spin" />
-                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                            Analyzing…
-                        </span>
-                    </div>
-                )}
-
-                {!loading && error && (
-                    <div className="p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-xs">
-                        <div className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-                            <span>{error}</span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => analyze({ force: true, constraint: activeConstraint })}
-                            className="mt-2 inline-flex items-center gap-1 font-mono text-2xs uppercase tracking-wider font-bold text-bad hover:text-bad/80 transition-colors duration-fast"
-                        >
-                            <RefreshCw className="w-3 h-3" /> Retry
-                        </button>
-                    </div>
-                )}
-
-                {!loading && !error && !hasResult && (
-                    <div className="flex flex-col items-center justify-center h-[120px] text-center px-2">
-                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                            Tap Generate
-                        </span>
-                        {isOnCooldown && (
-                            <span className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                                Refresh available in {cooldownLabel}
-                            </span>
-                        )}
-                    </div>
-                )}
-
-                {!loading && !error && hasResult && (
-                    <div className="space-y-1">{renderMarkdown(analysis)}</div>
-                )}
+            <p className="text-xs text-text-dim mb-3">{activeDescription}</p>
+            <div className="flex flex-wrap gap-2 mb-4" aria-label={`${title} analysis mode`}>
+                {modes.map(mode => <button type="button" key={mode.value || 'default'} aria-pressed={activeConstraint === mode.value}
+                    onClick={() => analyze({ constraint: mode.value })}
+                    className={`min-h-11 px-3 rounded-md border text-sm ${activeConstraint === mode.value ? 'border-signal text-signal bg-signal/10' : 'border-line text-text-dim hover:text-text'}`}>{mode.label}</button>)}
             </div>
-
-            {/* Constraint buttons */}
-            {hasResult && constraints.length > 0 && !loading && (
-                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-line">
-                    {constraints.map((c) => {
-                        const isActive = activeConstraint === c.value;
-                        return (
-                            <button
-                                key={c.value}
-                                type="button"
-                                onClick={() => analyze({ force: false, constraint: c.value })}
-                                className={`font-mono text-2xs uppercase tracking-wider px-2 py-1 rounded-sm border transition-colors duration-fast ${
-                                    isActive
-                                        ? 'border-signal text-signal bg-signal/10'
-                                        : 'border-line text-text-dim hover:border-line-strong hover:text-text'
-                                }`}
-                            >
-                                {c.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Cooldown footer when result exists */}
-            {hasResult && isOnCooldown && !loading && (
-                <div className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-2">
-                    Next refresh in {cooldownLabel}
-                </div>
-            )}
+            {loading && <p role="status" className="text-sm text-signal mb-3">Analyzing… Results appear as they arrive.</p>}
+            {error && <div role="alert" className="p-3 mb-3 rounded-md bg-bad/10 text-bad text-sm">
+                <p>{error}</p><button type="button" className="min-h-11 underline" onClick={() => analyze({ force: true, constraint: activeConstraint })}>Retry analysis</button>
+            </div>}
+            {analysis ? <div className="coach-result space-y-1 break-words">{renderMarkdown(analysis)}</div>
+                : !loading && !error && <p className="py-8 text-sm text-text-dim">Choose a mode or select Generate to analyze this team.</p>}
+            <footer className="mt-4 text-xs text-text-dim">
+                {valuation && <p className="mb-1">Market values: {valuation.source}{valuation.fetchedAt ? ` · retrieved ${new Date(valuation.fetchedAt).toLocaleString()}` : ""}. {valuation.approximation}</p>}
+                {incomplete && !loading ? 'Incomplete · not saved' : cachedAt ? `Completed ${new Date(cachedAt).toLocaleString()}` : ''}
+                {!incomplete && cachedAt && cooldownMinutes > 0 && <span className="block mt-1">Saved result reused for {cooldownMinutes >= 60 ? `${Math.ceil(cooldownMinutes / 60)}h` : `${cooldownMinutes}m`}. Refresh requests a new analysis.</span>}
+            </footer>
         </section>
     );
 };

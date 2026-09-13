@@ -64,7 +64,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
 
-    const { details: liveDetails } = useGameLiveDetails(week);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
     const gameStatuses = useMemo(() => {
         const map = {};
         Object.entries(liveDetails || {}).forEach(([abbr, d]) => {
@@ -356,7 +356,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
         });
 
         return checkpoints;
-    }, [myMatchup, oppMatchup, players, liveDetails, projMap, week, currentNFLWeek]);
+    }, [myMatchup, oppMatchup, players, liveDetails, projMap]);
 
     /* No matchup found */
     if (!myMatchup) {

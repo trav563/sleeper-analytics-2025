@@ -1,3 +1,4 @@
+import { clearToolSession } from './toolSession';
 /**
  * Local-storage housekeeping.
  *
@@ -32,7 +33,7 @@ export function pruneAiAnalysisCache() {
     return removeByPrefix(AI_PREFIX, (key) => {
         try {
             const parsed = JSON.parse(localStorage.getItem(key));
-            return !parsed?.timestamp || Date.now() - parsed.timestamp > AI_MAX_AGE_MS;
+            return !key.startsWith('ai_analysis:v2:') || !parsed?.timestamp || Date.now() - parsed.timestamp > AI_MAX_AGE_MS;
         } catch {
             return true; // unparseable → drop it
         }
@@ -44,6 +45,7 @@ export function pruneAiAnalysisCache() {
  * it is a display preference, not identity.
  */
 export function clearLocalUserData() {
+    clearToolSession();
     try {
         localStorage.removeItem('sleeper_user');
     } catch { /* ignore */ }

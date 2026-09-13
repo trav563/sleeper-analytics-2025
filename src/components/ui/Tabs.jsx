@@ -1,45 +1,23 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
-
-const TabsContext = React.createContext({});
-
-const Tabs = ({ defaultValue, className, children }) => {
-    const [activeTab, setActiveTab] = React.useState(defaultValue);
-    return (
-        <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-            <div className={className}>{children}</div>
-        </TabsContext.Provider>
-    );
-};
-
-const TabsList = ({ className, children }) => (
-    <div className={cn("inline-flex h-10 items-center justify-center rounded-md p-1 text-muted-foreground", className)}>
-        {children}
-    </div>
-);
-
-const TabsTrigger = ({ value, className, children }) => {
-    const { activeTab, setActiveTab } = React.useContext(TabsContext);
-    const isActive = activeTab === value;
-
-    return (
-        <button
-            className={cn(
-                "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-                isActive ? 'bg-background text-foreground shadow-sm' : 'hover:bg-slate-700/50 hover:text-slate-100',
-                className
-            )}
-            onClick={() => setActiveTab(value)}
-        >
-            {children}
-        </button>
-    );
-};
-
-const TabsContent = ({ value, className, children }) => {
-    const { activeTab } = React.useContext(TabsContext);
+import { createContext, useContext, useId, useState } from 'react';
+import { cn } from '../../lib/utils';
+const TabsContext = createContext({});
+export function Tabs({ defaultValue, className, children }) {
+    const [activeTab, setActiveTab] = useState(defaultValue), id = useId();
+    return <TabsContext.Provider value={{ activeTab, setActiveTab, id }}><div className={className}>{children}</div></TabsContext.Provider>;
+}
+export const TabsList = ({ className, children }) => <div role="tablist" className={cn('flex flex-wrap gap-1 p-1 rounded-lg bg-bg-2', className)}>{children}</div>;
+export function TabsTrigger({ value, className, children }) {
+    const { activeTab, setActiveTab, id } = useContext(TabsContext);
+    const active = activeTab === value;
+    const keyDown = e => {
+        const tabs = [...e.currentTarget.parentElement.querySelectorAll('[role="tab"]')], index = tabs.indexOf(e.currentTarget);
+        const next = e.key === 'ArrowRight' ? (index + 1) % tabs.length : e.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null;
+        if (next != null) { e.preventDefault(); tabs[next].focus(); tabs[next].click(); }
+    };
+    return <button type="button" role="tab" id={`${id}-tab-${value}`} aria-controls={`${id}-panel-${value}`} aria-selected={active} tabIndex={active ? 0 : -1} onKeyDown={keyDown} onClick={() => setActiveTab(value)} className={cn('min-h-11 px-3 py-2 rounded-md text-sm font-semibold', active ? 'bg-bg-3 text-signal' : 'text-text-dim hover:text-text', className)}>{children}</button>;
+}
+export function TabsContent({ value, className, children }) {
+    const { activeTab, id } = useContext(TabsContext);
     if (activeTab !== value) return null;
-    return <div className={cn("ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2", className)}>{children}</div>;
-};
-
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+    return <div role="tabpanel" tabIndex={0} id={`${id}-panel-${value}`} aria-labelledby={`${id}-tab-${value}`} className={className}>{children}</div>;
+}

@@ -25,7 +25,7 @@ export const getTeamsOnBye = async (weekNumber, season) => {
     if (known) return known;
 
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch schedule: ${response.statusText}`);
         }
@@ -73,9 +73,9 @@ export const getTeamsOnBye = async (weekNumber, season) => {
  * @param {number} weekNumber - The week number to fetch.
  * @returns {Promise<Object>} - A map of team abbreviation to game status: 'scheduled', 'in_progress', 'final', or 'bye'
  */
-export const getGameStatuses = async (weekNumber) => {
+export const getGameStatuses = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch schedule: ${response.statusText}`);
         }
@@ -135,10 +135,10 @@ export const getGameStatuses = async (weekNumber) => {
  * @param {number} weekNumber
  * @returns {Promise<Object>} { [abbr]: { period, displayClock, score, statusName, opponent, isHome } }
  */
-export const getGameLiveDetails = async (weekNumber) => {
+export const getGameLiveDetails = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
-        if (!response.ok) return {};
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        if (!response.ok) throw new Error('Game context unavailable');
 
         const data = await response.json();
         const events = data.events || [];
@@ -179,7 +179,7 @@ export const getGameLiveDetails = async (weekNumber) => {
         return detailsMap;
     } catch (error) {
         console.error('Error fetching game live details:', error);
-        return {};
+        throw error;
     }
 };
 
@@ -188,10 +188,10 @@ export const getGameLiveDetails = async (weekNumber) => {
  * @param {number} weekNumber - The week number to fetch.
  * @returns {Promise<Object>} - Map of team abbreviation to weather info: { temp, condition, displayValue, isIndoor, isAdverse }
  */
-export const getGameWeather = async (weekNumber) => {
+export const getGameWeather = async (weekNumber, season) => {
     try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}`);
-        if (!response.ok) return {};
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        if (!response.ok) throw new Error('Game context unavailable');
 
         const data = await response.json();
         const events = data.events || [];
@@ -207,7 +207,8 @@ export const getGameWeather = async (weekNumber) => {
                 if (abbr === 'WSH') abbr = 'WAS';
                 if (!ALL_NFL_TEAMS.includes(abbr)) return;
 
-                const isIndoor = INDOOR_STADIUMS.has(abbr);
+                const homeTeam = competition.competitors.find(c => c.homeAway === 'home')?.team?.abbreviation;
+                const isIndoor = competition.venue?.indoor ?? INDOOR_STADIUMS.has(homeTeam === 'WSH' ? 'WAS' : homeTeam);
 
                 if (isIndoor || !weather) {
                     weatherMap[abbr] = { isIndoor, isAdverse: false, displayValue: isIndoor ? 'Dome' : null };
@@ -215,7 +216,7 @@ export const getGameWeather = async (weekNumber) => {
                 }
 
                 const temp = weather.temperature ? parseInt(weather.temperature) : null;
-                const condition = weather.displayValue || '';
+                const condition = weather.conditionId ? (weather.link?.text || '') : (weather.displayValue || '');
                 const condLower = condition.toLowerCase();
 
                 // Flag adverse conditions: cold (<35°F), wind mention, rain, snow
@@ -226,7 +227,7 @@ export const getGameWeather = async (weekNumber) => {
                 weatherMap[abbr] = {
                     temp,
                     condition,
-                    displayValue: weather.displayValue || null,
+                    displayValue: /^\d+$/.test(String(weather.displayValue)) ? (weather.link?.text || null) : (weather.displayValue || null),
                     isIndoor: false,
                     isAdverse,
                 };

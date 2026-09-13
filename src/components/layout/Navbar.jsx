@@ -11,7 +11,13 @@ const Navbar = () => {
     const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [menuLocation, setMenuLocation] = useState(null);
+    const isMobileMenuOpen = menuLocation === location.key;
+    const setIsMobileMenuOpen = open => setMenuLocation(open ? location.key : null);
+
+    useEffect(() => {
+        if (isMobileMenuOpen) document.querySelector('#mobile-navigation a, #mobile-navigation button')?.focus();
+    }, [isMobileMenuOpen]);
 
     // Robustly extract leagueId from URL regardless of route nesting
     const leagueIdMatch = location.pathname.match(/\/league\/(\d+)/);
@@ -39,15 +45,9 @@ const Navbar = () => {
         }
     }, [user, season, leagues.length, getLeagues]);
 
-    // Close mobile menu when location changes
-    useEffect(() => {
-        setIsMobileMenuOpen(false);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    }, [location]);
-
     const isActive = (path) => {
         if (path === '') return location.pathname === `/league/${leagueId}`;
-        return location.pathname.includes(path);
+        return location.pathname.includes(path) || (path === 'my-team' && location.pathname.includes('/team/'));
     };
 
     const handleLeagueSwitch = (e) => {
@@ -69,7 +69,10 @@ const Navbar = () => {
         { href: `/league/${leagueId}/tools`, label: 'Tools', icon: Wrench },
     ];
 
+    const activeLeague = leagueHistory?.find(l => l.league_id === leagueId) || leagues.find(l => l.league_id === leagueId);
+    const primaryItems = navItems.filter(i => ['Dashboard', 'Matchup', 'My Team', 'Tools'].includes(i.label));
     return (
+        <>
         <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
             {/* Wider than the page content on large screens: max-w-7xl caps at
                 1280px regardless of viewport, so on a 1600px+ display the tabs
@@ -90,6 +93,7 @@ const Navbar = () => {
                             </span>
                             <span className="sr-only">League Analysis</span>
                         </Link>
+                        {leagueId && <div className="md:hidden min-w-0"><p className="text-sm font-semibold truncate max-w-[190px]">{activeLeague?.name || 'League Analysis'}</p><p className="text-xs text-text-dim">{activeLeague?.season || ''}{isHistoricalView ? ' · Historical' : ''}</p></div>}
 
                         {leagueId && (
                             // min-w-0 + scroll: without them the nowrap tabs refuse to
@@ -119,6 +123,7 @@ const Navbar = () => {
                     </div>
 
                     <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+                        {!user && hasHistory && <select aria-label="Switch season" value={leagueId || ''} onChange={handleSeasonSwitch} className="hidden md:block min-h-11 bg-bg-2 border border-line rounded-md px-2 text-sm max-w-24">{leagueHistory.map(l => <option value={l.league_id} key={l.league_id}>{l.season}</option>)}</select>}
                         {user && (
                             <div className="hidden md:flex items-center gap-2 lg:gap-3 min-w-0">
                                 {/* League Switcher — hidden when only one league */}
@@ -224,6 +229,7 @@ const Navbar = () => {
                             className="md:hidden min-w-[44px] min-h-[44px] text-text-dim hover:text-text hover:bg-bg-2"
                             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                             aria-expanded={isMobileMenuOpen}
+                            aria-controls="mobile-navigation"
                         >
                             {isMobileMenuOpen ? (
                                 <X className="h-6 w-6" />
@@ -237,8 +243,8 @@ const Navbar = () => {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1 animate-accordion-down">
-                    {leagueId && navItems.map((item) => {
+                <div id="mobile-navigation" onKeyDown={e => { if (e.key === 'Escape') { setIsMobileMenuOpen(false); document.getElementById('mobile-more')?.focus(); } }} className="md:hidden max-h-[65dvh] overflow-y-auto border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1">
+                    {leagueId && navItems.filter(i => !['Dashboard', 'Matchup', 'My Team', 'Tools'].includes(i.label)).map((item) => {
                         const active = isActive(item.exact ? '' : item.href.split('/').pop());
                         return (
                             <Link
@@ -259,6 +265,8 @@ const Navbar = () => {
                         );
                     })}
 
+                    {!user && leagueId && <Link to={`/league/${leagueId}/my-team?choose-team=1`} className="flex items-center min-h-11 px-4 text-sm">Choose a team</Link>}
+                    {!user && hasHistory && <label className="block px-4 text-sm">Season<select aria-label="Switch season" value={leagueId || ''} onChange={handleSeasonSwitch} className="block min-h-11 w-full bg-bg-2 px-3 mt-2 rounded-md">{leagueHistory.map(l => <option value={l.league_id} key={l.league_id}>{l.season}</option>)}</select></label>}
                     {user && (
                         <div className="pt-4 pb-3 border-t border-line mt-2">
                             <div className="flex items-center px-3 mb-3">
@@ -332,6 +340,13 @@ const Navbar = () => {
                 </div>
             )}
         </nav>
+        {leagueId && <nav aria-label="Primary mobile navigation" className="mobile-bottom-nav md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-line bg-bg-1/95 backdrop-blur">
+            <div className="grid grid-cols-5">{primaryItems.map(item => {
+                const active = isActive(item.exact ? '' : item.href.split('/').pop());
+                return <Link key={item.href} to={item.href} aria-current={active ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-1 min-h-[60px] text-[11px] font-semibold ${active ? 'text-signal bg-signal/5' : 'text-text-dim'}`}><item.icon className="w-5 h-5" aria-hidden="true" />{item.label}</Link>;
+            })}<button id="mobile-more" type="button" aria-expanded={isMobileMenuOpen} aria-controls="mobile-navigation" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`flex flex-col items-center justify-center gap-1 min-h-[60px] text-[11px] font-semibold ${isMobileMenuOpen || !primaryItems.some(i => isActive(i.exact ? '' : i.href.split('/').pop())) ? 'text-signal' : 'text-text-dim'}`}><Menu className="w-5 h-5" />More</button></div>
+        </nav>}
+        </>
     );
 };
 

@@ -25,7 +25,7 @@ export function useWeekProjections(season, week, scoringSettings) {
         const out = {};
         for (const [pid, stats] of Object.entries(data)) {
             const pts = projectedPoints(stats, scoringSettings);
-            if (pts) out[pid] = pts;
+            if (stats && Object.keys(stats).length && Number.isFinite(pts)) out[pid] = pts;
         }
         return out;
     }, [data, scoringSettings]);

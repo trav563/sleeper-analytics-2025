@@ -1,0 +1,44 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Secrets. `*.local` above already covers .env.local (what `vercel env pull`
+# writes by default), but not a bare .env — and this repo is public.
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vercel
+
+# External design package downloaded from Claude Design — kept locally as
+# a read-only reference; not part of source control.
+/league-analysis-ui-overhaul/
+/*.zip
+graphify-out/
+
+# Local AI review transcripts — contain league member names/IDs, never publish
+code-review/
+
+# Tests stay in GitHub and local validation, not serverless route discovery.
+**/*.test.js
+**/*.test.jsx

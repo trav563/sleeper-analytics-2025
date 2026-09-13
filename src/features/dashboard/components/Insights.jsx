@@ -34,7 +34,7 @@ const TOOLS = [
         analysisType: 'waivers',
         cooldownMs: 12 * HOUR,
         constraints: [
-            { value: 'low-rostered', label: 'Under 25% rostered' },
+            { value: 'low-rostered', label: 'Speculative adds' },
             { value: 'streamers', label: 'Streaming DEF/K only' },
         ],
     },

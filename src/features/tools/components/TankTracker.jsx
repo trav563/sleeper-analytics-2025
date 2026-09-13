@@ -1,4 +1,8 @@
-import { useMemo, useState, useRef } from 'react';
+import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
+import { completedProduction } from '../../../utils/completedStandings';
+import { assignLineup } from '../../../utils/lineupAssignment';
+import { useToolState } from '../../../hooks/useToolState';
+import { useMemo, useRef, useState } from 'react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Button } from '../../../components/ui/Button';
 import { Camera, Truck } from 'lucide-react';
@@ -8,17 +12,20 @@ import { Pip } from '../../../components/ui/Pip';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { theme } from '../../../lib/theme';
 
-const TankTracker = ({ rosters, users, tradedPicks, league }) => {
-    const [selectedRound, setSelectedRound] = useState(1);
+const TankTracker = ({ rosters, users, tradedPicks, league, players, currentWeek }) => {
+    const { seasonMatchups, completedWeek } = useSeasonMatchups(league?.league_id, currentWeek);
+    const [selectedRound, setSelectedRound] = useToolState(`TankTracker-selectedRound:${league?.league_id}`, 1);
     const captureRef = useRef(null);
     const [generating, setGenerating] = useState(false);
 
     const projectedOrder = useMemo(() => {
         if (!rosters || rosters.length === 0) return [];
 
+        const production = completedProduction(rosters, seasonMatchups, league.roster_positions, players, assignLineup);
+        const pointsFor = id => production.find(t => t.rosterId === id)?.maxPoints || 0;
         const sorted = [...rosters].sort((a, b) => {
-            const maxPfA = (a.settings?.ppts || 0) + (a.settings?.ppts_decimal || 0) / 100;
-            const maxPfB = (b.settings?.ppts || 0) + (b.settings?.ppts_decimal || 0) / 100;
+            const maxPfA = pointsFor(a.roster_id);
+            const maxPfB = pointsFor(b.roster_id);
             return maxPfA - maxPfB;
         });
 
@@ -27,7 +34,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
         return sorted.map((roster, index) => {
             const originalRosterId = roster.roster_id;
             const originalOwner = users.find(u => u.user_id === roster.owner_id);
-            const maxPf = (roster.settings?.ppts || 0) + (roster.settings?.ppts_decimal || 0) / 100;
+            const maxPf = pointsFor(roster.roster_id);
 
             const tradeEntry = tradedPicks?.find(p =>
                 p.roster_id === originalRosterId &&
@@ -49,7 +56,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
             }
 
             return {
-                pick: `${selectedRound}.${String(index + 1).padStart(2, '0')}`,
+                pick: completedWeek ? `${selectedRound}.${String(index + 1).padStart(2, '0')}` : `${selectedRound}.??`,
                 originalOwner,
                 currentOwner,
                 originalRosterId,
@@ -58,7 +65,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                 isTraded
             };
         });
-    }, [rosters, users, tradedPicks, league, selectedRound]);
+    }, [rosters, users, tradedPicks, league, selectedRound, seasonMatchups, completedWeek, players]);
 
     const downloadImage = async () => {
         if (captureRef.current) {
@@ -83,11 +90,12 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
     };
 
     if (!rosters || rosters.length === 0) return null;
+    if (league?.settings?.type === 0) return <section className="p-5 bg-bg-1 border border-line rounded-xl"><h2 className="text-lg font-semibold">Tank Tracker</h2><p className="text-sm text-text-dim mt-2">Future rookie-pick ownership applies to dynasty and keeper leagues. This is a redraft league.</p></section>;
 
     const leagueUrl = window.location.href;
 
     return (
-        <section className="space-y-4">
+        <section className="space-y-4"><p className="text-sm text-text-dim">{completedWeek ? `Production through Week ${completedWeek}. Ties and playoff finish may change the final order.` : "No completed production yet. Pick ownership is shown; draft positions are unranked."}</p>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
                 <div>
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1.5">
@@ -150,7 +158,7 @@ const TankTracker = ({ rosters, users, tradedPicks, league }) => {
                                 <tbody>
                                     {projectedOrder.map((row) => (
                                         <tr
-                                            key={row.pick}
+                                            key={`${selectedRound}-${row.originalRosterId}`}
                                             className={`group border-b border-line/60 ${row.isTraded ? 'bg-signal/8' : 'hover:bg-bg-2/60'} transition-colors duration-fast`}
                                         >
                                             <td className="px-4 py-3 font-mono font-bold text-text tnum">{row.pick}</td>

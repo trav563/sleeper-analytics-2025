@@ -126,6 +126,7 @@ export function buildRivalries({ seasons, currentOwnerIds } = {}) {
 
         (season?.weeks || []).forEach((weekMatchups, index) => {
             const week = index + 1;
+            if (season.completedWeek != null && week > season.completedWeek) return;
             const isRegular = week < pws;
 
             // A null matchup_id means "no game this week". Drop those before
@@ -141,9 +142,10 @@ export function buildRivalries({ seasons, currentOwnerIds } = {}) {
                 if (!ownerA || !ownerB || ownerA === ownerB) return;
                 if (allowed && (!allowed.has(ownerA) || !allowed.has(ownerB))) return;
 
-                const scoreA = ma.points || 0;
-                const scoreB = mb.points || 0;
-                if (scoreA === 0 && scoreB === 0) return; // scheduled, not played
+                if (!Number.isFinite(ma.points) || !Number.isFinite(mb.points)) return;
+                const scoreA = ma.points;
+                const scoreB = mb.points;
+                if (season.completedWeek == null && scoreA === 0 && scoreB === 0) return; // legacy frames lack completion metadata
 
                 const isPlayoff =
                     !isRegular &&

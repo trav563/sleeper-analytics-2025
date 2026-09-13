@@ -266,3 +266,25 @@
 @media (prefers-reduced-motion: reduce) {
     .live-dot { animation: none; }
 }
+
+/* Readable mobile controls and safe-area navigation. */
+.mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+.coach-result p, .coach-result li, .coach-result > div { font-size: 14px; line-height: 1.65; }
+.coach-result h4 { font-size: 12px; }
+:root { --text-mute: #828b9b; }
+[data-theme="light"] { --text-mute: #626b79; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--signal); outline-offset: 3px;
+}
+@media (max-width: 767px) {
+    main { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+    select, input, button { touch-action: manipulation; }
+    select, input { font-size: 16px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media (max-width: 767px) {
+    button, summary { min-height: 44px; }
+}

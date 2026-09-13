@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { completedMatchups } from '../../../utils/seasonState';
 import { computePowerRankings } from './usePowerRankings';
 
 const rosters = [
@@ -31,9 +32,9 @@ describe('computePowerRankings', () => {
         const scoreless = {
             1: week([[1, 1, 0], [2, 1, 0], [3, 2, 0], [4, 2, 0]]),
         };
-        const { ranked, rankings } = computePowerRankings(scoreless, rosters, users);
+        const { ranked, rankings } = computePowerRankings(completedMatchups(scoreless, 0), rosters, users);
         expect(ranked).toBe(false);
-        expect(rankings.map((r) => r.rosterId)).toEqual([1, 2, 3, 4]); // roster order, hence meaningless
+        expect(rankings.map((r) => r.rosterId)).toEqual([]); // live weeks are filtered at the shared boundary
     });
 
     it('reports ranked=true once anyone has scored', () => {
@@ -83,7 +84,7 @@ describe('computePowerRankings', () => {
         expect(byId[4].record).toBe('1-1');
     });
 
-    it('does not count a 0-0 unplayed matchup as a tie', () => {
+    it('counts completed 0-0 games as ties', () => {
         const seasonMatchups = {
             1: week([
                 [1, 1, 0], [2, 1, 0],
@@ -92,8 +93,8 @@ describe('computePowerRankings', () => {
         };
         const { rankings } = computePowerRankings(seasonMatchups, rosters, users);
         const byId = Object.fromEntries(rankings.map((t) => [t.rosterId, t]));
-        expect(byId[1].record).toBe('0-0');
-        expect(byId[2].record).toBe('0-0');
+        expect(byId[1].record).toBe('0-0-1');
+        expect(byId[2].record).toBe('0-0-1');
     });
 
     it('sorts by currentRank with the composite leader first', () => {

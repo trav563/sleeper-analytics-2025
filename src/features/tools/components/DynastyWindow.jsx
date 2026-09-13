@@ -1,9 +1,13 @@
+import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
+import { completedProduction } from '../../../utils/completedStandings';
+import { assignLineup } from '../../../utils/lineupAssignment';
+import { useMarketValues } from '../../tools/hooks/useMarketValues';
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+
 import { Hourglass } from 'lucide-react';
-import { fetchMarketValues } from '../../../utils/fantasyCalc';
+
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { activeRosterIds } from '../../../utils/leagueMath';
+import { ownedPlayerIds } from '../../../utils/valuation';
 import { buildPickLedger } from '../utils/pickLedger';
 import { Pip } from '../../../components/ui/Pip';
 
@@ -23,6 +27,7 @@ const normalize = (values) => {
  * it to 0.25-0.75 and let a team read "Win-Now" on roster value alone.
  */
 const phaseFor = ({ market, youth, capital, production }, hasProduction) => {
+    if (!hasProduction) return { label: 'Unclassified', tone: 'text-text-mute' };
     const winNow = hasProduction ? (market + production) / 2 : market;
     const future = (youth + capital) / 2;
     if (winNow >= 0.6 && future >= 0.5) return { label: 'Dynasty Elite', tone: 'text-signal' };
@@ -51,24 +56,21 @@ const scoreTone = (score) =>
  *   youth      — inverse average age of active skill players
  *   capital    — market value of owned future rookie picks
  */
-const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
-    const isSuperflex = league?.roster_positions?.includes('SUPER_FLEX');
+const DynastyWindow = ({ league, rosters, users, players, tradedPicks, currentWeek }) => {
+    const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentWeek);
+    const isSuperflex = (league?.roster_positions || []).filter(p => p === 'QB' || p === 'SUPER_FLEX').length >= 2;
 
-    const { data: marketValues } = useQuery({
-        queryKey: ['fantasyCalc', league?.league_id],
-        queryFn: () => fetchMarketValues(isSuperflex, rosters?.length || 12, 0.5),
-        enabled: !!league,
-        staleTime: 60 * 60 * 1000,
-    });
+    const { data: marketValues, snapshot: marketSnapshot, settings: marketSettings } = useMarketValues(league, rosters?.length);
 
     const { rows: teams, weights, hasProduction, hasMarket } = useMemo(() => {
         const empty = { rows: [], weights: {}, hasProduction: false, hasMarket: false };
         if (!league || !rosters?.length || !players) return empty;
 
-        const { ledgerByRoster } = buildPickLedger(league, rosters, tradedPicks, marketValues || {}, isSuperflex);
-
+        const finalProduction = completedProduction(rosters, seasonMatchups, league.roster_positions, players, assignLineup);
+        const completedRosters = rosters.map(r => ({ ...r, settings: { ...r.settings, ppts: finalProduction.find(t => t.rosterId === r.roster_id)?.maxPoints || 0 } }));
+        const { ledgerByRoster } = buildPickLedger(league, completedRosters, tradedPicks, marketValues || {}, isSuperflex);
         const raw = rosters.map((roster) => {
-            const activeIds = activeRosterIds(roster);
+            const activeIds = ownedPlayerIds(roster);
 
             const marketValue = marketValues
                 ? activeIds.reduce((sum, pid) => sum + (marketValues[pid] || 0), 0)
@@ -81,10 +83,7 @@ const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
                 ? skill.reduce((sum, p) => sum + p.age, 0) / skill.length
                 : 0;
 
-            const s = roster.settings || {};
-            const gp = (s.wins || 0) + (s.losses || 0) + (s.ties || 0);
-            const maxPf = (s.ppts || 0) + (s.ppts_decimal || 0) / 100;
-            const production = gp > 0 ? maxPf / gp : 0;
+            const production = finalProduction.find(t => t.rosterId === roster.roster_id)?.maxPpg || 0;
 
             const capital = (ledgerByRoster[roster.roster_id] || [])
                 .reduce((sum, p) => sum + (p.tradeValue || 0), 0);
@@ -93,7 +92,7 @@ const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
             return { rosterId: roster.roster_id, owner, marketValue, avgAge, production, capital };
         });
 
-        const hasProduction = raw.some((t) => t.production > 0);
+        const hasProduction = new Set(raw.map(t => t.production)).size > 1;
         const hasMarket = raw.some((t) => t.marketValue > 0);
 
         const normMarket = normalize(raw.map((t) => t.marketValue));
@@ -135,7 +134,7 @@ const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
             })
             .sort((a, b) => b.score - a.score);
         return { rows, weights, hasProduction, hasMarket };
-    }, [league, rosters, users, players, tradedPicks, marketValues, isSuperflex]);
+    }, [league, rosters, users, players, tradedPicks, marketValues, isSuperflex, seasonMatchups]);
 
     if (teams.length === 0) return null;
 
@@ -144,13 +143,13 @@ const DynastyWindow = ({ league, rosters, users, players, tradedPicks }) => {
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
-            <header className="p-4 border-b border-line">
+            <header className="p-4 border-b border-line"><p className="text-xs text-text-dim mb-2">{marketSnapshot?.source || "Loading values…"} · {marketSettings.isDynasty ? "Dynasty" : "Redraft"}{marketSnapshot?.fetchedAt ? ` · retrieved ${new Date(marketSnapshot.fetchedAt).toLocaleDateString()}` : ""}. {marketSnapshot?.approximation}</p>
                 <div className="flex items-center gap-2">
                     <Hourglass className="w-5 h-5 text-signal" aria-hidden="true" />
                     <h3 className="font-display text-lg font-semibold text-text">Dynasty Window</h3>
                 </div>
                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                    Bar length = score · segments show what it's made of
+                    Bar length = asset outlook · IR/taxi included · phases require completed production
                 </p>
 
                 <details className="mt-2 group">

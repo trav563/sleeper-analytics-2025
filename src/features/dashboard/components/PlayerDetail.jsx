@@ -1,3 +1,5 @@
+import { useCompletedPlayerStats } from '../../stats/hooks/useCompletedPlayerStats';
+import { useLeagueData } from '../../league/hooks/useLeagueData';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity } from 'lucide-react';
@@ -31,12 +33,14 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
     const week = currentWeek || state?.display_week || state?.week || 1;
     const seasonType = state?.season_type;
 
-    const { seasonMatchups } = useSeasonMatchups(leagueId, week);
-    const { details: liveDetails } = useGameLiveDetails(week);
-    const { weather } = useGameWeather(week);
+    const { seasonMatchups, completedWeek } = useSeasonMatchups(leagueId, week);
+    const { matchups: liveMatchups } = useLeagueData(leagueId);
+    const { logs, loading: statsLoading, error: statsError } = useCompletedPlayerStats(league?.season, completedWeek, league?.scoring_settings);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
+    const { weather } = useGameWeather(week, league?.season);
     // Needs the FULL player map: points allowed is aggregated across every
     // starter in the league, not just the player being viewed.
-    const defenseRanks = useDefenseRanks(seasonMatchups, players, league?.season);
+
     const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     // usePlayerNews filters a roster's players against the feed, so a one-player
@@ -54,23 +58,11 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
     /* -------------------------------------------------------
      * Derived stats (memoized)
      * ----------------------------------------------------- */
-    const weekly = useMemo(() => {
-        if (!seasonMatchups || !player) return [];
-        const out = [];
-        Object.entries(seasonMatchups).forEach(([wk, ms]) => {
-            if (!Array.isArray(ms)) return;
-            ms.forEach((m) => {
-                const pts = m.players_points?.[player.player_id];
-                if (pts !== undefined) {
-                    out.push({ week: Number(wk), points: pts });
-                }
-            });
-        });
-        return out.sort((a, b) => a.week - b.week);
-    }, [seasonMatchups, player]);
+    const defenseRanks = useDefenseRanks(seasonMatchups, players, league?.season, logs);
+    const weekly = useMemo(() => logs[player?.player_id] || [], [logs, player?.player_id]);
 
     const seasonStats = useMemo(() => {
-        const scored = weekly.filter((w) => w.points > 0);
+        const scored = weekly;
         if (scored.length === 0) return { avg: null, high: null, low: null, count: 0 };
         const total = scored.reduce((s, w) => s + w.points, 0);
         return {
@@ -83,14 +75,14 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
 
     const liveScore = useMemo(() => {
         if (!seasonMatchups || !player) return null;
-        const ms = seasonMatchups[week];
+        const ms = liveMatchups;
         if (!Array.isArray(ms)) return null;
         for (const m of ms) {
             const pts = m.players_points?.[player.player_id];
             if (pts !== undefined) return pts;
         }
         return null;
-    }, [seasonMatchups, week, player]);
+    }, [liveMatchups, seasonMatchups, player]);
 
     const ownership = useMemo(() => {
         if (!rosters || !player) return null;
@@ -104,22 +96,14 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
        fix that map wasn't passed, so this always returned null. */
     const positionRank = useMemo(() => {
         if (!seasonMatchups || !player?.position || !players) return null;
-        const totals = {}; // pid -> total
-        Object.values(seasonMatchups).forEach((ms) => {
-            if (!Array.isArray(ms)) return;
-            ms.forEach((m) => {
-                Object.entries(m.players_points || {}).forEach(([pid, pts]) => {
-                    if (pts > 0) totals[pid] = (totals[pid] || 0) + pts;
-                });
-            });
-        });
-        if (!totals[player.player_id]) return null; // hasn't scored yet
+        const totals = Object.fromEntries(Object.entries(logs).map(([id, games]) => [id, games.reduce((n, g) => n + g.points, 0)]));
+        if (!(player.player_id in totals)) return null;
         const peers = Object.entries(totals)
             .filter(([pid]) => players[pid]?.position === player.position)
             .sort(([, a], [, b]) => b - a);
         const idx = peers.findIndex(([pid]) => pid === player.player_id);
         return idx >= 0 ? idx + 1 : null;
-    }, [seasonMatchups, player, players]);
+    }, [seasonMatchups, player, players, logs]);
 
     /* -------------------------------------------------------
      * Loading / not-found states
@@ -197,7 +181,10 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
 
     /* ---- Bar chart geometry ---- */
     const chartWeeks = weekly.length > 0 ? weekly : Array.from({ length: 8 }, (_, i) => ({ week: i + 1, points: 0 }));
-    const maxPoints = Math.max(10, ...chartWeeks.map((w) => w.points));
+    const chartMin = Math.min(0, ...chartWeeks.map(w => w.points));
+    const chartMax = Math.max(10, ...chartWeeks.map(w => w.points));
+    const chartY = points => 190 - ((points - chartMin) / (chartMax - chartMin)) * 160;
+    const chartZero = chartY(0);
 
     return (
         <section className="space-y-5 pb-12">
@@ -333,7 +320,6 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                     { value: 'gamelog', label: 'Game Log' },
                     { value: 'news', label: 'News' },
                     { value: 'matchup', label: 'Matchup' },
-                    { value: 'trends', label: 'Trends' },
                 ]}
                 value={tab}
                 onChange={setTab}
@@ -360,40 +346,42 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                         </header>
                         {weekly.length === 0 ? (
                             <div className="h-48 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                No scoring data this season
+                                {statsLoading ? "Loading completed games…" : statsError ? "Completed game statistics unavailable" : "No completed games with confirmed participation"}
                             </div>
                         ) : (
                             <>
-                                <svg viewBox={`0 0 ${chartWeeks.length * 80 + 40} 220`} className="w-full" preserveAspectRatio="none" style={{ maxHeight: 240 }}>
+                                <svg role="img" aria-label="Fantasy points in completed games, including zero and negative scores" viewBox={`0 0 ${chartWeeks.length * 80 + 40} 220`} className="w-full" preserveAspectRatio="none" style={{ maxHeight: 240 }}>
+                                    <line x1="0" x2={chartWeeks.length * 80 + 40} y1={chartZero} y2={chartZero} stroke={theme.color.mute} />
                                     {seasonStats.avg != null && (
                                         <line
                                             x1="0"
                                             x2={chartWeeks.length * 80 + 40}
-                                            y1={200 - (seasonStats.avg / maxPoints) * 180}
-                                            y2={200 - (seasonStats.avg / maxPoints) * 180}
+                                            y1={chartY(seasonStats.avg)}
+                                            y2={chartY(seasonStats.avg)}
                                             stroke={theme.color.signal}
                                             strokeDasharray="4 4"
                                             opacity="0.4"
                                         />
                                     )}
                                     {chartWeeks.map((w, i) => {
-                                        const h = (w.points / maxPoints) * 180;
+                                        const y = chartY(w.points);
+                                        const h = Math.abs(y - chartZero);
                                         const x = 20 + i * 80;
                                         const isCurrent = !isHistoricalSeason && w.week === week;
                                         return (
                                             <g key={w.week}>
                                                 <rect
                                                     x={x}
-                                                    y={200 - h}
+                                                    y={Math.min(y, chartZero)}
                                                     width="58"
                                                     height={h}
                                                     fill={isCurrent ? theme.color.signal : `oklch(62% 0.18 ${hue})`}
                                                     rx="3"
                                                 />
-                                                {w.points > 0 && (
+                                                {(
                                                     <text
                                                         x={x + 29}
-                                                        y={200 - h - 6}
+                                                        y={w.points < 0 ? y + 14 : y - 6}
                                                         textAnchor="middle"
                                                         fontSize="12"
                                                         fontWeight="700"
@@ -514,7 +502,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                                 k={`${player.position} points allowed by ${oppTeam}`}
                                 v={defRank ? `${defRank}${ord(defRank)}-most` : '—'}
                                 sub={defRank
-                                    ? `Of 32 defenses · from this league's starters`
+                                    ? `Among ${defenseRanks?.[oppTeam]?.[player.position]?.sampleSize || 0} sampled defenses · league starters only`
                                     : 'Needs completed games to rank'}
                                 tone="signal"
                             />
@@ -531,13 +519,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                 </section>
             )}
 
-            {tab === 'trends' && (
-                <section className="bg-bg-1 rounded-xl border border-line p-8 shadow-card text-center">
-                    <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                        Rolling-average trends · coming soon
-                    </p>
-                </section>
-            )}
+
         </section>
     );
 };

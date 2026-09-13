@@ -13,8 +13,8 @@ class RouteErrorBoundary extends Component {
         this.state = { hasError: false };
     }
 
-    static getDerivedStateFromError() {
-        return { hasError: true };
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
     }
 
     componentDidCatch(error, info) {
@@ -24,11 +24,11 @@ class RouteErrorBoundary extends Component {
     render() {
         if (this.state.hasError) {
             return (
-                <ErrorState
+                <><ErrorState
                     className="h-[calc(100vh-4rem)]"
                     message="This page hit an unexpected error."
                     onRetry={() => this.setState({ hasError: false })}
-                />
+                />{import.meta.env.DEV && <pre className="whitespace-pre-wrap text-xs p-4">{this.state.error?.stack}</pre>}</>
             );
         }
         return this.props.children;

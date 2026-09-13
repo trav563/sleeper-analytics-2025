@@ -21,7 +21,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
         // Group by match_id to identify winners/losers
         const matchGroups = groupMatchups(matchups);
 
-        let highestLoserScore = -1;
+        let highestLoserScore = -Infinity;
         let unluckyTeam = null;
         let luckOpponent = null;
 
@@ -285,7 +285,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
         let lowestTeamScore = Infinity;
 
         matchups.forEach(m => {
-            if (m.points < lowestTeamScore && m.points > 0) {
+            if (Number.isFinite(m.points) && m.points < lowestTeamScore) {
                 lowestTeamScore = m.points;
                 const user = getOwner(m.roster_id);
                 tankCommander = {
@@ -399,7 +399,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
                 if (Number(w) >= currentWeek || !weekData) return; // Only prior completed weeks
                 weekData.forEach(m => {
                     if (!teamSeasonPPG[m.roster_id]) teamSeasonPPG[m.roster_id] = { total: 0, games: 0 };
-                    if (m.points > 0) {
+                    if (Number.isFinite(m.points)) {
                         teamSeasonPPG[m.roster_id].total += m.points;
                         teamSeasonPPG[m.roster_id].games += 1;
                     }

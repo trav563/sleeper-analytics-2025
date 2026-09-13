@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useSleeper } from '../context/SleeperContext';
 import { useLeagueData } from '../features/league/hooks/useLeagueData';
 import { fetchLeagueTransactions } from '../utils/sleeper';
-import { deriveCurrentWeek, isSeasonStarted } from '../utils/seasonState';
+import { deriveCurrentWeek, isSeasonStarted, lastCompletedWeek } from '../utils/seasonState';
 import PageTransition from '../components/PageTransition';
 import RouteErrorBoundary from '../components/RouteErrorBoundary';
 import ErrorState from '../components/ui/ErrorState';
@@ -13,11 +13,11 @@ const LeagueLayout = () => {
     const { leagueId } = useParams();
     const location = useLocation();
     const { user, loadHistory, findChainContaining, selectActiveChain } = useSleeper();
-    const { league, rosters, users, players, state, matchups, tradedPicks, drafts, loading, error, refresh } = useLeagueData(leagueId);
+    const { league, rosters, users, players, state, matchups, tradedPicks, drafts, loading, error, refresh, scoresUpdatedAt, scoresError, gameStatusError } = useLeagueData(leagueId);
     const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
-        if (!leagueId || !user?.user_id) return;
+        if (!leagueId) return;
         // Prefer the pre-walked chain that contains this league so the season
         // selector exposes both prior AND future seasons. Fall back to walking
         // backward from the URL leagueId for deep-linked leagues outside the
@@ -26,7 +26,7 @@ const LeagueLayout = () => {
         if (cached?.length) {
             selectActiveChain(cached);
         } else {
-            loadHistory(leagueId, user.user_id);
+            loadHistory(leagueId, user?.user_id);
         }
     }, [leagueId, user, loadHistory, findChainContaining, selectActiveChain]);
 
@@ -85,6 +85,11 @@ const LeagueLayout = () => {
             <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
             <meta name="twitter:image" content="/favicon.png" />
 
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-dim mb-4" role="status">
+                <span>{league?.season} season · {lastCompletedWeek(league, state) ? `Completed through Week ${lastCompletedWeek(league, state)}` : 'No completed weeks yet'}</span>
+                <span>{scoresError ? 'Scores may be stale · refresh failed' : scoresUpdatedAt ? `Week ${currentWeek} scores updated ${new Date(scoresUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Scores unavailable'} <button type="button" className="min-h-11 px-2 text-signal" onClick={refresh}>Refresh data</button></span>
+            </div>
+            {gameStatusError && <p role="status" className="text-sm text-warn mb-4">Game status is unavailable or stale. Live indicators and lineup recommendations may be unavailable.</p>}
             <AnimatePresence mode="wait">
                 <PageTransition key={location.pathname} className="min-h-[50vh]">
                     <RouteErrorBoundary key={location.pathname}>
@@ -97,6 +102,8 @@ const LeagueLayout = () => {
                         state,
                         currentWeek,
                         seasonStarted,
+                        completedWeek: lastCompletedWeek(league, state),
+                        scoresUpdatedAt, scoresError,
                         matchups,
                         transactions,
                         tradedPicks,

@@ -1,34 +1,12 @@
 import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
-
-const Switch = forwardRef(({ className, checked, onCheckedChange, ...props }, ref) => {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            data-state={checked ? 'checked' : 'unchecked'}
-            value={checked ? 'on' : 'off'}
-            className={cn(
-                "peer inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-                checked ? "bg-primary" : "bg-input",
-                className
-            )}
-            onClick={() => onCheckedChange?.(!checked)}
-            ref={ref}
-            {...props}
-        >
-            <span
-                data-state={checked ? 'checked' : 'unchecked'}
-                className={cn(
-                    "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                    checked ? "translate-x-4" : "translate-x-0"
-                )}
-            />
-        </button>
-    );
-});
-
-Switch.displayName = "Switch";
-
+const Switch = forwardRef(({ className, checked, onCheckedChange, ...props }, ref) => <button
+    type="button" role="switch" aria-checked={checked} data-state={checked ? 'checked' : 'unchecked'}
+    className={cn('inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-signal disabled:cursor-not-allowed disabled:opacity-50', className)}
+    onClick={() => onCheckedChange?.(!checked)} ref={ref} {...props}>
+    <span aria-hidden="true" className={cn('inline-flex h-5 w-9 items-center rounded-full p-0.5 transition-colors', checked ? 'bg-signal' : 'bg-bg-3 border border-line-strong')}>
+        <span className={cn('block h-4 w-4 rounded-full shadow-sm transition-transform', checked ? 'translate-x-4 bg-bg' : 'translate-x-0 bg-text-dim')} />
+    </span>
+</button>);
+Switch.displayName = 'Switch';
 export { Switch };

@@ -245,7 +245,7 @@ const GMPerformance = ({ league, players, users, rosters }) => {
                         <p className="text-sm text-text-dim max-w-md mx-auto">
                             {noDraftYet
                                 ? `This season doesn't have a completed draft on record, so there are no picks to grade.`
-                                : `Draft ROI compares each pick against the points it went on to score. The ${selectedSeason} class hasn't played any games yet — check back once the season is under way.`}
+                                : `Draft ROI compares each pick against the points it went on to score. The ${selectedSeason} class has no completed-game production yet — check back after the week is complete.`}
                         </p>
                     </div>
                 ) : (

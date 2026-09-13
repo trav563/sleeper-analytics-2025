@@ -1,236 +1,83 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { readAnalysisStream, analysisCacheKey, readAnalysisCache } from '../../../utils/analysisStream';
 
-const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000;
 
-// Module-level scheduler: serialize outgoing AI requests to one per ~1.5s so a
-// burst of card-Generate clicks doesn't trip Gemini's free-tier RPM cap (15/min).
-const MIN_GAP_MS = 1500;
-let lastFireTime = 0;
-async function scheduleFire() {
-    const now = Date.now();
-    const target = Math.max(now, lastFireTime + MIN_GAP_MS);
-    lastFireTime = target;
-    const wait = target - now;
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-}
-
-function getCacheKey(leagueId, userId, week, analysisType, constraint) {
-    const c = constraint ? `:${constraint}` : '';
-    return `ai_analysis:${leagueId}:${userId}:${week}:${analysisType}${c}`;
-}
-
-function readCache(key) {
-    try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return null;
-        const cached = JSON.parse(raw);
-        if (!cached.text || !cached.timestamp) return null;
-        return cached;
-    } catch {
-        return null;
-    }
-}
-
-function writeCache(key, text) {
-    try {
-        localStorage.setItem(key, JSON.stringify({ text, timestamp: Date.now() }));
-    } catch {
-        // localStorage full or unavailable
-    }
-}
-
-function getCooldownRemaining(cached, cooldownMs) {
-    if (!cached) return 0;
-    const elapsed = Date.now() - cached.timestamp;
-    return Math.max(0, cooldownMs - elapsed);
-}
-
-export function useAnalyzeTeam({
-    leagueId,
-    userId,
-    week,
-    analysisType = 'roster',
-    cooldownMs = DEFAULT_COOLDOWN_MS,
-} = {}) {
-    const [analysis, setAnalysis] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [remaining, setRemaining] = useState(null);
-    const [cachedAt, setCachedAt] = useState(null);
-    const [cooldownRemaining, setCooldownRemaining] = useState(0);
-    const [activeConstraint, setActiveConstraint] = useState(null);
-    const abortRef = useRef(null);
-    const timerRef = useRef(null);
-
-    const cacheKey = leagueId && userId && week
-        ? getCacheKey(leagueId, userId, week, analysisType, activeConstraint)
-        : null;
-
-    // Load cached result when params change
+export function useAnalyzeTeam({ leagueId, userId, week, analysisType = 'roster', cooldownMs = DEFAULT_COOLDOWN_MS } = {}) {
+    const identity = `${leagueId}:${userId}:${week}:${analysisType}`;
+    const [selection, setSelection] = useState({ identity, constraint: null });
+    const constraint = selection.identity === identity ? selection.constraint : null;
+    const key = analysisCacheKey(leagueId, userId, week, analysisType, constraint);
+    const [result, setResult] = useState(null);
+    const [clock, setClock] = useState(() => Date.now());
+    const request = useRef(null);
+    const identityRef = useRef(identity);
     useEffect(() => {
-        if (!cacheKey) return;
-        const cached = readCache(cacheKey);
-        if (cached) {
-            setAnalysis(cached.text);
-            setCachedAt(cached.timestamp);
-            setCooldownRemaining(getCooldownRemaining(cached, cooldownMs));
-        } else {
-            setAnalysis('');
-            setCachedAt(null);
-            setCooldownRemaining(0);
-        }
-        setError(null);
-    }, [cacheKey, cooldownMs]);
-
-    // Cooldown countdown timer
+        identityRef.current = identity;
+        return () => { request.current?.abort(); request.current = null; };
+    }, [identity]);
     useEffect(() => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (cooldownRemaining <= 0) return;
+        const timer = setInterval(() => setClock(Date.now()), 30000);
+        return () => clearInterval(timer);
+    }, []);
 
-        timerRef.current = setInterval(() => {
-            if (!cacheKey) return;
-            const cached = readCache(cacheKey);
-            const rem = getCooldownRemaining(cached, cooldownMs);
-            setCooldownRemaining(rem);
-            if (rem <= 0) clearInterval(timerRef.current);
-        }, 30000);
+    const cached = readAnalysisCache(key);
+    const current = result?.key === key ? result : { ...cached, text: cached?.text || '', timestamp: cached?.timestamp || null };
+    const loading = !!current.loading;
+    const cooldownRemaining = current.timestamp ? Math.max(0, current.timestamp + cooldownMs - clock) : 0;
 
-        return () => clearInterval(timerRef.current);
-    }, [cooldownRemaining, cacheKey, cooldownMs]);
-
-    const analyze = useCallback(async ({ force = false, constraint = null } = {}) => {
+    const analyze = useCallback(async ({ force = false, constraint: next = null } = {}) => {
         if (!leagueId || !userId || !week) return;
-
-        const effectiveCacheKey = getCacheKey(leagueId, userId, week, analysisType, constraint);
-        setActiveConstraint(constraint);
-
-        if (!force) {
-            const cached = readCache(effectiveCacheKey);
-            const rem = getCooldownRemaining(cached, cooldownMs);
-            if (cached && rem > 0) {
-                setAnalysis(cached.text);
-                setCachedAt(cached.timestamp);
-                setCooldownRemaining(rem);
-                setError(null);
-                return;
-            }
-        } else {
-            try { localStorage.removeItem(effectiveCacheKey); } catch {}
-        }
-
-        if (abortRef.current) abortRef.current.abort();
+        request.current?.abort();
         const controller = new AbortController();
-        abortRef.current = controller;
-
-        setLoading(true);
-        setError(null);
-        setAnalysis('');
-
-        try {
-            // Stagger cluster requests to avoid Gemini free-tier RPM rate limit.
-            await scheduleFire();
-            if (controller.signal.aborted) return;
-
-            const response = await fetch('/api/analyze-team', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leagueId, userId, week, analysisType, constraint }),
-                signal: controller.signal,
-            });
-
-            if (!response.ok) {
-                let serverMessage = '';
-                try {
-                    const errorData = await response.json();
-                    serverMessage = errorData?.error || '';
-                    if (response.status === 429) {
-                        setRemaining(errorData.remaining ?? 0);
-                    }
-                } catch {
-                    // body wasn't JSON
-                }
-                if (!serverMessage) {
-                    if (response.status === 429) serverMessage = 'Rate limit reached. Try again later.';
-                    else if (response.status === 500) serverMessage = 'AI analysis is temporarily unavailable. Please try again later.';
-                    else serverMessage = `Request failed (${response.status}).`;
-                }
-                throw new Error(serverMessage);
-            }
-
-            const remainingHeader = response.headers.get('X-Remaining');
-            if (remainingHeader !== null) setRemaining(parseInt(remainingHeader, 10));
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            let fullText = '';
-            let streamError = null;
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    try {
-                        const data = JSON.parse(line.slice(6));
-                        if (data.done) break;
-                        if (data.error) { streamError = data.error; break; }
-                        if (data.text) {
-                            fullText += data.text;
-                            setAnalysis(fullText);
-                        }
-                    } catch {
-                        // Skip parse errors on chunks
-                    }
-                }
-                if (streamError) break;
-            }
-
-            if (streamError) throw new Error(streamError);
-
-            if (fullText) {
-                writeCache(effectiveCacheKey, fullText);
-                setCachedAt(Date.now());
-                setCooldownRemaining(cooldownMs);
-            } else {
-                throw new Error('AI analysis is temporarily unavailable. Please try again later.');
-            }
-
-        } catch (err) {
-            if (err.name === 'AbortError') return;
-            setError(err.message);
-        } finally {
-            setLoading(false);
-            abortRef.current = null;
+        request.current = controller;
+        const requestKey = analysisCacheKey(leagueId, userId, week, analysisType, next);
+        setSelection({ identity, constraint: next });
+        const prior = readAnalysisCache(requestKey);
+        const active = () => request.current === controller && !controller.signal.aborted && identityRef.current === identity;
+        if (!force && prior && Date.now() - prior.timestamp < cooldownMs) {
+            setResult({ key: requestKey, ...prior, loading: false });
+            request.current = null;
+            return;
         }
-    }, [leagueId, userId, week, analysisType, cooldownMs]);
+        setResult({ key: requestKey, text: prior?.text || '', timestamp: prior?.timestamp, loading: true, error: null });
+        try {
+            const response = await fetch('/api/analyze-team', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ leagueId, userId, week, analysisType, constraint: next }), signal: controller.signal,
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body.error || `Analysis unavailable (${response.status}). Please try again.`);
+            }
+            let metadata;
+            const text = await readAnalysisStream(response.body, partial => {
+                if (active()) setResult(r => ({ ...r, text: partial, loading: true, incomplete: true }));
+            }, event => { metadata = event.valuation; });
+            if (!active()) return;
+            const complete = { key: requestKey, text, timestamp: Date.now(), status: 'complete', valuation: metadata, loading: false, incomplete: false };
+            try { localStorage.setItem(requestKey, JSON.stringify(complete)); } catch { /* Storage is optional. */ }
+            setClock(Date.now());
+            setResult(complete);
+        } catch (error) {
+            if (active()) setResult(r => ({ ...r, error: error.message, loading: false, incomplete: true }));
+        } finally {
+            if (active()) request.current = null;
+        }
+    }, [leagueId, userId, week, analysisType, cooldownMs, identity]);
 
     const cancel = useCallback(() => {
-        if (abortRef.current) {
-            abortRef.current.abort();
-            abortRef.current = null;
-            setLoading(false);
-        }
+        request.current?.abort(); request.current = null;
+        setResult(r => r ? { ...r, loading: false, incomplete: true, error: 'Analysis canceled. Retry when ready.' } : r);
     }, []);
-
     const clear = useCallback(() => {
-        setAnalysis('');
-        setError(null);
-        setActiveConstraint(null);
-    }, []);
+        cancel();
+        setSelection({ identity, constraint: null });
+        setResult(null);
+    }, [cancel, identity]);
 
-    const isOnCooldown = cooldownRemaining > 0 && !loading;
-    const cooldownMinutes = Math.ceil(cooldownRemaining / 60000);
-
-    return {
-        analysis, loading, error, remaining,
-        cachedAt, isOnCooldown, cooldownMinutes,
-        activeConstraint,
-        analyze, cancel, clear
-    };
+    return { analysis: current.text || '', loading, error: current.error, incomplete: current.incomplete,
+        valuation: current.valuation, cachedAt: current.timestamp, isOnCooldown: cooldownRemaining > 0 && !loading,
+        cooldownMinutes: Math.ceil(cooldownRemaining / 60000), activeConstraint: constraint,
+        analyze, cancel, clear };
 }

@@ -50,7 +50,7 @@ const PrivacyPage = () => (
                     — not just yours
                 </li>
                 <li>The full roster of the team being analyzed</li>
-                <li>Opponents' starting lineups for the relevant week</li>
+                <li>Other teams' full rosters, including IR and taxi players, plus player ages and market values</li>
                 <li>That team's game log for the season</li>
                 <li>Recent league transactions (adds, drops, trades)</li>
             </ul>
@@ -115,7 +115,7 @@ const PrivacyPage = () => (
         </Section>
 
         <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-            Last updated 2026-08-24 ·{' '}
+            Last updated 2026-09-13 ·{' '}
             <Link to="/" className="text-signal hover:underline">
                 Back to app
             </Link>

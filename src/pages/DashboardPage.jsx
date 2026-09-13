@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { displayTeamName } from '../utils/nflData';
 import MyMatchupHero from '../features/dashboard/components/MyMatchupHero';
@@ -13,43 +14,26 @@ import { fetchLeagueMatchups } from '../utils/sleeper';
 
 const DashboardPage = () => {
     const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, seasonStarted, loading, error, user, league } = useOutletContext();
-    const [selectedUserId, setSelectedUserId] = useState('');
+    const [chosenUser, setSelectedUserId] = useState('');
+    const selectedUserId = rosters?.some(r => r.owner_id === chosenUser) ? chosenUser : (rosters?.find(r => r.owner_id === user?.user_id) || rosters?.[0])?.owner_id;
 
     const currentNFLWeek = currentWeek || 1;
     const isHistoricalSeason = league?.season && state?.season &&
         Number(league.season) < Number(state.season);
     // Before kickoff week 1 is upcoming, not "current" — don't imply games exist.
     const anchorLabel = isHistoricalSeason ? '(Final)' : seasonStarted ? '(Current)' : '(Upcoming)';
-    const [selectedWeek, setSelectedWeek] = useState(currentNFLWeek);
-    const [viewMatchups, setViewMatchups] = useState([]);
-    const [loadingMatchups, setLoadingMatchups] = useState(false);
-
-    useEffect(() => {
-        if (currentNFLWeek) setSelectedWeek(currentNFLWeek);
-    }, [currentNFLWeek]);
-
-    useEffect(() => {
-        if (!league?.league_id || !selectedWeek) return;
-        if (selectedWeek === currentNFLWeek && currentWeekMatchups?.length > 0) {
-            setViewMatchups(currentWeekMatchups);
-            return;
-        }
-        let cancelled = false;
-        setLoadingMatchups(true);
-        fetchLeagueMatchups(league.league_id, selectedWeek)
-            .then((data) => { if (!cancelled) setViewMatchups(data || []); })
-            .catch((err) => { if (!cancelled) console.error('Failed to fetch matchups', err); })
-            .finally(() => { if (!cancelled) setLoadingMatchups(false); });
-        return () => { cancelled = true; };
-    }, [selectedWeek, league?.league_id, currentNFLWeek, currentWeekMatchups]);
-
-    const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
-
-    useEffect(() => {
-        if (users && users.length > 0 && !selectedUserId) {
-            setSelectedUserId(user?.user_id || users[0].user_id);
-        }
-    }, [users, user, selectedUserId]);
+    const anchor = `${league?.league_id}:${currentNFLWeek}`;
+    const [weekSelection, setWeekSelection] = useState(null);
+    const selectedWeek = weekSelection?.anchor === anchor ? weekSelection.week : currentNFLWeek;
+    const setSelectedWeek = week => setWeekSelection({ anchor, week });
+    const { data: selectedMatchups, isFetching: loadingMatchups, error: matchupError } = useQuery({
+        queryKey: ['leagueMatchups', league?.league_id, selectedWeek],
+        queryFn: () => fetchLeagueMatchups(league.league_id, selectedWeek),
+        enabled: !!league?.league_id && selectedWeek !== currentNFLWeek,
+        staleTime: 60000,
+    });
+    const viewMatchups = selectedWeek === currentNFLWeek ? currentWeekMatchups || [] : selectedMatchups || [];
+    const { seasonMatchups } = useSeasonMatchups(league?.league_id, selectedWeek);
 
     const myRoster = useMemo(
         () => rosters?.find((r) => r.owner_id === selectedUserId) || null,
@@ -122,6 +106,7 @@ const DashboardPage = () => {
                 </div>
             </header>
 
+            {matchupError && <p role="alert" className="text-bad text-sm">Could not load the selected week. Try Refresh data.</p>}
             {/* Two-column body matching design composition */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
                 {/* LEFT column: Hero → LeaguePulse → LineupToday (mobile) → Insights */}
@@ -155,11 +140,11 @@ const DashboardPage = () => {
                             slotLabels={league?.roster_positions || []}
                         />
                     </div>
-                    <Insights
+                    {!isHistoricalSeason && !isTimeTraveling && <Insights
                         leagueId={league?.league_id}
                         userId={selectedUserId}
                         week={selectedWeek}
-                    />
+                    />}
                 </div>
 
                 {/* RIGHT rail: 4 stats → Standings → Roster News */}

@@ -22,12 +22,9 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
         // played there is no such thing, so we report nothing rather than 0.0.
         const ppgByRoster = {};
         let anyGames = false;
-        rosters.forEach((r) => {
-            const s = r.settings || {};
-            const gp = (s.wins || 0) + (s.losses || 0) + (s.ties || 0);
-            const fpts = (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
-            if (gp > 0) anyGames = true;
-            ppgByRoster[r.roster_id] = gp > 0 ? fpts / gp : 0;
+        (rankings || []).forEach(r => {
+            if (r.gamesPlayed > 0) anyGames = true;
+            ppgByRoster[r.rosterId] = r.ppg;
         });
 
         const upcoming = [];
@@ -45,7 +42,7 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
         const leagueAvg =
             Object.values(ppgByRoster).reduce((s, v) => s + v, 0) / Math.max(1, rosters.length);
         return { games: upcoming.length, avg, leagueAvg, upcoming };
-    }, [roster, rosters, fullSchedule, currentWeek, league]);
+    }, [roster, rosters, fullSchedule, currentWeek, league, rankings]);
 
     const myOdds = odds?.[roster?.roster_id];
 
@@ -68,7 +65,7 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
                         {myOdds ? `${myOdds.percent}%` : '—'}
                     </div>
                     <div className="font-mono text-2xs text-text-mute mt-0.5">
-                        {myOdds ? (isProjection ? 'preseason' : myOdds.status) : 'unavailable'}
+                        {myOdds ? (isProjection ? 'projection' : myOdds.status) : 'unavailable'}
                     </div>
                 </div>
                 <div className="p-4 text-center">

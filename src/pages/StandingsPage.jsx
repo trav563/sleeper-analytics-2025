@@ -20,7 +20,7 @@ const StandingsPage = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-end">
+            <div className="flex flex-wrap gap-3 items-center justify-between"><h1 className="text-2xl font-bold">Standings</h1>
                 <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
                     <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Through Week</span>
                     <select

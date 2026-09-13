@@ -17,7 +17,7 @@ import nflOpponents from '../../../data/nflOpponents.json';
  *
  * Returns { [nflTeamAbbr]: { QB|RB|WR|TE: { totalPoints, gamesPlayed, ppg, rank } } }
  */
-export const useDefenseRanks = (seasonMatchups, players, season) => {
+export const useDefenseRanks = (seasonMatchups, players, season, participation = {}) => {
     return useMemo(() => {
         if (!seasonMatchups || !players) return {};
 
@@ -47,7 +47,7 @@ export const useDefenseRanks = (seasonMatchups, players, season) => {
                 const starters = m.starters || [];
                 const points = m.starters_points || [];
                 starters.forEach((pid, idx) => {
-                    if (!pid || pid === '0') return;
+                    if (!pid || pid === '0' || !participation[pid]?.some(g => g.week === Number(week))) return;
                     const player = players[pid];
                     if (!player || !positions.includes(player.position)) return;
                     if (!player.team) return;
@@ -59,7 +59,7 @@ export const useDefenseRanks = (seasonMatchups, players, season) => {
                     const pts = points[idx] ?? 0;
                     const slot = ensure(defense)[player.position];
                     slot.totalPoints += pts;
-                    if (pts > 0) slot.gamesPlayed += 1;
+                    slot.gamesPlayed += 1;
                 });
             });
         });
@@ -75,6 +75,7 @@ export const useDefenseRanks = (seasonMatchups, players, season) => {
         // Rank by points allowed per game, most-allowed first.
         positions.forEach((pos) => {
             const ranking = Object.entries(byTeam)
+                .filter(([, data]) => data[pos].gamesPlayed > 0)
                 .map(([team, data]) => {
                     const slot = data[pos];
                     const ppg = slot.gamesPlayed > 0 ? slot.totalPoints / slot.gamesPlayed : 0;
@@ -85,11 +86,12 @@ export const useDefenseRanks = (seasonMatchups, players, season) => {
 
             ranking.forEach(({ team }, i) => {
                 byTeam[team][pos].rank = i + 1;
+                byTeam[team][pos].sampleSize = ranking.length;
             });
         });
 
         return byTeam;
-    }, [seasonMatchups, players, season]);
+    }, [seasonMatchups, players, season, participation]);
 };
 
 export default useDefenseRanks;

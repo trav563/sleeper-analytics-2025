@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useToolState } from '../../../hooks/useToolState';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { ChevronDown, ChevronUp, CalendarDays, RotateCcw } from 'lucide-react';
 import { displayTeamName } from '../../../utils/nflData';
@@ -11,9 +12,9 @@ import { calculateFairness } from '../utils/scheduleFairness';
 const STORAGE_KEY_PREFIX = 'schedule_generator_';
 
 const ScheduleGenerator = ({ league, rosters, users }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [generatedResult, setGeneratedResult] = useState(null);
-  const [showRestore, setShowRestore] = useState(false);
+  const [isExpanded, setIsExpanded] = useToolState(`schedule-open:${league?.league_id}`, true);
+  const [generatedResult, setGeneratedResult] = useToolState(`schedule-result:${league?.league_id}`, null);
+  const [showRestore, setShowRestore] = useState(() => { try { return !!localStorage.getItem(STORAGE_KEY_PREFIX + league?.league_id); } catch { return false; } });
 
   const teams = useMemo(() => {
     if (!rosters || !users) return [];
@@ -50,20 +51,7 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
     };
   }, [league, teams]);
 
-  const [config, setConfig] = useState(defaultConfig);
-
-  useEffect(() => {
-    setConfig(defaultConfig);
-    setGeneratedResult(null);
-  }, [defaultConfig]);
-
-  useEffect(() => {
-    if (!league?.league_id) return;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + league.league_id);
-      if (saved) setShowRestore(true);
-    } catch {}
-  }, [league?.league_id]);
+  const [config, setConfig] = useToolState(`schedule-config:${league?.league_id}`, defaultConfig);
 
   const handleRestore = useCallback(() => {
     try {
@@ -92,7 +80,7 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
       console.error('Failed to restore schedule:', e);
     }
     setShowRestore(false);
-  }, [league?.league_id, teams]);
+  }, [league, teams, setConfig, setGeneratedResult, setIsExpanded]);
 
   const handleDismissRestore = () => setShowRestore(false);
 
@@ -118,8 +106,8 @@ const ScheduleGenerator = ({ league, rosters, users }) => {
         STORAGE_KEY_PREFIX + league.league_id,
         JSON.stringify({ config, result: fullResult, savedAt: new Date().toISOString() })
       );
-    } catch {}
-  }, [teams, config, rosters, league?.league_id]);
+    } catch { /* Storage may be unavailable. */ }
+  }, [teams, config, rosters, league, setGeneratedResult]);
 
   if (teams.length < 2) return null;
 

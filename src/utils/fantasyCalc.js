@@ -26,44 +26,36 @@ export function pickKeyFromName(name) {
  * @param {number} ppr
  * @returns {Promise<Object>}
  */
-export const fetchMarketValues = async (isSuperflex = true, numTeams = 12, ppr = 0.5) => {
+export async function fetchValuationSnapshot(settings) {
+    const { isDynasty = true, numQbs = 2, numTeams = 12, ppr = 0.5 } = settings;
+    const fetchedAt = Date.now();
     try {
-        const numQbs = isSuperflex ? 2 : 1;
-        const url = `${FANTASY_CALC_API}?isDynasty=true&numQbs=${numQbs}&numTeams=${numTeams}&ppr=${ppr}`;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch FantasyCalc values');
-
+        const response = await fetch(`${FANTASY_CALC_API}?isDynasty=${isDynasty}&numQbs=${numQbs}&numTeams=${numTeams}&ppr=${ppr}`, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) throw new Error('Market values unavailable');
         const data = await response.json();
-
-        const valueMap = {};
-        data.forEach(entry => {
-            // Entries nest the identity under `player`.
+        const values = {};
+        for (const entry of data) {
             const p = entry?.player;
-            if (!p) return;
-            if (p.position === 'PICK') {
-                const key = pickKeyFromName(p.name);
-                if (key) valueMap[key] = entry.value;
-            } else if (p.sleeperId) {
-                valueMap[p.sleeperId] = entry.value;
-            }
-        });
-
-        return valueMap;
-    } catch (error) {
-        console.error('Error fetching market values:', error);
-        // Second opinion: DynastyProcess weekly values (same scale + shape).
-        try {
-            const { fetchDynastyProcessValues } = await import('./dynastyProcess');
-            const dp = await fetchDynastyProcessValues(isSuperflex);
-            console.warn('FantasyCalc unavailable — using DynastyProcess values');
-            return dp;
-        } catch (dpError) {
-            console.error('DynastyProcess fallback also failed:', dpError);
-            return {}; // Empty map → consumers use their formula fallbacks
+            if (!p || !Number.isFinite(entry.value) || entry.value < 0) continue;
+            const key = p.position === 'PICK' ? pickKeyFromName(p.name) : p.sleeperId;
+            if (key) values[key] = entry.value;
         }
+        if (!Object.keys(values).length) throw new Error('Empty market response');
+        return { values, source: 'FantasyCalc', fetchedAt, settings, trustworthy: true };
+    } catch {
+        if (isDynasty) {
+            try {
+                const { fetchDynastyProcessValues } = await import('./dynastyProcess.js');
+                const values = await fetchDynastyProcessValues(numQbs === 2);
+                if (Object.keys(values).length) return { values, source: 'DynastyProcess', fetchedAt, settings, trustworthy: true, approximation: 'Provider supports QB format; reception scoring and league size are approximate.' };
+            } catch { /* Caller displays unavailable data. */ }
+        }
+        return { values: {}, source: 'Unavailable', fetchedAt, settings, trustworthy: false };
     }
-};
+}
+
+export const fetchMarketValues = async (isSuperflex = true, numTeams = 12, ppr = 0.5) =>
+    (await fetchValuationSnapshot({ isDynasty: true, numQbs: isSuperflex ? 2 : 1, numTeams, ppr })).values;
 
 /**
  * Look up a draft pick's market value from a fetchMarketValues map.

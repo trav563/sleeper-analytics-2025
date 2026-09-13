@@ -11,6 +11,21 @@
 /** Season types where regular-season games have been played (or are being played). */
 const LIVE_TYPES = new Set(['regular', 'post']);
 
+/** Conservative finality: Sleeper's week rollover confirms the previous week.
+ * Never infer a completed game from a nonzero score. Historical seasons are final.
+ */
+export function lastCompletedWeek(league, state) {
+    if (!league || !state) return 0;
+    if (Number(league.season) < Number(state.season)) return 18;
+    if (!isSeasonStarted(league, state)) return 0;
+    if (state.season_type === 'post') return 18;
+    return Math.max(0, Math.min(18, Number(state.week ?? state.display_week ?? 1) - 1));
+}
+
+export function completedMatchups(matchups, throughWeek) {
+    return Object.fromEntries(Object.entries(matchups || {}).filter(([week]) => Number(week) <= throughWeek));
+}
+
 /** True once the league's own season is under way. Past seasons count as started. */
 export function isSeasonStarted(league, state) {
     const leagueSeason = league?.season ? Number(league.season) : null;

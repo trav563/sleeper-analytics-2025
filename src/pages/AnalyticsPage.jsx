@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import PowerRankings from '../features/analytics/components/PowerRankings';
 import TrueStandings from '../features/analytics/components/TrueStandings';
@@ -11,22 +11,11 @@ const AnalyticsPage = () => {
     const { leagueId } = useParams();
     const { league, rosters, users, players, user, currentWeek } = useOutletContext();
 
-    const [selectedRosterId, setSelectedRosterId] = useState(null);
+    const [chosenRosterId, setSelectedRosterId] = useState(null);
+    const selectedRosterId = rosters?.some(r => r.roster_id === chosenRosterId) ? chosenRosterId : (rosters?.find(r => r.owner_id === user?.user_id) || rosters?.[0])?.roster_id;
     const [comparisonMode, setComparisonMode] = useState('league'); // 'league' | 'h2h'
-    const [opponentRosterId, setOpponentRosterId] = useState(null);
-
-    useEffect(() => {
-        if (!rosters || rosters.length === 0) return;
-        if (selectedRosterId && rosters.find(r => r.roster_id === selectedRosterId)) return;
-        if (user) {
-            const userRoster = rosters.find(r => r.owner_id === user.user_id);
-            if (userRoster) {
-                setSelectedRosterId(userRoster.roster_id);
-                return;
-            }
-        }
-        setSelectedRosterId(rosters[0].roster_id);
-    }, [rosters, user, selectedRosterId]);
+    const [chosenOpponentId, setOpponentRosterId] = useState(null);
+    const opponentRosterId = chosenOpponentId !== selectedRosterId && rosters?.some(r => r.roster_id === chosenOpponentId) ? chosenOpponentId : null;
 
     const handleTeamChange = (e) => setSelectedRosterId(Number(e.target.value));
     const handleOpponentChange = (e) => setOpponentRosterId(Number(e.target.value));

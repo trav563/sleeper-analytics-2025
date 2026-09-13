@@ -1,9 +1,10 @@
+import { useMarketValues } from '../../tools/hooks/useMarketValues';
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+
 import { Scale } from 'lucide-react';
 import { useTradeHistory } from '../hooks/useTradeHistory';
-import { fetchMarketValues, getMarketPickValue } from '../../../utils/fantasyCalc';
-import { getPickValue, ordinal } from '../utils/pickLedger';
+import { getMarketPickValue } from '../../../utils/fantasyCalc';
+import { ordinal } from '../utils/pickLedger';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { buildOwnerLookup } from '../../../utils/leagueMath';
 import { Pip } from '../../../components/ui/Pip';
@@ -20,20 +21,13 @@ const fmtDate = (ms) => {
  */
 const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
     const { trades, loading } = useTradeHistory(leagueId);
-    const isSuperflex = league?.roster_positions?.includes('SUPER_FLEX');
 
-    const { data: marketValues } = useQuery({
-        queryKey: ['fantasyCalc', leagueId],
-        queryFn: () => fetchMarketValues(isSuperflex, rosters?.length || 12, 0.5),
-        enabled: !!league,
-        staleTime: 60 * 60 * 1000,
-    });
+    const { data: marketValues, snapshot: marketSnapshot } = useMarketValues(league, rosters?.length);
 
     const getOwner = useMemo(() => buildOwnerLookup(rosters, users), [rosters, users]);
 
     const graded = useMemo(() => {
         if (!trades.length || !players) return [];
-        const totalTeams = rosters?.length || 12;
 
         return trades.map(trade => {
             const sides = (trade.roster_ids || []).map(rosterId => {
@@ -46,15 +40,14 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                         key: `p-${pid}`,
                         label: p ? `${p.first_name} ${p.last_name}` : pid,
                         detail: p ? `${p.position} · ${p.team || 'FA'}` : '',
-                        value: marketValues?.[pid] || 0,
+                        value: marketValues?.[pid] ?? null,
                     });
                 });
 
                 (trade.draft_picks || []).forEach((dp, i) => {
                     if (dp.owner_id !== rosterId) return;
                     const year = parseInt(dp.season);
-                    const value = getMarketPickValue(marketValues, { year, round: dp.round, tier: 'mid' })
-                        ?? getPickValue(dp.round, 6, totalTeams, isSuperflex);
+                    const value = getMarketPickValue(marketValues, { year, round: dp.round, tier: 'mid' }) ?? null;
                     assets.push({
                         key: `dp-${i}-${dp.season}-${dp.round}-${dp.roster_id}`,
                         label: `${dp.season} ${ordinal(dp.round)}`,
@@ -63,7 +56,7 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                     });
                 });
 
-                const total = assets.reduce((sum, a) => sum + a.value, 0);
+                const total = assets.some(a => a.value == null) ? null : assets.reduce((sum, a) => sum + a.value, 0);
                 return { rosterId, owner: getOwner(rosterId), assets, total };
             });
 
@@ -79,12 +72,12 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                 date: trade.created,
                 week: trade.leg,
                 sides,
-                verdict: edgePct < 8
+                verdict: sides.some(s => s.total == null) || !marketSnapshot?.trustworthy ? { label: 'Incomplete market values', tone: 'text-text-dim' } : edgePct < 8
                     ? { label: 'Even', tone: 'text-text-mute' }
                     : { label: `${displayTeamName(leader?.owner)} ahead +${edgePct}%`, tone: 'text-good' },
             };
         });
-    }, [trades, players, marketValues, rosters, getOwner, isSuperflex]);
+    }, [trades, players, marketValues, getOwner, marketSnapshot]);
 
     if (loading) return (
         <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card" aria-busy="true">
@@ -107,7 +100,7 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                     <h3 className="font-display text-lg font-semibold text-text">Trade Retro</h3>
                 </div>
                 <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-1">
-                    {league?.season} trades · graded at today's market values
+                    {league?.season} trades · {marketSnapshot?.source || 'Loading values…'}{marketSnapshot?.fetchedAt ? ` · retrieved ${new Date(marketSnapshot.fetchedAt).toLocaleString()}` : ''}
                 </p>
             </header>
 
@@ -135,7 +128,7 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                                                 <Pip seed={side.owner?.user_id ?? side.rosterId} name={displayTeamName(side.owner)} size={24} />
                                             )}
                                             <span className="text-sm font-semibold text-text truncate">{displayTeamName(side.owner)}</span>
-                                            <span className="ml-auto font-mono text-xs tnum text-signal">{side.total.toLocaleString()}</span>
+                                            <span className="ml-auto font-mono text-xs tnum text-signal">{side.total?.toLocaleString() ?? '—'}</span>
                                         </div>
                                         {side.assets.length === 0 ? (
                                             <p className="text-xs text-text-mute italic">Nothing received</p>
@@ -145,7 +138,7 @@ const TradeRetro = ({ leagueId, league, rosters, users, players }) => {
                                                     <li key={a.key} className="flex items-center gap-2 text-xs">
                                                         <span className="text-text">{a.label}</span>
                                                         <span className="font-mono text-2xs text-text-mute">{a.detail}</span>
-                                                        <span className="ml-auto font-mono tnum text-text-dim">{a.value.toLocaleString()}</span>
+                                                        <span className="ml-auto font-mono tnum text-text-dim">{a.value?.toLocaleString() ?? '—'}</span>
                                                     </li>
                                                 ))}
                                             </ul>

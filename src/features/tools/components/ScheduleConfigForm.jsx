@@ -119,7 +119,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
               type="number"
               min={1}
               max={18}
-              value={weeks}
+              aria-label="Regular season weeks" value={weeks}
               onChange={(e) => update({ weeks: parseInt(e.target.value) || 1 })}
               className="w-full px-2 py-1.5 rounded-md border border-line bg-bg-2 text-text text-sm focus:outline-none focus:ring-1 focus:ring-signal tnum"
             />
@@ -130,7 +130,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
               type="number"
               min={1}
               max={10}
-              value={maxRepeat}
+              aria-label="Maximum repeat opponents" value={maxRepeat}
               onChange={(e) => update({ maxRepeat: parseInt(e.target.value) || 1 })}
               className="w-full px-2 py-1.5 rounded-md border border-line bg-bg-2 text-text text-sm focus:outline-none focus:ring-1 focus:ring-signal tnum"
             />
@@ -145,14 +145,14 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
             <p className="text-sm text-text">No back-to-back matchups</p>
             <p className="text-xs text-text-dim">Teams won't face the same opponent in consecutive weeks</p>
           </div>
-          <Switch checked={noBackToBack} onCheckedChange={(v) => update({ noBackToBack: v })} />
+          <Switch aria-label="Avoid consecutive repeat matchups" checked={noBackToBack} onCheckedChange={(v) => update({ noBackToBack: v })} />
         </div>
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Divisions</span>
-          <Switch checked={divisionsEnabled} onCheckedChange={(v) => update({ divisionsEnabled: v })} />
+          <Switch aria-label="Enable divisions" checked={divisionsEnabled} onCheckedChange={(v) => update({ divisionsEnabled: v })} />
         </div>
         {divisionsEnabled && (
           <DivisionSetup
@@ -166,7 +166,7 @@ const ScheduleConfigForm = ({ teams, config, onChange, onGenerate }) => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <SectionHeader icon={Swords} label="Rivalry Week" iconClass="text-warn" />
-          <Switch checked={rivalryWeekEnabled} onCheckedChange={(v) => update({ rivalryWeekEnabled: v })} />
+          <Switch aria-label="Enable rivalry week" checked={rivalryWeekEnabled} onCheckedChange={(v) => update({ rivalryWeekEnabled: v })} />
         </div>
         {rivalryWeekEnabled && (
           <div className="space-y-3 pl-3 border-l-2 border-warn/30">

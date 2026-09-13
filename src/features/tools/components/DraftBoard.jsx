@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useToolState } from '../../../hooks/useToolState';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardList } from 'lucide-react';
 import { fetchDraftPicks } from '../../../utils/sleeper';
@@ -34,7 +35,7 @@ const DraftBoard = ({ league, rosters, users, drafts, tradedPicks }) => {
         () => [...(drafts || [])].sort((a, b) => Number(b.season) - Number(a.season) || (b.start_time || 0) - (a.start_time || 0)),
         [drafts]
     );
-    const [selectedId, setSelectedId] = useState(null);
+    const [selectedId, setSelectedId] = useToolState(`DraftBoard-selectedId:${league?.league_id}`, null);
     const draft = sortedDrafts.find(d => d.draft_id === selectedId) || sortedDrafts[0];
 
     const isLive = draft?.status === 'drafting';
@@ -154,7 +155,8 @@ const DraftBoard = ({ league, rosters, users, drafts, tradedPicks }) => {
                 )}
             </header>
 
-            <div className="overflow-x-auto p-4">
+            <p className="px-4 pt-3 text-xs text-text-dim">Scroll horizontally to explore every pick.</p>
+            <div className="overflow-x-auto p-4" tabIndex={0} aria-label="Draft board, scroll horizontally">
                 {draft.status === 'pre_draft' && projectedBoard && (
                     <div className="space-y-3 min-w-[640px]">
                         <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
@@ -166,7 +168,7 @@ const DraftBoard = ({ league, rosters, users, drafts, tradedPicks }) => {
                                 {row.map(cell => (
                                     <div
                                         key={cell.slot}
-                                        className={`flex-1 min-w-0 rounded-md border p-1.5 text-center ${cell.traded ? 'border-signal/60 bg-signal/5' : 'border-line bg-bg-2'}`}
+                                        className={`flex-1 min-w-[100px] lg:min-w-[80px] rounded-md border p-1.5 text-center ${cell.traded ? 'border-signal/60 bg-signal/5' : 'border-line bg-bg-2'}`}
                                         title={cell.traded
                                             ? `${roundIdx + 1}.${String(cell.slot).padStart(2, '0')} — ${displayTeamName(cell.owner)} (from ${displayTeamName(cell.original)})`
                                             : `${roundIdx + 1}.${String(cell.slot).padStart(2, '0')} — ${displayTeamName(cell.owner)}`}
@@ -199,13 +201,13 @@ const DraftBoard = ({ league, rosters, users, drafts, tradedPicks }) => {
                                     return (
                                         <div
                                             key={slot}
-                                            className={`flex-1 min-w-0 rounded-md border p-1.5 ${pick ? tone : 'border-dashed border-line bg-bg-2/40'}`}
+                                            className={`flex-1 min-w-[100px] lg:min-w-[80px] rounded-md border p-1.5 ${pick ? tone : 'border-dashed border-line bg-bg-2/40'}`}
                                             title={pick ? `${round}.${String(slot).padStart(2, '0')} ${md?.first_name} ${md?.last_name} — ${displayTeamName(picker)}` : `${round}.${String(slot).padStart(2, '0')} on the clock`}
                                         >
                                             <div className="font-mono text-2xs text-text-mute tnum">{round}.{String(slot).padStart(2, '0')}</div>
                                             {pick ? (
                                                 <>
-                                                    <div className="text-xs font-semibold truncate text-text">
+                                                    <div className="text-xs font-semibold break-words text-text">
                                                         {md?.first_name?.[0]}. {md?.last_name}
                                                     </div>
                                                     <div className="font-mono text-2xs truncate">

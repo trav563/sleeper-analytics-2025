@@ -6,7 +6,7 @@ import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
 /** Compact "Today's Lineup" card — first 5 starters with live highlighting. */
 const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels }) => {
     const navigate = useNavigate();
-    const { details: liveDetails } = useGameLiveDetails(week);
+    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
 
     const myMatchup = useMemo(() => {
         if (!Array.isArray(viewMatchups) || !roster) return null;

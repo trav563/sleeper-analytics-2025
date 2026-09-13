@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
+import { completedStandings } from '../../../utils/completedStandings';
+import { useState, useEffect, useMemo } from 'react';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 
 const CACHE_PREFIX = 'playoffOdds:';
@@ -188,6 +190,14 @@ function pruneStaleCache() {
 }
 
 export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters) {
+    const { seasonMatchups, loading: loadingCompleted } = useSeasonMatchups(league?.league_id, currentWeek);
+    const finalRosters = useMemo(() => {
+        const final = completedStandings(rosters, seasonMatchups);
+        return (rosters || []).map(r => {
+            const s = final.find(t => t.rosterId === r.roster_id);
+            return { ...r, settings: { ...r.settings, wins: s?.wins || 0, losses: s?.losses || 0, ties: s?.ties || 0, fpts: s?.totalPoints || 0, fpts_decimal: 0 } };
+        });
+    }, [rosters, seasonMatchups]);
     const [odds, setOdds] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isProjection, setIsProjection] = useState(false);
@@ -198,7 +208,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
     useEffect(() => { pruneStaleCache(); }, []);
 
     useEffect(() => {
-        if (!league || !rosters || !currentWeek) return;
+        if (!league || !rosters || !currentWeek || loadingCompleted) return;
 
         let cancelled = false;
 
@@ -208,7 +218,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                 const playoffStartWeek = league.settings.playoff_week_start;
                 const playoffSpots = league.settings.playoff_teams;
 
-                const teams = rosters.map(r => {
+                const teams = finalRosters.map(r => {
                     const gamesPlayed = r.settings.wins + r.settings.losses + r.settings.ties;
                     const fpts = r.settings.fpts + (r.settings.fpts_decimal || 0) / 100;
                     const ppg = gamesPlayed > 0 ? fpts / gamesPlayed : 0;
@@ -230,7 +240,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
                     weeksToSimulate.push(w);
                 }
 
-                const isOffseasonState = seasonType === 'off' || seasonType === 'pre';
+                const isOffseasonState = seasonType === 'off' || seasonType === 'pre' || teams.every(t => !t.gamesPlayed);
 
                 // --- OFFSEASON PROJECTION ---
                 if (isOffseasonState) {
@@ -456,7 +466,7 @@ export function usePlayoffOdds(league, rosters, currentWeek, marketValues, seaso
         return () => {
             cancelled = true;
         };
-    }, [league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters]);
+    }, [league, rosters, finalRosters, loadingCompleted, currentWeek, marketValues, seasonType, prevSeasonRosters]);
 
     return { odds, loading, isProjection };
 }

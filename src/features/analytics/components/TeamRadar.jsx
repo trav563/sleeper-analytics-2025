@@ -4,6 +4,24 @@ import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName } from '../../../utils/nflData';
 import { theme } from '../../../lib/theme';
 
+const Frame = ({ children, headerExtras }) => (
+        <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card">
+            <header className="mb-3">
+                <h3 className="font-display text-lg font-semibold text-text">Positional Strength</h3>
+                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-0.5">
+                    Avg starter points by position
+                </p>
+                {headerExtras && (
+                    <div className="mt-3 pt-3 border-t border-line">
+                        {headerExtras}
+                    </div>
+                )}
+            </header>
+            {children}
+        </section>
+    );
+
+
 const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, users, opponentRosterId, opponentTeamName, headerExtras }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
 
@@ -74,39 +92,23 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
         });
     }, [seasonMatchups, players, userRosterId, opponentRosterId, loading, selectedTeamName, opponentTeamName]);
 
-    const Frame = ({ children }) => (
-        <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card">
-            <header className="mb-3">
-                <h3 className="font-display text-lg font-semibold text-text">Positional Strength</h3>
-                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mt-0.5">
-                    Avg starter points by position
-                </p>
-                {headerExtras && (
-                    <div className="mt-3 pt-3 border-t border-line">
-                        {headerExtras}
-                    </div>
-                )}
-            </header>
-            {children}
-        </section>
-    );
 
     if (loading) return (
-        <Frame>
+        <Frame headerExtras={headerExtras}>
             <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
                 Loading radar…
             </div>
         </Frame>
     );
     if (!players) return (
-        <Frame>
+        <Frame headerExtras={headerExtras}>
             <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
                 Loading player database…
             </div>
         </Frame>
     );
     if (!seasonMatchups || Object.keys(seasonMatchups).length === 0) return (
-        <Frame>
+        <Frame headerExtras={headerExtras}>
             <div className="h-64 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
                 No matchup data available
             </div>
@@ -114,7 +116,7 @@ const TeamRadar = ({ leagueId, currentWeek, rosters, players, userRosterId, user
     );
 
     return (
-        <Frame>
+        <Frame headerExtras={headerExtras}>
             <div
                 className="h-96 w-full"
                 role="img"

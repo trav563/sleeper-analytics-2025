@@ -3,7 +3,7 @@ import { RefreshCw, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { useLeagueData } from '../hooks/useLeagueData';
 import { useLineupStatus } from '../hooks/useLineupStatus';
 import { deriveCurrentWeek } from '../../../utils/seasonState';
-import { avatarUrl, STATUS_COLORS } from '../../../utils/nflData';
+import { STATUS_COLORS } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import TeamLineupModal from './TeamLineupModal';
 

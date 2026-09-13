@@ -6,12 +6,12 @@ import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
 /** Full standings preview with deep-link to power rankings page. */
 const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId }) => {
     const navigate = useNavigate();
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings } = usePowerRankings(seasonMatchups, rosters, users);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
             <header className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
-                <h3 className="font-display text-md font-semibold text-text">Standings</h3>
+                <h3 className="font-display text-md font-semibold text-text">Power Rankings</h3>
                 <button
                     type="button"
                     onClick={() => navigate(`/league/${league?.league_id}/standings`)}

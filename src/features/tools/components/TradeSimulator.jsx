@@ -1,368 +1,69 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { ArrowLeftRight, Check, RotateCcw } from 'lucide-react';
 import { useSleeper } from '../../../context/SleeperContext';
 import { fetchSleeper } from '../../../utils/sleeper';
-import { fetchMarketValues } from '../../../utils/fantasyCalc';
-import { calculateFallbackValue } from '../utils/playerValue';
+import { useMarketValues } from '../hooks/useMarketValues';
+import { useToolState } from '../../../hooks/useToolState';
+import { ownedPlayerIds } from '../../../utils/valuation';
+import { scoreStatLine } from '../../../utils/scoring';
 import { displayTeamName } from '../../../utils/nflData';
-import { Button } from '../../../components/ui/Button';
-import { theme } from '../../../lib/theme';
+import { TRADE_VALUE_TOLERANCE, CONSOLIDATION_PREMIUM, trustworthyMarket } from '../../../utils/tradeCandidates';
 
-const TradeSimulator = ({ league, rosters, users, players }) => {
+export default function TradeSimulator({ league, rosters, users, players }) {
     const { user } = useSleeper();
-
-    const leagueSeason = league?.season || '2025';
-    const prevSeason = String(Number(leagueSeason) - 1);
-
-    const { data: seasonStats } = useQuery({
-        queryKey: ['seasonStats', prevSeason],
-        queryFn: () => fetchSleeper(`/stats/nfl/regular/${prevSeason}`),
-        staleTime: 60 * 60 * 1000,
-        enabled: !!league,
-    });
-
-    const isSuperflex = league?.roster_positions?.includes('SUPER_FLEX');
-    // league.settings.type: 0 redraft, 1 keeper, 2 dynasty
-    const isDynasty = league?.settings?.type === 1 || league?.settings?.type === 2;
-
-    const { data: marketValues } = useQuery({
-        queryKey: ['fantasyCalc', league?.league_id],
-        queryFn: () => fetchMarketValues(isSuperflex, rosters?.length || 12, 0.5),
-        staleTime: 60 * 60 * 1000,
-        enabled: !!league && isDynasty,
-    });
-    const useDynastyValues = isDynasty && !!marketValues && Object.keys(marketValues).length > 0;
-
-    const pprField = useMemo(() => {
-        const rec = league?.scoring_settings?.rec ?? 0;
-        if (rec >= 1) return 'pts_ppr';
-        if (rec >= 0.5) return 'pts_half_ppr';
-        return 'pts_std';
-    }, [league]);
-
-    const [team1Id, setTeam1Id] = useState(null);
-    const [team2Id, setTeam2Id] = useState(null);
-    const [team1Selected, setTeam1Selected] = useState(new Set());
-    const [team2Selected, setTeam2Selected] = useState(new Set());
-
-    useEffect(() => {
-        if (!rosters || !rosters.length || team1Id) return;
-        if (user) {
-            const myRoster = rosters.find(r => r.owner_id === user.user_id);
-            if (myRoster) {
-                setTeam1Id(myRoster.roster_id);
-                const other = rosters.find(r => r.roster_id !== myRoster.roster_id);
-                if (other) setTeam2Id(other.roster_id);
-            }
-        } else if (rosters.length >= 2) {
-            setTeam1Id(rosters[0].roster_id);
-            setTeam2Id(rosters[1].roster_id);
-        }
-    }, [rosters, user, team1Id]);
-
-    const roster1 = rosters?.find(r => r.roster_id === team1Id);
-    const roster2 = rosters?.find(r => r.roster_id === team2Id);
-    const owner1 = users?.find(u => u.user_id === roster1?.owner_id);
-    const owner2 = users?.find(u => u.user_id === roster2?.owner_id);
-
-    const getPlayerList = (roster) => {
-        if (!roster || !players) return [];
-        return (roster.players || [])
-            .map(pid => {
-                const p = players[pid];
-                if (!p || !['QB', 'RB', 'WR', 'TE'].includes(p.position)) return null;
-                const stats = seasonStats?.[pid];
-                const gp = stats?.gp || 0;
-                const pts = stats?.[pprField] ?? stats?.pts_ppr ?? 0;
-                const ppg = gp > 0 ? parseFloat((pts / gp).toFixed(1)) : 0;
-
-                // Dynasty value already prices age in; the formula fallback
-                // applies an explicit age curve when there's no market value.
-                const dynValue = marketValues?.[pid]
-                    ?? calculateFallbackValue(ppg, p.age, p.position, isSuperflex, p.search_rank);
-
-                return { pid, name: `${p.first_name} ${p.last_name}`, pos: p.position, team: p.team || 'FA', age: p.age || null, ppg, gp, dynValue };
-            })
-            .filter(Boolean)
-            .sort((a, b) => b.ppg - a.ppg);
-    };
-
-    const team1Players = useMemo(() => getPlayerList(roster1), [roster1, players, seasonStats, pprField, marketValues, isSuperflex]);
-    const team2Players = useMemo(() => getPlayerList(roster2), [roster2, players, seasonStats, pprField, marketValues, isSuperflex]);
-
-    const togglePlayer = (side, pid) => {
-        const [selected, setSelected] = side === 1 ? [team1Selected, setTeam1Selected] : [team2Selected, setTeam2Selected];
-        const next = new Set(selected);
-        if (next.has(pid)) next.delete(pid);
-        else next.add(pid);
-        setSelected(next);
-    };
-
-    const reset = () => {
-        setTeam1Selected(new Set());
-        setTeam2Selected(new Set());
-    };
-
-    const team1PPG = useMemo(() => [...team1Selected].reduce((sum, pid) => {
-        const p = team1Players.find(pl => pl.pid === pid);
-        return sum + (p?.ppg || 0);
-    }, 0), [team1Selected, team1Players]);
-
-    const team2PPG = useMemo(() => [...team2Selected].reduce((sum, pid) => {
-        const p = team2Players.find(pl => pl.pid === pid);
-        return sum + (p?.ppg || 0);
-    }, 0), [team2Selected, team2Players]);
-
-    // In a dynasty league, judge the trade on dynasty value (age-aware) and
-    // keep PPG on screen for reference. Redraft still judges on PPG.
-    const team1Value = useMemo(() => [...team1Selected].reduce((sum, pid) => {
-        const p = team1Players.find(pl => pl.pid === pid);
-        return sum + (p?.dynValue || 0);
-    }, 0), [team1Selected, team1Players]);
-
-    const team2Value = useMemo(() => [...team2Selected].reduce((sum, pid) => {
-        const p = team2Players.find(pl => pl.pid === pid);
-        return sum + (p?.dynValue || 0);
-    }, 0), [team2Selected, team2Players]);
-
-    const side1 = useDynastyValues ? team1Value : team1PPG;
-    const side2 = useDynastyValues ? team2Value : team2PPG;
-    const fairnessRatio = Math.abs(side1 - side2) / (Math.max(side1, side2) || 1);
-    const fairnessColor = fairnessRatio <= 0.15 ? 'text-good' : fairnessRatio <= 0.3 ? 'text-warn' : 'text-bad';
-    const fairnessLabel = fairnessRatio <= 0.15 ? 'Fair Trade' : fairnessRatio <= 0.3 ? 'Slight Edge' : 'Lopsided';
-
-    const radarData = useMemo(() => {
-        if (!team1Players.length || !team2Players.length) return [];
-
-        const calcPosAvg = (playerList) => {
-            const result = {};
-            ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
-                const posPlayers = playerList.filter(p => p.pos === pos && p.ppg > 0);
-                result[pos] = posPlayers.length > 0
-                    ? parseFloat((posPlayers.reduce((s, p) => s + p.ppg, 0) / Math.min(posPlayers.length, 3)).toFixed(1))
-                    : 0;
-            });
-            return result;
-        };
-
-        const t1Avg = calcPosAvg(team1Players);
-        const t2Avg = calcPosAvg(team2Players);
-        const name1 = displayTeamName(owner1);
-        const name2 = displayTeamName(owner2);
-
-        return ['QB', 'RB', 'WR', 'TE'].map(pos => ({
-            subject: pos,
-            [name1]: t1Avg[pos],
-            [name2]: t2Avg[pos],
-            fullMark: 25,
-        }));
-    }, [team1Players, team2Players, owner1, owner2]);
-
-    const hasSelections = team1Selected.size > 0 || team2Selected.size > 0;
-    const hasStats = seasonStats && Object.keys(seasonStats).length > 0;
-
-    if (!rosters || rosters.length < 2) return null;
-
-    return (
-        <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
-            <header className="p-4 border-b border-line">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <ArrowLeftRight className="w-5 h-5 text-signal" aria-hidden="true" />
-                        <div>
-                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                Tool · Trade Simulator
-                            </div>
-                            <h3 className="font-display text-lg font-semibold text-text">Trade Simulator</h3>
-                        </div>
-                    </div>
-                    {hasSelections && (
-                        <Button onClick={reset} variant="ghost" size="sm" className="text-text-dim hover:text-text hover:bg-bg-2">
-                            <RotateCcw className="w-4 h-4 mr-1" /> Reset
-                        </Button>
-                    )}
-                </div>
-                <p className="text-xs text-text-dim mt-1">
-                    Select players from each team to simulate a trade
-                    {useDynastyValues
-                        ? <span className="text-text-mute"> — judged on dynasty market value (age-adjusted); <span className="tnum">{prevSeason}</span> PPG shown for reference</span>
-                        : hasStats && <span className="text-text-mute"> — values based on <span className="tnum">{prevSeason}</span> season PPG</span>}
-                </p>
-            </header>
-
-            <div className="p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                    <select
-                        className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
-                        value={team1Id || ''}
-                        onChange={(e) => { setTeam1Id(Number(e.target.value)); setTeam1Selected(new Set()); }}
-                    >
-                        {rosters.map(r => {
-                            const o = users?.find(u => u.user_id === r.owner_id);
-                            return <option key={r.roster_id} value={r.roster_id}>{displayTeamName(o)}</option>;
-                        })}
-                    </select>
-                    <select
-                        className="bg-bg-2 border border-line text-text text-sm rounded-md min-h-[40px] px-3 focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
-                        value={team2Id || ''}
-                        onChange={(e) => { setTeam2Id(Number(e.target.value)); setTeam2Selected(new Set()); }}
-                    >
-                        {rosters.filter(r => r.roster_id !== team1Id).map(r => {
-                            const o = users?.find(u => u.user_id === r.owner_id);
-                            return <option key={r.roster_id} value={r.roster_id}>{displayTeamName(o)}</option>;
-                        })}
-                    </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    {[
-                        { players: team1Players, selected: team1Selected, side: 1, owner: owner1, tone: 'signal' },
-                        { players: team2Players, selected: team2Selected, side: 2, owner: owner2, tone: 'signal-2' },
-                    ].map(({ players: pList, selected, side, owner, tone }) => (
-                        <div key={side} className="space-y-1 max-h-72 overflow-y-auto pr-1">
-                            <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2">
-                                {displayTeamName(owner)} sends:
-                            </p>
-                            {pList.map(p => {
-                                const isSelected = selected.has(p.pid);
-                                const selectedClass = tone === 'signal'
-                                    ? 'bg-signal/15 border-signal/40 text-signal'
-                                    : 'bg-signal-2/15 border-signal-2/40 text-signal-2';
-                                return (
-                                    <button
-                                        key={p.pid}
-                                        type="button"
-                                        onClick={() => togglePlayer(side, p.pid)}
-                                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs border transition-colors duration-fast ${
-                                            isSelected
-                                                ? selectedClass
-                                                : 'bg-bg-2 border-line text-text-dim hover:bg-bg-3 hover:text-text'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="font-mono font-bold text-text-mute w-6 text-2xs uppercase">{p.pos}</span>
-                                            <span className="truncate max-w-[100px]">{p.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            <span className="font-mono text-2xs text-text-mute tnum">
-                                                {p.age ? `${p.age}yo` : ''}{p.age && p.ppg > 0 ? ' · ' : ''}{p.ppg > 0 ? `${p.ppg} PPG` : ''}
-                                            </span>
-                                            {isSelected && <Check className="w-3 h-3" />}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ))}
-                </div>
-
-                {hasSelections && (
-                    <div className="space-y-4 pt-3 border-t border-line">
-                        <div className="bg-bg-2 rounded-md p-4 border border-line">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                                    {useDynastyValues ? 'Dynasty value · combined PPG' : 'Combined PPG'}
-                                </span>
-                                {team1Selected.size > 0 && team2Selected.size > 0 && (
-                                    <span className={`font-mono text-2xs uppercase tracking-wider font-bold ${fairnessColor}`}>{fairnessLabel}</span>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-right flex-1">
-                                    {useDynastyValues && (
-                                        <div className="tnum font-display text-lg font-bold text-signal">{team1Value.toLocaleString()}</div>
-                                    )}
-                                    <div className={useDynastyValues
-                                        ? 'tnum font-mono text-2xs text-text-dim'
-                                        : 'tnum font-display text-lg font-bold text-signal'}>
-                                        {team1PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span>
-                                    </div>
-                                    <div className="font-mono text-2xs text-text-mute uppercase tracking-wider">{displayTeamName(owner1)} sends</div>
-                                </div>
-                                <div className="w-px h-8 bg-line-strong" />
-                                <div className="flex-1">
-                                    {useDynastyValues && (
-                                        <div className="tnum font-display text-lg font-bold text-signal-2">{team2Value.toLocaleString()}</div>
-                                    )}
-                                    <div className={useDynastyValues
-                                        ? 'tnum font-mono text-2xs text-text-dim'
-                                        : 'tnum font-display text-lg font-bold text-signal-2'}>
-                                        {team2PPG.toFixed(1)} <span className="text-2xs font-mono text-text-mute">PPG</span>
-                                    </div>
-                                    <div className="font-mono text-2xs text-text-mute uppercase tracking-wider">{displayTeamName(owner2)} sends</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {radarData.length > 0 && (
-                            <div className="bg-bg-2 rounded-md p-4 border border-line">
-                                <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2">
-                                    Positional Strength · <span className="tnum">{prevSeason}</span> PPG
-                                </p>
-                                <div className="h-56">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart data={radarData}>
-                                            <PolarGrid stroke={theme.color.lineStrong} />
-                                            <PolarAngleAxis dataKey="subject" tick={{ fill: theme.color.textDim, fontSize: 11, fontFamily: 'var(--font-mono)' }} />
-                                            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-                                            <Tooltip contentStyle={{
-                                                backgroundColor: theme.color.bg1,
-                                                border: `1px solid ${theme.color.lineStrong}`,
-                                                borderRadius: theme.radius.md,
-                                                color: theme.color.text,
-                                                fontFamily: 'var(--font-sans)',
-                                                fontSize: 12,
-                                            }} />
-                                            <Radar name={displayTeamName(owner1)} dataKey={displayTeamName(owner1)} stroke={theme.color.signal} fill={theme.color.signal} fillOpacity={0.35} />
-                                            <Radar name={displayTeamName(owner2)} dataKey={displayTeamName(owner2)} stroke={theme.color.signal2} fill={theme.color.signal2} fillOpacity={0.35} />
-                                            <Legend wrapperStyle={{ color: theme.color.textDim, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }} />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div>
-                                <p className="font-mono text-2xs uppercase tracking-wider text-signal mb-1.5">{displayTeamName(owner1)} sends</p>
-                                {[...team1Selected].map(pid => {
-                                    const p = team1Players.find(pl => pl.pid === pid);
-                                    return p ? (
-                                        <div key={pid} className="flex justify-between text-text-dim">
-                                            <span><span className="font-mono text-2xs text-text-mute">{p.pos}</span> {p.name}</span>
-                                            <span className="font-mono text-text-mute tnum">{p.ppg} PPG</span>
-                                        </div>
-                                    ) : null;
-                                })}
-                                {team1Selected.size === 0 && <div className="text-text-mute italic">No players selected</div>}
-                            </div>
-                            <div>
-                                <p className="font-mono text-2xs uppercase tracking-wider text-signal-2 mb-1.5">{displayTeamName(owner2)} sends</p>
-                                {[...team2Selected].map(pid => {
-                                    const p = team2Players.find(pl => pl.pid === pid);
-                                    return p ? (
-                                        <div key={pid} className="flex justify-between text-text-dim">
-                                            <span><span className="font-mono text-2xs text-text-mute">{p.pos}</span> {p.name}</span>
-                                            <span className="font-mono text-text-mute tnum">{p.ppg} PPG</span>
-                                        </div>
-                                    ) : null;
-                                })}
-                                {team2Selected.size === 0 && <div className="text-text-mute italic">No players selected</div>}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {!hasSelections && (
-                    <div className="text-center py-4">
-                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">Click players above to add them to the trade</p>
-                    </div>
-                )}
+    const [summaryOpen, setSummaryOpen] = useState(false);
+    const myId = (rosters.find(r => r.owner_id === user?.user_id) || rosters[0])?.roster_id;
+    const [form, setForm] = useToolState(`simulator:${league.league_id}`, () => ({
+        teams: [myId, rosters.find(r => r.roster_id !== myId)?.roster_id], selections: [[], []], search: ['', ''], position: ['ALL', 'ALL'],
+    }));
+    const { snapshot, isLoading, refetch } = useMarketValues(league, rosters.length);
+    const season = Number(league.season) - 1;
+    const { data: stats } = useQuery({ queryKey: ['seasonStats', String(season)], queryFn: () => fetchSleeper(`/stats/nfl/regular/${season}`), staleTime: 3600000 });
+    const ownerName = id => displayTeamName(users.find(u => u.user_id === rosters.find(r => r.roster_id === id)?.owner_id));
+    const sides = useMemo(() => form.teams.map(id => {
+        const roster = rosters.find(r => r.roster_id === id);
+        return ownedPlayerIds(roster).map(pid => {
+            const p = players[pid];
+            if (!p || !['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position)) return null;
+            const stat = stats?.[pid];
+            const points = scoreStatLine(stat, league.scoring_settings);
+            return { id: pid, name: `${p.first_name || ''} ${p.last_name || ''}`.trim(), position: p.position, age: p.age,
+                value: snapshot?.values?.[pid], ppg: stat?.gp > 0 && points != null ? points / stat.gp : null,
+                status: roster.reserve?.includes(pid) ? 'IR' : roster.taxi?.includes(pid) ? 'Taxi' : '' };
+        }).filter(Boolean).sort((a, b) => (b.value || 0) - (a.value || 0));
+    }), [form.teams, rosters, players, stats, snapshot, league.scoring_settings]);
+    const selected = sides.map((list, side) => list.filter(p => form.selections[side].includes(p.id)));
+    const totals = selected.map(list => list.reduce((sum, p) => sum + (p.value || 0), 0));
+    const ready = selected.every(list => list.length > 0) && selected.flat().every(p => Number.isFinite(p.value) && p.value > 0) && trustworthyMarket(snapshot);
+    const packageSide = selected[0].length > selected[1].length ? 0 : selected[1].length > selected[0].length ? 1 : null;
+    const adjusted = totals.map((value, i) => packageSide === i ? value / (1 + CONSOLIDATION_PREMIUM) : value);
+    const difference = Math.abs(adjusted[0] - adjusted[1]) / Math.max(...adjusted, 1);
+    const update = (field, side, value) => setForm(prev => ({ ...prev, [field]: prev[field].map((v, i) => i === side ? value : v) }));
+    const chooseTeam = (side, id) => setForm(prev => ({ ...prev, teams: prev.teams.map((v, i) => i === side ? id : v), selections: prev.selections.map((v, i) => i === side ? [] : v) }));
+    const toggle = (side, id) => update('selections', side, form.selections[side].includes(id) ? form.selections[side].filter(p => p !== id) : [...form.selections[side], id]);
+    return <section className="space-y-4">
+        <header className="bg-bg-1 border border-line rounded-xl p-5"><h2 className="text-xl font-bold">Trade Simulator</h2>
+            <p className="mt-2 text-sm text-text-dim">Compare {snapshot?.settings?.isDynasty ? 'dynasty' : 'redraft'} market values. Age is already reflected in dynasty prices. {season} PPG is shown separately.</p>
+            <p className="text-xs text-text-dim mt-2">{isLoading ? 'Loading market values…' : snapshot?.source}{snapshot?.fetchedAt ? ` · retrieved ${new Date(snapshot.fetchedAt).toLocaleString()}` : ''}. {snapshot?.approximation}</p>
+            {!isLoading && !snapshot?.trustworthy && <button onClick={() => refetch()} className="min-h-11 text-signal text-sm">Retry market values</button>}
+        </header>
+        <div className="grid md:grid-cols-2 gap-4">{sides.map((list, side) => <section key={side} className="min-w-0 bg-bg-1 border border-line rounded-xl overflow-hidden">
+            <div className="p-4 space-y-3 border-b border-line">
+                <label className="block text-sm font-semibold">{side === 0 ? 'Your team sends' : 'Other team sends'}<select aria-label={`Trade team ${side + 1}`} value={form.teams[side] || ''} onChange={e => chooseTeam(side, Number(e.target.value))} className="mt-2 min-h-11 w-full bg-bg-2 rounded-md border border-line px-3">{rosters.filter(r => r.roster_id !== form.teams[1 - side]).map(r => <option key={r.roster_id} value={r.roster_id}>{ownerName(r.roster_id)}</option>)}</select></label>
+                <div className="flex gap-2"><input aria-label={`Search team ${side + 1} players`} placeholder="Search players" value={form.search[side]} onChange={e => update('search', side, e.target.value)} className="min-w-0 flex-1 min-h-11 px-3 bg-bg-2 rounded-md border border-line text-sm" /><select aria-label={`Team ${side + 1} position`} value={form.position[side]} onChange={e => update('position', side, e.target.value)} className="min-h-11 px-2 bg-bg-2 rounded-md border border-line text-sm">{['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => <option key={pos}>{pos}</option>)}</select></div>
             </div>
-        </section>
-    );
-};
-
-export default TradeSimulator;
+            <div className="max-h-[420px] overflow-y-auto divide-y divide-line">{list.filter(p => p.name.toLowerCase().includes(form.search[side].toLowerCase()) && (form.position[side] === 'ALL' || p.position === form.position[side])).map(p => <button key={p.id} type="button" onClick={() => toggle(side, p.id)} aria-pressed={form.selections[side].includes(p.id)} className={`w-full min-h-[68px] px-4 py-3 flex items-start gap-3 text-left ${form.selections[side].includes(p.id) ? 'bg-signal/10' : 'hover:bg-bg-2'}`}>
+                <span aria-hidden="true" className="text-signal w-4 pt-0.5">{form.selections[side].includes(p.id) ? '✓' : '+'}</span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-semibold break-words">{p.name}</span><span className="block text-xs text-text-dim mt-1">{p.position}{p.position !== 'DEF' && p.age ? ` · ${p.age}yo` : ''}{p.status ? ` · ${p.status}` : ''}{p.ppg != null ? ` · ${p.ppg.toFixed(1)} PPG` : ''}</span></span>
+                <span className="text-sm tnum shrink-0">{p.value != null ? p.value.toLocaleString() : '—'}</span>
+            </button>)}</div>
+        </section>)}</div>
+        <aside aria-label="Trade summary" className="trade-summary sticky bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-4 bg-bg-1 border border-line-strong shadow-pop rounded-xl p-4 z-20">
+            <div className="flex justify-between items-center gap-3"><h3 className="hidden md:block font-bold text-base">Offer summary</h3><button type="button" aria-expanded={summaryOpen} aria-controls="offer-details" className="md:hidden min-h-11 text-left text-sm font-semibold" onClick={() => setSummaryOpen(v => !v)}>Offer · {totals[0].toLocaleString()} / {totals[1].toLocaleString()} <span className="text-signal ml-2">{summaryOpen ? "Hide" : "Details"}</span></button><button className="text-sm text-signal min-h-11 -my-2 px-2" onClick={() => setForm(prev => ({ ...prev, selections: [[], []] }))}>Reset</button></div>
+            <div id="offer-details" className={`${summaryOpen ? "block" : "hidden"} md:block max-h-[35dvh] overflow-y-auto`}><div className="grid sm:grid-cols-2 gap-3 mt-3">{selected.map((list, i) => <div key={i} className="text-sm min-w-0"><p className="font-semibold">{ownerName(form.teams[i])}: {totals[i].toLocaleString()}</p><p className="text-text-dim break-words text-xs mt-1">{list.map(p => p.name).join(', ') || 'Select players above'}</p></div>)}</div>
+            <p className={`mt-3 text-sm ${ready && difference <= TRADE_VALUE_TOLERANCE ? 'text-good' : 'text-text-dim'}`}>{ready ? difference <= TRADE_VALUE_TOLERANCE ? 'Within the market-value screen' : 'Outside the 15% value screen' : 'Choose valued assets on both sides to compare. Missing values are not zero.'}</p>
+            {packageSide != null && ready && <p className="text-xs text-text-dim mt-1">Includes a 10% premium for consolidating a larger package. Roster fit and manager preference still matter.</p>}
+            </div>
+        </aside>
+    </section>;
+}
