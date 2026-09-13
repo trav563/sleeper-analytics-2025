@@ -22,6 +22,12 @@ describe('dedicated analysis instructions', () => {
         expect(sell).toContain('## Sell-high Candidates'); expect(sell).not.toContain('## Roster Grade');
         expect(trades).not.toContain('CONSTRAINT: Suggest 2-3');
         expect(sell).toContain('snapshot cannot establish a historical peak');
+        for (const prompt of [trades, sell]) {
+            expect(prompt).not.toContain('VERIFIED LINEUP');
+            expect(prompt).not.toContain('VERIFIED WAIVER MOVES');
+            expect(prompt).not.toContain('PRODUCTION GRADING GUIDE');
+            expect(prompt).toContain('Empty candidates mean no supported deals');
+        }
     });
     it('supplies dynasty designation, complete ownership, and safe fallbacks', () => {
         const prompt = buildPrompt(data,'roster');
