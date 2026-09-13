@@ -10,6 +10,10 @@
  * Returns 0..1. Caller can multiply by 100 for display.
  */
 
+// Initial calibration against eleven September 2026 Sleeper screenshots.
+// This approximates their displayed probabilities; it is not outcome validation.
+export const WIN_PROBABILITY_UNCERTAINTY_FACTOR = 0.45;
+
 // Abramowitz & Stegun 7.1.26 — error function approximation, max error ~1.5e-7.
 function erf(x) {
     const sign = x < 0 ? -1 : 1;
@@ -36,7 +40,7 @@ function normalCdf(z) {
  * @param {number} args.oppCurrent          Current points scored by opponent.
  * @param {number} args.myProjRemaining     Projected points still to come for my side (sum of starters who haven't finished).
  * @param {number} args.oppProjRemaining    Projected points still to come for opponent.
- * @param {number} [args.varianceFactor=0.18]  σ = projRemaining * factor. 0.18 ≈ ESPN-style.
+ * @param {number} [args.varianceFactor=0.45]  σ = projRemaining * factor.
  * @returns {number} Probability my side wins, in [0, 1].
  */
 export function computeWinProbability({
@@ -44,7 +48,7 @@ export function computeWinProbability({
     oppCurrent = 0,
     myProjRemaining = 0,
     oppProjRemaining = 0,
-    varianceFactor = 0.18,
+    varianceFactor = WIN_PROBABILITY_UNCERTAINTY_FACTOR,
 }) {
     const myFinalMean = myCurrent + myProjRemaining;
     const oppFinalMean = oppCurrent + oppProjRemaining;

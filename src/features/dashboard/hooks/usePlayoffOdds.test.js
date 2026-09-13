@@ -33,9 +33,10 @@ describe('simulateInSeasonOdds', () => {
             simulations: 20000,
         });
         const p1 = results[1] / 20000;
-        // Model expectation from the shared normal-CDF model (~75%), far from
-        // the old ppg-ratio 125/230 ≈ 54%.
-        const expected = computeWinProbability({ myProjRemaining: 125, oppProjRemaining: 105 });
+        // This simulates full future weeks with its own 18% score variance.
+        // Keep that explicit: the live matchup's remaining-points calibration
+        // is a separate setting. Expected odds are ~75%, versus ppg-ratio ~54%.
+        const expected = computeWinProbability({ myProjRemaining: 125, oppProjRemaining: 105, varianceFactor: .18 });
         expect(p1).toBeGreaterThan(0.65);
         expect(Math.abs(p1 - expected)).toBeLessThan(0.02);
     });
