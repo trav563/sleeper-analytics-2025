@@ -1,0 +1,836 @@
+{
+  "description": "Manually transcribed user screenshots dated 2026-09-13 about 15:02 Eastern; pregame projections calculated from Sleeper API fetched at about 15:03 Eastern. Q3 clocks unless HALF, SOON, or FINAL. FINAL small numbers are pregame projections, not live final estimates.",
+  "projection_source": "https://api.sleeper.app/v1/projections/nfl/regular/2026/1",
+  "league_source": "https://api.sleeper.app/v1/league/1312087088669151232",
+  "scoring_settings": {
+    "sack": 1.0,
+    "fgm_40_49": 0.0,
+    "fgm_yds": 0.1,
+    "pass_int": -2.0,
+    "pts_allow_0": 10.0,
+    "pass_2pt": 2.0,
+    "st_td": 6.0,
+    "rec_td": 6.0,
+    "fgm_30_39": 0.0,
+    "xpmiss": -1.0,
+    "rush_td": 6.0,
+    "rec_2pt": 2.0,
+    "st_fum_rec": 1.0,
+    "fgmiss": 0.0,
+    "ff": 1.0,
+    "fgmiss_30_39": -1.0,
+    "rec": 0.5,
+    "pts_allow_14_20": 1.0,
+    "fgm_0_19": 0.0,
+    "int": 2.0,
+    "def_st_fum_rec": 1.0,
+    "fum_lost": -2.0,
+    "pts_allow_1_6": 7.0,
+    "fgmiss_20_29": -1.0,
+    "fgm_20_29": 0.0,
+    "pts_allow_21_27": 0.0,
+    "xpm": 1.0,
+    "fgmiss_0_19": -1.0,
+    "rush_2pt": 2.0,
+    "fum_rec": 2.0,
+    "def_st_td": 6.0,
+    "fgm_50p": 0.0,
+    "def_td": 6.0,
+    "safe": 2.0,
+    "pass_yd": 0.04,
+    "fgmiss_40_49": -1.0,
+    "blk_kick": 2.0,
+    "pass_td": 6.0,
+    "rush_yd": 0.1,
+    "fum": 0.0,
+    "pts_allow_28_34": -1.0,
+    "pts_allow_35p": -4.0,
+    "fum_rec_td": 6.0,
+    "rec_yd": 0.1,
+    "def_st_ff": 1.0,
+    "pts_allow_7_13": 4.0,
+    "st_ff": 1.0
+  },
+  "teams": [
+    {
+      "team": "Prescott",
+      "sleeper_projected_total": 103.62,
+      "players": [
+        {
+          "name": "Justin Herbert",
+          "position": "QB",
+          "actual": 0.0,
+          "pregame": 19.624,
+          "screenshot_projection": 19.62,
+          "clock": "SOON"
+        },
+        {
+          "name": "Saquon Barkley",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 15.054,
+          "screenshot_projection": 15.05,
+          "clock": "SOON"
+        },
+        {
+          "name": "Breece Hall",
+          "position": "RB",
+          "actual": 13.5,
+          "pregame": 14.38,
+          "screenshot_projection": 15.94,
+          "clock": "8:38"
+        },
+        {
+          "name": "CeeDee Lamb",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 13.091,
+          "screenshot_projection": 13.09,
+          "clock": "SOON"
+        },
+        {
+          "name": "George Pickens",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 12.982,
+          "screenshot_projection": 12.98,
+          "clock": "SOON"
+        },
+        {
+          "name": "Dalton Kincaid",
+          "position": "TE",
+          "actual": 4.3,
+          "pregame": 6.815,
+          "screenshot_projection": 6.04,
+          "clock": "9:26"
+        },
+        {
+          "name": "Tetairoa McMillan",
+          "position": "WR",
+          "actual": 1.9,
+          "pregame": 12.562000000000001,
+          "screenshot_projection": 7.71,
+          "clock": "15:00"
+        },
+        {
+          "name": "Trey Smack",
+          "position": "K",
+          "actual": 0.0,
+          "pregame": 7.728000000000001,
+          "screenshot_projection": 7.18,
+          "clock": "SOON"
+        },
+        {
+          "name": "NE",
+          "position": "DEF",
+          "actual": 6.0,
+          "pregame": 6.66,
+          "screenshot_projection": 6.66,
+          "clock": "FINAL"
+        }
+      ]
+    },
+    {
+      "team": "Buttery",
+      "sleeper_projected_total": 90.74,
+      "players": [
+        {
+          "name": "Jalen Hurts",
+          "position": "QB",
+          "actual": 0.0,
+          "pregame": 23.613400000000002,
+          "screenshot_projection": 23.61,
+          "clock": "SOON"
+        },
+        {
+          "name": "David Montgomery",
+          "position": "RB",
+          "actual": 18.5,
+          "pregame": 14.142000000000001,
+          "screenshot_projection": 21.57,
+          "clock": "9:26"
+        },
+        {
+          "name": "Rachaad White",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 7.686,
+          "screenshot_projection": 7.69,
+          "clock": "SOON"
+        },
+        {
+          "name": "A.J. Brown",
+          "position": "WR",
+          "actual": 4.1,
+          "pregame": 14.147,
+          "screenshot_projection": 14.15,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Tee Higgins",
+          "position": "WR",
+          "actual": 5.1,
+          "pregame": 13.732000000000001,
+          "screenshot_projection": 8.46,
+          "clock": "4:34"
+        },
+        {
+          "name": "Mark Andrews",
+          "position": "TE",
+          "actual": 2.2,
+          "pregame": 8.318,
+          "screenshot_projection": 5.7,
+          "clock": "14:14"
+        },
+        {
+          "name": "Christian Watson",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 10.723,
+          "screenshot_projection": 10.72,
+          "clock": "SOON"
+        },
+        {
+          "name": "Will Reichard",
+          "position": "K",
+          "actual": 0.0,
+          "pregame": 7.384000000000001,
+          "screenshot_projection": 6.89,
+          "clock": "SOON"
+        },
+        {
+          "name": "LAR",
+          "position": "DEF",
+          "actual": 2.0,
+          "pregame": 7.1000000000000005,
+          "screenshot_projection": 7.1,
+          "clock": "FINAL"
+        }
+      ]
+    },
+    {
+      "team": "Epstein",
+      "sleeper_projected_total": 82.03,
+      "players": [
+        {
+          "name": "Brock Purdy",
+          "position": "QB",
+          "actual": 27.1,
+          "pregame": 21.244600000000002,
+          "screenshot_projection": 21.24,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Rhamondre Stevenson",
+          "position": "RB",
+          "actual": 12.0,
+          "pregame": 14.966000000000001,
+          "screenshot_projection": 14.97,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Tony Pollard",
+          "position": "RB",
+          "actual": 1.8,
+          "pregame": 10.464,
+          "screenshot_projection": 5.49,
+          "clock": "8:38"
+        },
+        {
+          "name": "Alec Pierce",
+          "position": "WR",
+          "actual": 1.8,
+          "pregame": 7.954000000000001,
+          "screenshot_projection": 5.23,
+          "clock": "14:14"
+        },
+        {
+          "name": "Michael Pittman",
+          "position": "WR",
+          "actual": 2.6,
+          "pregame": 8.286999999999999,
+          "screenshot_projection": 5.54,
+          "clock": "10:54"
+        },
+        {
+          "name": "Michael Mayer",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 6.682,
+          "screenshot_projection": 6.68,
+          "clock": "SOON"
+        },
+        {
+          "name": "Malachi Fields",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 6.499,
+          "screenshot_projection": 6.5,
+          "clock": "SOON"
+        },
+        {
+          "name": "Cairo Santos",
+          "position": "K",
+          "actual": 8.0,
+          "pregame": 7.178000000000001,
+          "screenshot_projection": 10.0,
+          "clock": "HALF"
+        },
+        {
+          "name": "HOU",
+          "position": "DEF",
+          "actual": 1.0,
+          "pregame": 7.11,
+          "screenshot_projection": 3.49,
+          "clock": "9:26"
+        }
+      ]
+    },
+    {
+      "team": "Tenants",
+      "sleeper_projected_total": 103.35,
+      "players": [
+        {
+          "name": "Joe Burrow",
+          "position": "QB",
+          "actual": 14.48,
+          "pregame": 25.1098,
+          "screenshot_projection": 19.73,
+          "clock": "5:18"
+        },
+        {
+          "name": "Jahmyr Gibbs",
+          "position": "RB",
+          "actual": 22.0,
+          "pregame": 19.725,
+          "screenshot_projection": 26.21,
+          "clock": "11:14"
+        },
+        {
+          "name": "Kyren Williams",
+          "position": "RB",
+          "actual": 14.0,
+          "pregame": 13.587,
+          "screenshot_projection": 13.59,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Ladd McConkey",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 10.834000000000001,
+          "screenshot_projection": 10.83,
+          "clock": "SOON"
+        },
+        {
+          "name": "Terry McLaurin",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 9.84,
+          "screenshot_projection": 9.84,
+          "clock": "SOON"
+        },
+        {
+          "name": "Colston Loveland",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 11.21,
+          "screenshot_projection": 5.61,
+          "clock": "HALF"
+        },
+        {
+          "name": "Brian Thomas",
+          "position": "WR",
+          "actual": 5.5,
+          "pregame": 8.792,
+          "screenshot_projection": 7.13,
+          "clock": "4:19"
+        },
+        {
+          "name": "Andy Borregales",
+          "position": "K",
+          "actual": 6.0,
+          "pregame": 6.567,
+          "screenshot_projection": 6.16,
+          "clock": "FINAL"
+        },
+        {
+          "name": "NO",
+          "position": "DEF",
+          "actual": 4.0,
+          "pregame": 3.8000000000000003,
+          "screenshot_projection": 4.0,
+          "clock": "11:14"
+        }
+      ]
+    },
+    {
+      "team": "Second Sanborn",
+      "sleeper_projected_total": 101.14,
+      "players": [
+        {
+          "name": "Patrick Mahomes",
+          "position": "QB",
+          "actual": 0.0,
+          "pregame": 16.8844,
+          "screenshot_projection": 16.88,
+          "clock": "SOON"
+        },
+        {
+          "name": "Bucky Irving",
+          "position": "RB",
+          "actual": 12.9,
+          "pregame": 13.426,
+          "screenshot_projection": 14.55,
+          "clock": "5:18"
+        },
+        {
+          "name": "Jacory Croskey-Merritt",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 8.855,
+          "screenshot_projection": 8.86,
+          "clock": "SOON"
+        },
+        {
+          "name": "Amon-Ra St. Brown",
+          "position": "WR",
+          "actual": 5.2,
+          "pregame": 16.593,
+          "screenshot_projection": 11.18,
+          "clock": "11:14"
+        },
+        {
+          "name": "Justin Jefferson",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 14.245,
+          "screenshot_projection": 14.25,
+          "clock": "SOON"
+        },
+        {
+          "name": "Tucker Kraft",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 8.725,
+          "screenshot_projection": 8.73,
+          "clock": "SOON"
+        },
+        {
+          "name": "Marvin Harrison",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 8.122,
+          "screenshot_projection": 8.12,
+          "clock": "SOON"
+        },
+        {
+          "name": "Chase McLaughlin",
+          "position": "K",
+          "actual": 4.4,
+          "pregame": 6.894,
+          "screenshot_projection": 5.58,
+          "clock": "5:18"
+        },
+        {
+          "name": "SEA",
+          "position": "DEF",
+          "actual": 13.0,
+          "pregame": 8.790000000000001,
+          "screenshot_projection": 8.79,
+          "clock": "FINAL"
+        }
+      ]
+    },
+    {
+      "team": "Back2Back",
+      "sleeper_projected_total": 96.18,
+      "players": [
+        {
+          "name": "Drake Maye",
+          "position": "QB",
+          "actual": 11.82,
+          "pregame": 22.1794,
+          "screenshot_projection": 22.18,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Kenneth Walker",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 12.298,
+          "screenshot_projection": 12.3,
+          "clock": "SOON"
+        },
+        {
+          "name": "Omarion Hampton",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 14.144,
+          "screenshot_projection": 14.14,
+          "clock": "SOON"
+        },
+        {
+          "name": "Jaxon Smith-Njigba",
+          "position": "WR",
+          "actual": 22.2,
+          "pregame": 16.257,
+          "screenshot_projection": 16.26,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Drake London",
+          "position": "WR",
+          "actual": 1.3,
+          "pregame": 11.694,
+          "screenshot_projection": 6.03,
+          "clock": "10:54"
+        },
+        {
+          "name": "Kyle Pitts",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 7.699000000000001,
+          "screenshot_projection": 3.32,
+          "clock": "10:54"
+        },
+        {
+          "name": "Malik Nabers",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 10.668000000000001,
+          "screenshot_projection": 10.67,
+          "clock": "SOON"
+        },
+        {
+          "name": "Jason Myers",
+          "position": "K",
+          "actual": 6.6,
+          "pregame": 7.622,
+          "screenshot_projection": 7.12,
+          "clock": "FINAL"
+        },
+        {
+          "name": "PIT",
+          "position": "DEF",
+          "actual": 9.0,
+          "pregame": 9.22,
+          "screenshot_projection": 9.09,
+          "clock": "10:54"
+        }
+      ]
+    },
+    {
+      "team": "Saco",
+      "sleeper_projected_total": 93.79,
+      "players": [
+        {
+          "name": "Baker Mayfield",
+          "position": "QB",
+          "actual": 3.8,
+          "pregame": 22.0448,
+          "screenshot_projection": 10.57,
+          "clock": "5:46"
+        },
+        {
+          "name": "Christian McCaffrey",
+          "position": "RB",
+          "actual": 11.3,
+          "pregame": 17.113,
+          "screenshot_projection": 17.11,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Derrick Henry",
+          "position": "RB",
+          "actual": 20.7,
+          "pregame": 14.693000000000001,
+          "screenshot_projection": 25.84,
+          "clock": "14:54"
+        },
+        {
+          "name": "Ja'Marr Chase",
+          "position": "WR",
+          "actual": 2.2,
+          "pregame": 16.965,
+          "screenshot_projection": 7.57,
+          "clock": "5:46"
+        },
+        {
+          "name": "Davante Adams",
+          "position": "WR",
+          "actual": 4.1,
+          "pregame": 10.592,
+          "screenshot_projection": 10.59,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Brenton Strange",
+          "position": "TE",
+          "actual": 9.3,
+          "pregame": 6.557,
+          "screenshot_projection": 10.34,
+          "clock": "5:06"
+        },
+        {
+          "name": "Chris Olave",
+          "position": "WR",
+          "actual": 5.5,
+          "pregame": 13.115,
+          "screenshot_projection": 9.88,
+          "clock": "11:14"
+        },
+        {
+          "name": "Brandon Aubrey",
+          "position": "K",
+          "actual": 0.0,
+          "pregame": 7.519,
+          "screenshot_projection": 7.03,
+          "clock": "SOON"
+        },
+        {
+          "name": "DEN",
+          "position": "DEF",
+          "actual": 0.0,
+          "pregame": 7.1499999999999995,
+          "screenshot_projection": 7.15,
+          "clock": "SOON"
+        }
+      ]
+    },
+    {
+      "team": "TJ",
+      "sleeper_projected_total": 114.77,
+      "players": [
+        {
+          "name": "Jaxson Dart",
+          "position": "QB",
+          "actual": 0.0,
+          "pregame": 21.266,
+          "screenshot_projection": 21.27,
+          "clock": "SOON"
+        },
+        {
+          "name": "Javonte Williams",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 16.183,
+          "screenshot_projection": 16.18,
+          "clock": "SOON"
+        },
+        {
+          "name": "Bhayshul Tuten",
+          "position": "RB",
+          "actual": 8.3,
+          "pregame": 9.699,
+          "screenshot_projection": 9.7,
+          "clock": "5:06"
+        },
+        {
+          "name": "Puka Nacua",
+          "position": "WR",
+          "actual": 9.9,
+          "pregame": 17.188,
+          "screenshot_projection": 17.19,
+          "clock": "FINAL"
+        },
+        {
+          "name": "Nico Collins",
+          "position": "WR",
+          "actual": 12.8,
+          "pregame": 13.648000000000001,
+          "screenshot_projection": 15.43,
+          "clock": "10:18"
+        },
+        {
+          "name": "Tyler Warren",
+          "position": "TE",
+          "actual": 1.4,
+          "pregame": 11.073,
+          "screenshot_projection": 6.57,
+          "clock": "14:54"
+        },
+        {
+          "name": "Zay Flowers",
+          "position": "WR",
+          "actual": 23.5,
+          "pregame": 12.788,
+          "screenshot_projection": 29.34,
+          "clock": "14:54"
+        },
+        {
+          "name": "Harrison Mevis",
+          "position": "K",
+          "actual": 1.0,
+          "pregame": 7.720000000000001,
+          "screenshot_projection": 7.21,
+          "clock": "FINAL"
+        },
+        {
+          "name": "CHI",
+          "position": "DEF",
+          "actual": 4.0,
+          "pregame": 6.7700000000000005,
+          "screenshot_projection": 5.38,
+          "clock": "HALF"
+        }
+      ]
+    },
+    {
+      "team": "Gerry",
+      "sleeper_projected_total": 131.64,
+      "players": [
+        {
+          "name": "Lamar Jackson",
+          "position": "QB",
+          "actual": 23.16,
+          "pregame": 21.8412,
+          "screenshot_projection": 28.95,
+          "clock": "15:00"
+        },
+        {
+          "name": "Bijan Robinson",
+          "position": "RB",
+          "actual": 19.5,
+          "pregame": 17.226,
+          "screenshot_projection": 23.19,
+          "clock": "11:06"
+        },
+        {
+          "name": "Jonathan Taylor",
+          "position": "RB",
+          "actual": 15.7,
+          "pregame": 17.117,
+          "screenshot_projection": 20.33,
+          "clock": "15:00"
+        },
+        {
+          "name": "Rashee Rice",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 10.186,
+          "screenshot_projection": 10.19,
+          "clock": "SOON"
+        },
+        {
+          "name": "Garrett Wilson",
+          "position": "WR",
+          "actual": 7.1,
+          "pregame": 12.335,
+          "screenshot_projection": 10.26,
+          "clock": "8:38"
+        },
+        {
+          "name": "Trey McBride",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 11.013000000000002,
+          "screenshot_projection": 11.01,
+          "clock": "SOON"
+        },
+        {
+          "name": "De'Von Achane",
+          "position": "RB",
+          "actual": 0.0,
+          "pregame": 14.816,
+          "screenshot_projection": 14.82,
+          "clock": "SOON"
+        },
+        {
+          "name": "Jake Bates",
+          "position": "K",
+          "actual": 2.0,
+          "pregame": 7.944,
+          "screenshot_projection": 4.76,
+          "clock": "11:14"
+        },
+        {
+          "name": "LAC",
+          "position": "DEF",
+          "actual": 0.0,
+          "pregame": 8.129999999999999,
+          "screenshot_projection": 8.13,
+          "clock": "SOON"
+        }
+      ]
+    },
+    {
+      "team": "Creed",
+      "sleeper_projected_total": 116.84,
+      "players": [
+        {
+          "name": "Josh Allen",
+          "position": "QB",
+          "actual": 27.72,
+          "pregame": 21.486200000000004,
+          "screenshot_projection": 32.73,
+          "clock": "10:31"
+        },
+        {
+          "name": "James Cook",
+          "position": "RB",
+          "actual": 4.7,
+          "pregame": 15.099,
+          "screenshot_projection": 9.97,
+          "clock": "10:31"
+        },
+        {
+          "name": "Chase Brown",
+          "position": "RB",
+          "actual": 12.3,
+          "pregame": 14.957,
+          "screenshot_projection": 14.69,
+          "clock": "5:46"
+        },
+        {
+          "name": "Jaylen Waddle",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 11.741000000000001,
+          "screenshot_projection": 11.74,
+          "clock": "SOON"
+        },
+        {
+          "name": "Courtland Sutton",
+          "position": "WR",
+          "actual": 0.0,
+          "pregame": 8.481,
+          "screenshot_projection": 8.48,
+          "clock": "SOON"
+        },
+        {
+          "name": "Isaiah Likely",
+          "position": "TE",
+          "actual": 0.0,
+          "pregame": 8.41,
+          "screenshot_projection": 8.41,
+          "clock": "SOON"
+        },
+        {
+          "name": "Woody Marks",
+          "position": "RB",
+          "actual": 2.3,
+          "pregame": 8.166,
+          "screenshot_projection": 5.21,
+          "clock": "10:31"
+        },
+        {
+          "name": "Eddy Pineiro",
+          "position": "K",
+          "actual": 10.6,
+          "pregame": 7.016,
+          "screenshot_projection": 6.56,
+          "clock": "FINAL"
+        },
+        {
+          "name": "DET",
+          "position": "DEF",
+          "actual": 15.0,
+          "pregame": 7.3500000000000005,
+          "screenshot_projection": 15.0,
+          "clock": "11:34"
+        }
+      ]
+    }
+  ]
+}

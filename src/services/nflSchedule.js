@@ -147,9 +147,10 @@ export const getGameLiveDetails = async (weekNumber, season) => {
         events.forEach((event) => {
             const competition = event.competitions?.[0];
             if (!competition) return;
-            const status = competition.status?.type?.name || 'STATUS_UNKNOWN';
-            const period = competition.status?.period ?? 0;
-            const displayClock = competition.status?.displayClock || '';
+            const gameStatus = competition.status || event.status;
+            const status = gameStatus?.type?.name || 'STATUS_UNKNOWN';
+            const period = gameStatus?.period ?? 0;
+            const displayClock = gameStatus?.displayClock || '';
             const gameId = event.id || competition.id || null;
             const kickoff = event.date || competition.date || null;
 

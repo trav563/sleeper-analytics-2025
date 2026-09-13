@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getTeamsOnBye } from './nflSchedule';
+import { getTeamsOnBye, getGameLiveDetails } from './nflSchedule';
 
 // Builds an ESPN scoreboard payload in which `teams` are the ones playing.
 const scoreboard = (teams) => ({
@@ -29,6 +29,22 @@ beforeEach(() => {
 afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+});
+
+describe('game context for live projections', () => {
+    it('uses event-level clocks when competition status is absent and keys the requested season/week', async () => {
+        const payload = scoreboard(['WSH', 'PHI']);
+        payload.events[0].status = { type: { name: 'STATUS_END_PERIOD' }, period: 3, displayClock: '0:00' };
+        fetch.mockResolvedValue(ok(payload));
+        const games = await getGameLiveDetails(2, '2025');
+        expect(games.WAS).toMatchObject({ statusName: 'STATUS_END_PERIOD', period: 3, displayClock: '0:00' });
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('week=2&seasontype=2&dates=2025'));
+    });
+
+    it('propagates failed game context so consumers can identify delayed estimates', async () => {
+        fetch.mockResolvedValue({ ok: false });
+        await expect(getGameLiveDetails(1, '2026')).rejects.toThrow('Game context unavailable');
+    });
 });
 
 describe('getTeamsOnBye', () => {

@@ -41,8 +41,14 @@ export function scoreStatLine(stats, scoringSettings) {
  * scored (unexpected payload shape).
  */
 export function projectedPoints(stats, scoringSettings) {
-    if (!stats) return 0;
+    return projectedPointsOrNull(stats, scoringSettings) ?? 0;
+}
+
+/** Preserve the distinction between an explicit zero and a missing projection. */
+export function projectedPointsOrNull(stats, scoringSettings) {
+    if (!stats) return null;
     const exact = scoreStatLine(stats, scoringSettings);
-    if (exact != null) return exact;
-    return stats[ppgField(scoringSettings)] ?? stats.pts_ppr ?? 0;
+    if (Number.isFinite(exact)) return exact;
+    const fallback = stats[ppgField(scoringSettings)] ?? stats.pts_ppr;
+    return Number.isFinite(fallback) ? fallback : null;
 }

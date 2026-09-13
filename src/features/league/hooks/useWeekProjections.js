@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWeekProjections } from '../../../utils/sleeper';
-import { projectedPoints } from '../../../utils/scoring';
+import { projectedPointsOrNull } from '../../../utils/scoring';
 
 /**
  * Weekly projections scored with the league's own scoring settings.
@@ -24,8 +24,8 @@ export function useWeekProjections(season, week, scoringSettings) {
         if (!data) return {};
         const out = {};
         for (const [pid, stats] of Object.entries(data)) {
-            const pts = projectedPoints(stats, scoringSettings);
-            if (stats && Object.keys(stats).length && Number.isFinite(pts)) out[pid] = pts;
+            const pts = projectedPointsOrNull(stats, scoringSettings);
+            if (Number.isFinite(pts)) out[pid] = pts;
         }
         return out;
     }, [data, scoringSettings]);

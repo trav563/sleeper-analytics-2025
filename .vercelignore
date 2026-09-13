@@ -42,3 +42,6 @@ code-review/
 # Tests stay in GitHub and local validation, not serverless route discovery.
 **/*.test.js
 **/*.test.jsx
+
+# Offline screenshot research and regression fixtures.
+research/

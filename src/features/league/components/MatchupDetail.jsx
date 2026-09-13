@@ -2,58 +2,27 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { WinProbabilityBadge } from '../../../components/ui/WinProbabilityBadge';
 import { Pip } from '../../../components/ui/Pip';
 import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
 import { LiveDot } from '../../../components/ui/LiveDot';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
-import { computeWinProbability, formatWinProbabilityPercent } from '../../../lib/winProbability';
+import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
+import { projectMatchup, starterPoints, gamePhase, formatProjection } from '../../../lib/liveProjection';
 import { theme } from '../../../lib/theme';
 
 /* ---------- helpers ---------- */
-const buildPlayerSeasonAvg = (seasonMatchups) => {
-    const totals = {};
-    if (!seasonMatchups) return totals;
-    Object.values(seasonMatchups).forEach((ms) => {
-        if (!Array.isArray(ms)) return;
-        ms.forEach((m) => {
-            Object.entries(m.players_points || {}).forEach(([pid, pts]) => {
-                if (!totals[pid]) totals[pid] = { sum: 0, n: 0 };
-                if (pts > 0) {
-                    totals[pid].sum += pts;
-                    totals[pid].n += 1;
-                }
-            });
-        });
-    });
-    const avg = {};
-    Object.entries(totals).forEach(([pid, t]) => {
-        avg[pid] = t.n > 0 ? t.sum / t.n : 0;
-    });
-    return avg;
-};
-
-const sumProjFromAvg = (starters, avgByPid) => {
-    if (!Array.isArray(starters)) return 0;
-    return starters.reduce((acc, pid) => {
-        if (!pid || pid === '0') return acc;
-        return acc + (avgByPid[pid] || 0);
-    }, 0);
-};
-
 const bucketStarter = (m, idx, players, gameStatuses) => {
-    const pid = m.starters?.[idx];
+    const pid = m?.starters?.[idx];
     if (!pid || pid === '0') return { status: 'EMPTY', live: false };
     const player = players?.[pid];
     if (!player?.team) return { status: 'UNKNOWN', live: false };
     const gameStatus = gameStatuses[player.team];
-    if (gameStatus === 'STATUS_FINAL') return { status: 'DONE', live: false };
-    if (gameStatus === 'STATUS_IN_PROGRESS' || gameStatus === 'STATUS_HALFTIME') {
-        return { status: 'LIVE', live: true };
-    }
-    return { status: 'SOON', live: false };
+    const phase = gamePhase({ statusName: gameStatus });
+    return { status: phase, live: phase === 'LIVE' };
 };
 
 const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'];
@@ -64,7 +33,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
 
-    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
+    const { details: liveDetails, error: gameError } = useGameLiveDetails(week, league?.season);
     const gameStatuses = useMemo(() => {
         const map = {};
         Object.entries(liveDetails || {}).forEach(([abbr, d]) => {
@@ -167,36 +136,18 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
     /* Build position-by-position rows. Computed unconditionally so we don't
        trip rules-of-hooks; the early-return below skips the render. */
-    /* Per-player season-average map (built once) — the fallback when Sleeper
-       has no projection for a player (or before the season starts). */
-    const playerAvg = useMemo(() => buildPlayerSeasonAvg(seasonMatchups), [seasonMatchups]);
-
-    /* Real weekly projections, scored with THIS league's settings. */
-    const { projFor: leagueProjFor, hasProjections } = useWeekProjections(
+    const { projections, hasProjections } = useWeekProjections(
         league?.season, week, league?.scoring_settings
     );
-    /* Prefer a real projection; fall back to the player's season average. */
-    const projFor = useMemo(
-        () => (pid) => leagueProjFor(pid) || playerAvg[pid] || 0,
-        [leagueProjFor, playerAvg]
-    );
-    const projMap = useMemo(() => {
-        // sumProjFromAvg takes a pid->points map; give it the blended values.
-        const out = {};
-        const ids = new Set([
-            ...(myMatchup?.starters || []),
-            ...(oppMatchup?.starters || []),
-        ]);
-        ids.forEach((pid) => { if (pid && pid !== '0') out[pid] = projFor(pid); });
-        return out;
-    }, [projFor, myMatchup, oppMatchup]);
+    const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails }),
+        [myMatchup, players, projections, liveDetails]);
+    const oppProjection = useMemo(() => projectMatchup({ matchup: oppMatchup, players, projections, games: liveDetails }),
+        [oppMatchup, players, projections, liveDetails]);
 
     const positionRows = useMemo(() => {
         if (!myMatchup) return [];
         const myStarters = myMatchup.starters || [];
         const oppStarters = oppMatchup?.starters || [];
-        const myPoints = myMatchup.starters_points || [];
-        const oppPoints = oppMatchup?.starters_points || [];
         const len = Math.max(myStarters.length, oppStarters.length, slotLabels.length);
         const rows = [];
         for (let i = 0; i < len; i++) {
@@ -216,20 +167,20 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                 me: my ? {
                     name: `${my.first_name} ${my.last_name}`,
                     team: my.team,
-                    pts: myPoints[i] || 0,
+                    pts: starterPoints(myMatchup, i) ?? 0,
                     status: myStatus.status,
                     live: myStatus.live,
                     pid: myPid,
-                    proj: projFor(myPid),
+                    proj: myProjection.bySlot[i]?.final,
                 } : null,
                 opp: opp ? {
                     name: `${opp.first_name} ${opp.last_name}`,
                     team: opp.team,
-                    pts: oppPoints[i] || 0,
+                    pts: starterPoints(oppMatchup, i) ?? 0,
                     status: oppStatus.status,
                     live: oppStatus.live,
                     pid: oppPid,
-                    proj: projFor(oppPid),
+                    proj: oppProjection.bySlot[i]?.final,
                 } : null,
             });
         }
@@ -238,125 +189,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             const bi = orderedPositions.indexOf(b.slot);
             return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels, projFor]);
-
-    /* Win-probability checkpoint trajectory. Each checkpoint is one call to
-       computeWinProbability with progressively more "actual" points and less
-       "projected remaining" as starters' NFL games conclude. */
-    const winProbCheckpoints = useMemo(() => {
-        if (!myMatchup) return [];
-
-        const myStarters = (myMatchup.starters || []).filter((p) => p && p !== '0');
-        const oppStarters = (oppMatchup?.starters || []).filter((p) => p && p !== '0');
-        const myPoints = myMatchup.starters_points || [];
-        const oppPoints = oppMatchup?.starters_points || [];
-
-        const myFullProj = sumProjFromAvg(myStarters, projMap);
-        const oppFullProj = sumProjFromAvg(oppStarters, projMap);
-
-        // Pregame checkpoint: predict purely from season averages.
-        const pregameWP = computeWinProbability({
-            myCurrent: 0,
-            oppCurrent: 0,
-            myProjRemaining: myFullProj,
-            oppProjRemaining: oppFullProj,
-        });
-        const checkpoints = [{ label: 'Pregame', myWP: pregameWP }];
-
-        // Map each starter to its NFL game (gameId, kickoff). Group by game so a
-        // game's completion advances both teams' starters in that game at once.
-        const gameMap = new Map(); // gameId -> { kickoff, statusName }
-        const starterRefs = []; // { side, idx, pid, gameId, actualPts }
-        const recordStarter = (side, idx, pid, actualPts) => {
-            const team = players?.[pid]?.team;
-            const live = team ? liveDetails?.[team] : null;
-            const gameId = live?.gameId || `noGame:${pid}`;
-            const kickoff = live?.kickoff || null;
-            const statusName = live?.statusName || null;
-            if (!gameMap.has(gameId)) gameMap.set(gameId, { kickoff, statusName });
-            starterRefs.push({ side, idx, pid, gameId, actualPts });
-        };
-        myStarters.forEach((pid, i) => recordStarter('me', i, pid, myPoints[i] || 0));
-        oppStarters.forEach((pid, i) => recordStarter('opp', i, pid, oppPoints[i] || 0));
-
-        // Order completed games by kickoff so the checkpoint trail walks Thu → MNF.
-        const completedGames = Array.from(gameMap.entries())
-            .filter(([, g]) => g.statusName === 'STATUS_FINAL')
-            .sort((a, b) => {
-                const ta = a[1].kickoff ? Date.parse(a[1].kickoff) : 0;
-                const tb = b[1].kickoff ? Date.parse(b[1].kickoff) : 0;
-                return ta - tb;
-            })
-            .map(([gameId]) => gameId);
-
-        if (completedGames.length === 0) {
-            // No ESPN game-grouping available (true past-season case where ESPN
-            // returns the wrong year's data). Fall back to per-starter
-            // checkpoints using starters_points as proxy for "completed".
-            const allStarters = [
-                ...myStarters.map((pid, i) => ({ side: 'me', pid, pts: myPoints[i] || 0 })),
-                ...oppStarters.map((pid, i) => ({ side: 'opp', pid, pts: oppPoints[i] || 0 })),
-            ];
-            const anyScored = allStarters.some((s) => s.pts > 0);
-            if (!anyScored) return checkpoints; // truly no data — pregame only
-
-            const finishedPids = new Set();
-            allStarters.forEach((s) => {
-                finishedPids.add(s.pid);
-                let myActual = 0;
-                let oppActual = 0;
-                const myRemaining = [];
-                const oppRemaining = [];
-                myStarters.forEach((pid, i) => {
-                    if (finishedPids.has(pid)) myActual += myPoints[i] || 0;
-                    else myRemaining.push(pid);
-                });
-                oppStarters.forEach((pid, i) => {
-                    if (finishedPids.has(pid)) oppActual += oppPoints[i] || 0;
-                    else oppRemaining.push(pid);
-                });
-                const myProjRemaining = sumProjFromAvg(myRemaining, projMap);
-                const oppProjRemaining = sumProjFromAvg(oppRemaining, projMap);
-                const myWP = computeWinProbability({
-                    myCurrent: myActual,
-                    oppCurrent: oppActual,
-                    myProjRemaining,
-                    oppProjRemaining,
-                });
-                checkpoints.push({ label: `+${finishedPids.size}`, myWP });
-            });
-            return checkpoints;
-        }
-
-        const finishedGameIds = new Set();
-        completedGames.forEach((gameId) => {
-            finishedGameIds.add(gameId);
-            let myActual = 0;
-            let oppActual = 0;
-            const myRemaining = [];
-            const oppRemaining = [];
-            starterRefs.forEach((s) => {
-                if (finishedGameIds.has(s.gameId)) {
-                    if (s.side === 'me') myActual += s.actualPts;
-                    else oppActual += s.actualPts;
-                } else {
-                    if (s.side === 'me') myRemaining.push(s.pid);
-                    else oppRemaining.push(s.pid);
-                }
-            });
-            const myProjRemaining = sumProjFromAvg(myRemaining, projMap);
-            const oppProjRemaining = sumProjFromAvg(oppRemaining, projMap);
-            const myWP = computeWinProbability({
-                myCurrent: myActual,
-                oppCurrent: oppActual,
-                myProjRemaining,
-                oppProjRemaining,
-            });
-            checkpoints.push({ label: `+${finishedGameIds.size}`, myWP });
-        });
-
-        return checkpoints;
-    }, [myMatchup, oppMatchup, players, liveDetails, projMap]);
+    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels, myProjection, oppProjection]);
 
     /* No matchup found */
     if (!myMatchup) {
@@ -377,31 +210,23 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const myScore = myMatchup.points || 0;
     const oppScore = oppMatchup?.points || 0;
 
-    /* Projected REMAINING (only for starters whose game isn't STATUS_FINAL). */
-    const projRemaining = (m) => {
-        if (!m) return 0;
-        const remainingStarters = (m.starters || []).filter((pid, idx) => {
-            const b = bucketStarter(m, idx, players, gameStatuses);
-            return b.status !== 'DONE' && b.status !== 'EMPTY';
-        });
-        return sumProjFromAvg(remainingStarters, projMap);
-    };
-    const myProjRem = projRemaining(myMatchup);
-    const oppProjRem = projRemaining(oppMatchup);
-    const winProb = computeWinProbability({
+    const projectionsAvailable = myProjection.available && oppProjection.available;
+    const winProb = projectionsAvailable ? computeWinProbability({
         myCurrent: myScore,
         oppCurrent: oppScore,
-        myProjRemaining: myProjRem,
-        oppProjRemaining: oppProjRem,
-    });
-    const myProjFinal = myScore + myProjRem;
-    const oppProjFinal = oppScore + oppProjRem;
+        myProjRemaining: myProjection.remaining,
+        oppProjRemaining: oppProjection.remaining,
+    }) : null;
+    const myProjFinal = myProjection.final;
+    const oppProjFinal = oppProjection.final;
+    // No historical clock snapshots are available: show only the current estimate.
+    const winProbCheckpoints = winProb == null ? [] : [{ label: 'Current estimate', myWP: winProb }];
     // Before anyone has scored, a live margin is always 0.0 — which reads as
     // broken next to a projection-based win probability. Show the PROJECTED
     // margin until real points exist, and label it as such.
-    const hasScored = myScore > 0 || oppScore > 0;
-    const marginValue = hasScored ? myScore - oppScore : myProjFinal - oppProjFinal;
-    const margin = marginValue.toFixed(1);
+    const hasScored = myScore !== 0 || oppScore !== 0;
+    const marginValue = hasScored ? myScore - oppScore : projectionsAvailable ? myProjFinal - oppProjFinal : null;
+    const margin = marginValue == null ? '—' : marginValue.toFixed(1);
     const marginLabel = hasScored ? 'Margin' : 'Proj margin';
     // Tone from the margin's own sign, not from `winning` — at 0-0 `winning`
     // is false, which rendered a "+0.0" in red.
@@ -504,7 +329,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     `,
                 }}
             >
-                <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 mb-5">
+                    <div className="min-w-0 space-y-2">
                     <div className="flex items-center gap-2">
                         {anyLive ? (
                             <>
@@ -519,12 +345,14 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             </span>
                         )}
                     </div>
-                    <span className="font-mono text-2xs uppercase tracking-wider text-text-dim">
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                         <span className="tnum">{remainingMine}</span> of <span className="tnum">{totalSlots}</span> players remaining
-                    </span>
+                    </div>
+                    </div>
+                    <WinProbabilityBadge probability={winProb} />
                 </div>
 
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-6 items-center">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 md:gap-6 items-center">
                     {/* My side */}
                     <div className="text-center md:text-left flex flex-col items-center md:flex-row md:items-center gap-2 md:gap-5 min-w-0">
                         <button
@@ -539,14 +367,14 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 <Pip seed={myRoster?.roster_id} name={displayTeamName(myUser)} size={48} />
                             )}
                         </button>
-                        <div className="min-w-0">
+                        <div className="min-w-0 w-full md:w-auto">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                                 {myRoster?.settings?.wins ?? 0}-{myRoster?.settings?.losses ?? 0} · You
                             </div>
                             <button
                                 type="button"
                                 onClick={() => myRoster && navigate(`/league/${league?.league_id}/team/${myRoster.roster_id}`)}
-                                className="block font-display text-sm md:text-lg font-bold text-text truncate max-w-[140px] md:max-w-[320px] mx-auto md:mx-0 hover:text-signal transition-colors duration-fast md:text-left"
+                                className="block font-display text-sm md:text-lg font-bold text-text truncate w-full max-w-full md:max-w-[320px] mx-auto md:mx-0 hover:text-signal transition-colors duration-fast md:text-left"
                             >
                                 {displayTeamName(myUser)}
                             </button>
@@ -557,29 +385,12 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 {myScore.toFixed(1)}
                             </div>
                             <div className="font-mono text-2xs text-text-mute mt-1.5">
-                                Proj <span className="tnum">{myProjFinal.toFixed(1)}</span>
+                                Est. final <span className="tnum">{formatProjection(myProjFinal)}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Center pod */}
-                    <div className="flex flex-col items-center gap-2 shrink-0">
-                        <div className="px-2 md:px-3 py-2 rounded-md bg-bg-2 border border-line text-center min-w-[68px] md:min-w-[100px]">
-                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
-                                Win Prob
-                            </div>
-                            <div className="font-display tnum text-2xl font-extrabold text-good">
-                                {formatWinProbabilityPercent(winProb)}
-                            </div>
-                        </div>
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                            {marginLabel} <span className={`tnum font-bold ${
-                                marginTone === 'good' ? 'text-good' : marginTone === 'bad' ? 'text-bad' : 'text-text-mute'
-                            }`}>
-                                {marginValue > 0 ? '+' : ''}{margin}
-                            </span>
-                        </div>
-                    </div>
+                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">VS</div>
 
                     {/* Opp side */}
                     <div className="text-center md:text-right flex flex-col items-center md:flex-row-reverse md:items-center gap-2 md:gap-5 min-w-0">
@@ -595,14 +406,14 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 <Pip seed={oppRoster?.roster_id} name={displayTeamName(oppUser)} size={48} />
                             )}
                         </button>
-                        <div className="min-w-0">
+                        <div className="min-w-0 w-full md:w-auto">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                                 {oppRoster?.settings?.wins ?? 0}-{oppRoster?.settings?.losses ?? 0} · Opp
                             </div>
                             <button
                                 type="button"
                                 onClick={() => oppRoster && navigate(`/league/${league?.league_id}/team/${oppRoster.roster_id}`)}
-                                className="block font-display text-sm md:text-lg font-bold text-text truncate max-w-[140px] md:max-w-[320px] mx-auto md:mx-0 md:ml-auto hover:text-signal transition-colors duration-fast md:text-right"
+                                className="block font-display text-sm md:text-lg font-bold text-text truncate w-full max-w-full md:max-w-[320px] mx-auto md:mx-0 md:ml-auto hover:text-signal transition-colors duration-fast md:text-right"
                             >
                                 {displayTeamName(oppUser)}
                             </button>
@@ -613,18 +424,32 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 {oppScore.toFixed(1)}
                             </div>
                             <div className="font-mono text-2xs text-text-mute mt-1.5">
-                                Proj <span className="tnum">{oppProjFinal.toFixed(1)}</span>
+                                Est. final <span className="tnum">{formatProjection(oppProjFinal)}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                        <div className="font-mono text-2xs uppercase tracking-wider text-text-dim text-center mt-4">
+                            {marginLabel} <span className={`tnum font-bold ${
+                                marginTone === 'good' ? 'text-good' : marginTone === 'bad' ? 'text-bad' : 'text-text-mute'
+                            }`}>
+                                {marginValue > 0 ? '+' : ''}{margin}
+                            </span>
+                        </div>
+
+                {!projectionsAvailable && (
+                    <p className="text-xs text-text-mute mt-3">Estimate unavailable — waiting for projections or regulation game clocks.</p>
+                )}
+                {gameError && projectionsAvailable && (
+                    <p className="text-xs text-text-mute mt-3">Game clock update delayed; estimates use the last available clock.</p>
+                )}
                 {/* Win-prob bar */}
                 <div className="mt-5 h-1.5 rounded-full overflow-hidden bg-bg-3">
                     <div
                         className="h-full"
                         style={{
-                            width: `${Math.round(winProb * 100)}%`,
+                            width: `${Math.round((winProb ?? 0) * 100)}%`,
                             background: `linear-gradient(90deg, var(--signal), var(--good))`,
                         }}
                     />
@@ -678,27 +503,23 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         <SectionShell title="Totals">
                             <div className="grid grid-cols-3 gap-3 text-center">
                                 <Stat label="Current" value={`${myScore.toFixed(1)} – ${oppScore.toFixed(1)}`} />
-                                <Stat label="Projected" value={`${myProjFinal.toFixed(1)} – ${oppProjFinal.toFixed(1)}`} />
+                                <Stat label="Est. final" value={`${formatProjection(myProjFinal)} – ${formatProjection(oppProjFinal)}`} />
                                 <Stat label={marginLabel} value={(marginValue > 0 ? '+' : '') + margin} tone={marginTone} />
                             </div>
                         </SectionShell>
 
                         <SectionShell
                             title="Win Probability"
-                            sub={anyLive
-                                ? `Live · ${winProbCheckpoints.length} checkpoints`
-                                : winProbCheckpoints.length <= 1
-                                    ? (hasProjections ? 'Pregame · league-scored projections' : 'Pregame · season averages')
-                                    : `${winProbCheckpoints.length} checkpoints`}
+                            sub={hasProjections ? 'Current estimate' : 'Projection data unavailable'}
                         >
-                            <WinProbCurve
+                            {winProb != null ? <WinProbCurve
                                 checkpoints={winProbCheckpoints}
                                 winProb={winProb}
                                 myName={displayTeamName(myUser)}
                                 oppName={displayTeamName(oppUser)}
                                 myHue={myHue}
                                 oppHue={oppHue}
-                            />
+                            /> : <p className="text-sm text-text-mute">Waiting for complete projection and game data.</p>}
                         </SectionShell>
                     </aside>
                 </div>
@@ -713,11 +534,11 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
                                     <th scope="col" className="px-2 py-2">Slot</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
-                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Est. final</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                     <th scope="col" className="px-2 py-2">vs</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
-                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Est. final</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                 </tr>
                             </thead>
@@ -727,7 +548,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                         <td className="px-2 py-2 font-mono text-2xs uppercase tracking-wider text-signal">{row.slot}</td>
                                         <td className="px-2 py-2 text-text truncate">{row.me?.name || '—'}</td>
                                         <td className="px-2 py-2 text-right tnum text-text-mute">
-                                            {row.me?.proj ? row.me.proj.toFixed(1) : '—'}
+                                            {formatProjection(row.me?.proj)}
                                         </td>
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.me?.pts || 0) > (row.opp?.pts || 0) ? 'text-good' : 'text-text'}`}>
                                             {(row.me?.pts || 0).toFixed(1)}
@@ -735,7 +556,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                         <td className="px-2 py-2 font-mono text-2xs uppercase text-text-mute">vs</td>
                                         <td className="px-2 py-2 text-text truncate">{row.opp?.name || '—'}</td>
                                         <td className="px-2 py-2 text-right tnum text-text-mute">
-                                            {row.opp?.proj ? row.opp.proj.toFixed(1) : '—'}
+                                            {formatProjection(row.opp?.proj)}
                                         </td>
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.opp?.pts || 0) > (row.me?.pts || 0) ? 'text-good' : 'text-text'}`}>
                                             {(row.opp?.pts || 0).toFixed(1)}
@@ -829,9 +650,9 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
             <div className={`tnum text-lg font-extrabold tracking-tight mt-0.5 ${winning ? 'text-good' : 'text-text'}`}>
                 {(player.pts || 0).toFixed(1)}
             </div>
-            {player.proj > 0 && (
+            {Number.isFinite(player.proj) && (
                 <div className="font-mono text-2xs tnum text-text-mute">
-                    Proj <span className="text-text-dim">{player.proj.toFixed(1)}</span>
+                    Est. final <span className="text-text-dim">{formatProjection(player.proj)}</span>
                 </div>
             )}
             </div>

@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { WinProbabilityBadge } from '../../../components/ui/WinProbabilityBadge';
 import { Pip } from '../../../components/ui/Pip';
 import { LiveDot } from '../../../components/ui/LiveDot';
-import { computeWinProbability, formatWinProbabilityPercent } from '../../../lib/winProbability';
+import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
+import { projectMatchup, gamePhase, formatProjection } from '../../../lib/liveProjection';
 import { useWeekProjections } from '../../league/hooks/useWeekProjections';
 
 const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
@@ -12,9 +14,9 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
 /**
  * Hero matchup card for the dashboard. Mirrors the design's
  * dir-a.jsx MyMatchupHero composition (large pip, full team name,
- * 72px score with glow, PROJ · CEILING sub, win-prob bar at bottom).
+ * 72px score with glow, live estimated final score, win-prob bar at bottom).
  */
-    const TeamSide = ({ league, navigate, user, roster, score, projFinal, ceilFinal, isWinning, mirror = false }) => {
+    const TeamSide = ({ league, navigate, user, roster, score, projFinal, isWinning, mirror = false }) => {
         const recordLabel = roster
             ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
             : (mirror ? 'Opp' : 'You');
@@ -42,14 +44,14 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
                         <Pip seed={roster?.roster_id} name={displayTeamName(user)} size={48} />
                     )}
                 </button>
-                <div className="min-w-0">
+                <div className="min-w-0 w-full md:w-auto">
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-dim font-bold">
                         {recordLabel}
                     </div>
                     <button
                         type="button"
                         onClick={goTeam}
-                        className={`block font-display text-sm md:text-xl font-bold tracking-snug text-text truncate max-w-[140px] md:max-w-[280px] mx-auto hover:text-signal transition-colors duration-fast ${mirror ? 'md:ml-auto md:mx-0 md:text-right' : 'md:mx-0 md:text-left'}`}
+                        className={`block font-display text-sm md:text-xl font-bold tracking-snug text-text truncate w-full max-w-full md:max-w-[280px] mx-auto hover:text-signal transition-colors duration-fast ${mirror ? 'md:ml-auto md:mx-0 md:text-right' : 'md:mx-0 md:text-left'}`}
                     >
                         {displayTeamName(user)}
                     </button>
@@ -60,10 +62,7 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
                         {score.toFixed(1)}
                     </div>
                     <div className="font-mono text-2xs text-text-dim mt-1">
-                        Proj <span className="tnum text-text-dim">{projFinal.toFixed(1)}</span>
-                        {ceilFinal > projFinal && (
-                            <> · Ceiling <span className="tnum text-text-dim">{ceilFinal.toFixed(1)}</span></>
-                        )}
+                        Est. final <span className="tnum text-text-dim">{formatProjection(projFinal)}</span>
                     </div>
                 </div>
             </div>
@@ -71,11 +70,11 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
     };
 
 
-const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, seasonMatchups, selectedUserId }) => {
+const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, selectedUserId }) => {
     /* Real weekly projections scored with this league's settings. */
-    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
+    const { projections } = useWeekProjections(league?.season, week, league?.scoring_settings);
     const navigate = useNavigate();
-    const { details: liveDetails } = useGameLiveDetails(week, league?.season);
+    const { details: liveDetails, error: gameError } = useGameLiveDetails(week, league?.season);
 
     const { myRoster, myMatchup, oppRoster, oppMatchup, myUser, oppUser } = useMemo(() => {
         if (!Array.isArray(viewMatchups) || !rosters) return {};
@@ -100,26 +99,6 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     const myHue = ROSTER_HUE(myRoster?.roster_id);
     const oppHue = ROSTER_HUE(oppRoster?.roster_id) || 180;
 
-    /* Per-player season aggregates: avg + max single-week score (for CEILING). */
-    const playerStats = useMemo(() => {
-        const out = {};
-        if (!seasonMatchups) return out;
-        Object.values(seasonMatchups).forEach((ms) => {
-            if (!Array.isArray(ms)) return;
-            ms.forEach((m) => {
-                Object.entries(m.players_points || {}).forEach(([pid, pts]) => {
-                    if (!out[pid]) out[pid] = { sum: 0, n: 0, max: 0 };
-                    if (pts > 0) {
-                        out[pid].sum += pts;
-                        out[pid].n += 1;
-                        if (pts > out[pid].max) out[pid].max = pts;
-                    }
-                });
-            });
-        });
-        return out;
-    }, [seasonMatchups]);
-
     if (!myMatchup) {
         return (
             <section
@@ -138,49 +117,28 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
     const oppScore = oppMatchup?.points || 0;
     const winning = myScore > oppScore;
 
-    /* Projected REMAINING + CEILING REMAINING per side. */
-    const computeProj = (m) => {
-        if (!m) return { proj: 0, ceiling: 0 };
-        let proj = 0;
-        let ceiling = 0;
-        (m.starters || []).forEach((pid) => {
-            if (!pid || pid === '0') return;
-            const team = players?.[pid]?.team;
-            const status = team ? liveDetails?.[team]?.statusName : null;
-            const isDone = status === 'STATUS_FINAL';
-            if (isDone) return;
-            const stats = playerStats[pid];
-            const seasonAvg = stats && stats.n > 0 ? stats.sum / stats.n : 0;
-            // Prefer Sleeper's weekly projection (league-scored); fall back to
-            // the player's season average when there isn't one.
-            proj += projFor(pid) || seasonAvg;
-            ceiling += stats?.max || projFor(pid) || 0;
-        });
-        return { proj, ceiling };
-    };
-    const myProj = computeProj(myMatchup);
-    const oppProj = computeProj(oppMatchup);
-    const myProjFinal = myScore + myProj.proj;
-    const oppProjFinal = oppScore + oppProj.proj;
-    const myCeilFinal = myScore + myProj.ceiling;
-    const oppCeilFinal = oppScore + oppProj.ceiling;
-    const winProb = computeWinProbability({
+    const myProj = projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails });
+    const oppProj = projectMatchup({ matchup: oppMatchup, players, projections, games: liveDetails });
+    const myProjFinal = myProj.final;
+    const oppProjFinal = oppProj.final;
+    const projectionsAvailable = myProj.available && oppProj.available;
+    const winProb = projectionsAvailable ? computeWinProbability({
         myCurrent: myScore,
         oppCurrent: oppScore,
-        myProjRemaining: myProj.proj,
-        oppProjRemaining: oppProj.proj,
-    });
+        myProjRemaining: myProj.remaining,
+        oppProjRemaining: oppProj.remaining,
+    }) : null;
 
     /* Live eyebrow. */
     const anyLive = (myMatchup.starters || []).some((pid) => {
         const team = players?.[pid]?.team;
         const status = team ? liveDetails?.[team]?.statusName : null;
-        return status === 'STATUS_IN_PROGRESS' || status === 'STATUS_HALFTIME';
+        return gamePhase({ statusName: status }) === 'LIVE';
     });
     const remainingMine = (myMatchup.starters || []).filter((pid) => {
         const team = players?.[pid]?.team;
         const status = team ? liveDetails?.[team]?.statusName : null;
-        return status !== 'STATUS_FINAL' && status !== null;
+        return ['SOON', 'LIVE'].includes(gamePhase({ statusName: status }));
     }).length;
     /* Pull the most-active starter's clock for the eyebrow Q+time (best heuristic). */
     const liveTime = (myMatchup.starters || []).reduce((acc, pid) => {
@@ -211,7 +169,8 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
             }}
         >
             {/* Eyebrow */}
-            <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 mb-5">
+                <div className="min-w-0 space-y-2">
                 <div className="flex items-center gap-2">
                     {anyLive ? (
                         <>
@@ -226,20 +185,21 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                         </span>
                     )}
                 </div>
-                <span className="font-mono text-2xs uppercase tracking-wider text-text-dim">
+                <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
                     {liveTime && <><span className="text-text-dim tnum">{liveTime}</span> · </>}
                     <span className="tnum">{remainingMine}</span> players left
-                </span>
+                </div>
+                </div>
+                <WinProbabilityBadge probability={winProb} />
             </div>
 
             {/* Teams + center pod */}
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 md:gap-6 items-center">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 md:gap-6 items-center">
                 <TeamSide league={league} navigate={navigate}
                     user={myUser}
                     roster={myRoster}
                     score={myScore}
                     projFinal={myProjFinal}
-                    ceilFinal={myCeilFinal}
                     isWinning={winning && myScore > 0}
                 />
 
@@ -247,14 +207,7 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">
                         VS
                     </div>
-                    <div className="px-2 md:px-3 py-1.5 rounded-md bg-bg-3 border border-line text-center min-w-[68px] md:min-w-[88px]">
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
-                            Win Prob
-                        </div>
-                        <div className="font-display tnum text-xl font-extrabold text-good leading-none mt-0.5">
-                            {formatWinProbabilityPercent(winProb)}
-                        </div>
-                    </div>
+
                 </div>
 
                 <TeamSide league={league} navigate={navigate}
@@ -262,18 +215,23 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
                     roster={oppRoster}
                     score={oppScore}
                     projFinal={oppProjFinal}
-                    ceilFinal={oppCeilFinal}
                     isWinning={!winning && oppScore > 0}
                     mirror
                 />
             </div>
 
-            {/* Win-prob bar */}
+            {!projectionsAvailable && (
+                <p className="text-xs text-text-mute mt-3">Estimate unavailable — waiting for projections or regulation game clocks.</p>
+            )}
+            {gameError && projectionsAvailable && (
+                    <p className="text-xs text-text-mute mt-3">Game clock update delayed; estimates use the last available clock.</p>
+                )}
+                {/* Win-prob bar */}
             <div className="mt-5 h-1.5 rounded-full overflow-hidden bg-bg-3">
                 <div
                     className="h-full transition-[width] duration-base"
                     style={{
-                        width: `${Math.round(winProb * 100)}%`,
+                        width: `${Math.round((winProb ?? 0) * 100)}%`,
                         background: 'linear-gradient(90deg, var(--signal), var(--good))',
                     }}
                 />
