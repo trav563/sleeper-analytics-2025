@@ -78,7 +78,7 @@ function renderMarkdown(text) {
 const CoachCard = ({ icon: Icon, title, description, leagueId, userId, week, analysisType, cooldownMs, constraints = [] }) => {
     const { analysis, loading, error, incomplete, valuation, cachedAt, cooldownMinutes, activeConstraint, analyze, cancel } = useAnalyzeTeam({ leagueId, userId, week, analysisType, cooldownMs });
     const activeTitle = activeConstraint === 'trade-up' ? 'Trade-up Ideas' : activeConstraint === 'sell-high' ? 'Sell-high Candidates' : title;
-    const activeDescription = activeConstraint === 'trade-up' ? 'AI · Screened consolidation packages' : activeConstraint === 'sell-high' ? 'AI · Market-value opportunities' : description;
+    const activeDescription = activeConstraint === 'trade-up' ? 'Screened consolidation packages' : activeConstraint === 'sell-high' ? 'Screened market-value opportunities' : description;
     const modes = [{ value: null, label: analysisType === 'roster' ? 'Roster grades' : 'Overview' }, ...constraints];
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card p-4 flex flex-col min-w-0">

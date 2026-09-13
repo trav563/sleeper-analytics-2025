@@ -70,6 +70,15 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe('provider completion propagation', () => {
     const req = () => ({ method: 'POST', body: { leagueId: '1', userId: '2', week: 1, analysisType: 'roster' } });
+    it.each(['trade-up', 'sell-high'])('renders %s from screening without allowing provider-invented offers', async constraint => {
+        streamText.mockReturnValue(model());
+        const request = req(); request.body.constraint = constraint;
+        const res = sink(); await handler(request, res);
+        expect(streamText).not.toHaveBeenCalled();
+        expect(res.events).toContain('verified-screening');
+        expect(res.events).toContain('withheld');
+        expect(res.events).toContain('"status":"complete"');
+    });
     it.each(['stop','length','content-filter'])('propagates %s accurately', async reason => {
         streamText.mockReturnValue(model(reason)); const res = sink(); await handler(req(),res);
         expect(res.events).toContain(`"finishReason":"${reason}"`);
