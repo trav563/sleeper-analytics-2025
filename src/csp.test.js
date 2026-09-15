@@ -39,6 +39,8 @@ describe('Content-Security-Policy', () => {
             'https://api.sleeper.app',
             'https://raw.githubusercontent.com',
             'https://site.api.espn.com',
+            // Share-image export (html-to-image) fetches headshots to inline them.
+            'https://sleepercdn.com',
         ]);
     });
 
