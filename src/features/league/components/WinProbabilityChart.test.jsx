@@ -32,11 +32,26 @@ describe('recorded probability chart', () => {
         add(0, .5); add(60_000, .6); add(180_000, .8); render();
         expect(container.querySelector('path').getAttribute('d')).toContain('L110.666');
         add(600_000, .9);
-        expect(container.querySelectorAll('path')).toHaveLength(2); // Last point is isolated, not connected across seven minutes.
+        expect(container.querySelectorAll('path')).toHaveLength(2); // Seven-minute gap is not a solid recorded line...
+        expect(container.querySelectorAll('line[data-gap]')).toHaveLength(2); // ...but a dashed connector per team.
+    });
+    it('shows recorded probabilities for the nearest observation on hover or tap', () => {
+        add(0, .5); add(60_000, .6); add(120_000, .8); render();
+        const svg = container.querySelector('svg');
+        svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 125 });
+        act(() => svg.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 150 })));
+        const tip = container.querySelector('[role="status"]');
+        expect(tip.textContent).toContain('Team A60%');
+        expect(tip.textContent).toContain('Team B40%');
+        act(() => svg.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 300 })));
+        expect(container.querySelector('[role="status"]').textContent).toContain('Team A80%');
     });
     it('changes perspective without mixing team or week histories', () => {
         add(0, .8); render({ winProb: null, myRosterId: 2, oppRosterId: 1 });
-        expect(container.querySelector('circle title').textContent).toContain('20%');
+        const svg = container.querySelector('svg');
+        svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 125 });
+        act(() => svg.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 160 })));
+        expect(container.querySelector('[role="status"]').textContent).toContain('Team A20%');
         render({ week: 2 });
         expect(container.querySelectorAll('circle')).toHaveLength(0);
         render(); expect(container.querySelectorAll('circle')).toHaveLength(2);

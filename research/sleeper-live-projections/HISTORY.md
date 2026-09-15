@@ -6,7 +6,7 @@ Each observation contains an observation timestamp and probability. League, seas
 
 Observations are retained locally, not written to an application server. All matchups from one update are persisted with one localStorage write. Writes and reads are bounded to 32 recent matchup histories, each with at most 1,440 observations; histories expire after 45 days when next accessed. Blocked/quota-exhausted storage falls back to session memory. No new dependencies, databases, scheduled jobs or paid services are required.
 
-The chart uses elapsed time on its horizontal axis, splits gaps longer than 150 seconds, and displays when the retained history begins. Data from before recording started is not invented. Browser navigation and reloads preserve available local history; another browser or device starts independently. Completed matchups stop adding duplicate final probabilities, but changed final results can still be recorded.
+The chart uses elapsed time on its horizontal axis, draws gaps longer than 150 seconds as faint dashed connectors rather than solid recorded lines, shows the recorded probabilities for the nearest observation on hover or tap, and displays when the retained history begins. Data from before recording started is not invented. Browser navigation and reloads preserve available local history; another browser or device starts independently. Completed matchups stop adding duplicate final probabilities, but changed final results can still be recorded.
 
 ## Load and rate-limit safeguards
 
