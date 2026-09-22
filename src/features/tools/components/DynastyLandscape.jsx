@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { leagueRecords } from '../../../utils/leagueRecords';
 import { useSeasonMatchups } from '../../analytics/hooks/useSeasonMatchups';
 import { completedProduction } from '../../../utils/completedStandings';
 import { assignLineup } from '../../../utils/lineupAssignment';
@@ -7,7 +9,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { activeRosterIds } from '../../../utils/leagueMath';
 import { Switch } from '../../../components/ui/Switch';
-import { fetchLeagueRosters } from '../../../utils/sleeper';
+import { fetchLeague, fetchLeagueRosters } from '../../../utils/sleeper';
 import { Globe } from 'lucide-react';
 import { theme } from '../../../lib/theme';
 import { useSleeper } from '../../../context/SleeperContext';
@@ -18,9 +20,11 @@ const SKILL_POS = new Set(['QB', 'RB', 'WR', 'TE']);
 const MIN_GAMES = 4;
 const MIN_SKILL_SAMPLE = 6;
 
-function computeSeasonStats(seasonRoster, players, yearsAgo) {
+function computeSeasonStats(seasonRoster, players, yearsAgo, settings) {
     const s = seasonRoster?.settings || {};
-    const games = (s.wins || 0) + (s.losses || 0) + (s.ties || 0);
+    // Historical trail requires a provider-confirmed scoring boundary, not W/L totals.
+    if (!Number.isFinite(settings?.last_scored_leg)) return null;
+    const games = Math.max(0, Math.min(settings.last_scored_leg, (settings.playoff_week_start || 19) - 1) - (settings.start_week || 1) + 1);
     if (games < MIN_GAMES) return null;
 
     const fpts = (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
@@ -49,6 +53,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state, currentWeek 
     const { leagueChains, user } = useSleeper();
     const [useMaxPf, setUseMaxPf] = useToolState(`DynastyLandscape-useMaxPf:${league?.league_id}`, false);
     const [prevSeasonRosters, setPrevSeasonRosters] = useState(null);
+    const { data: previousLeague } = useQuery({ queryKey: ['league', league?.previous_league_id], queryFn: () => fetchLeague(league.previous_league_id), enabled: completedWeek === 0 && !!league?.previous_league_id, staleTime: 3600000 });
+    const { seasonMatchups: previousWeeks } = useSeasonMatchups(completedWeek === 0 ? previousLeague?.league_id : null, (previousLeague?.settings?.playoff_week_start || 19) - 1);
+    const priorRecords = useMemo(() => leagueRecords(prevSeasonRosters?.data || [], previousWeeks, previousLeague), [prevSeasonRosters, previousWeeks, previousLeague]);
     const hasCurrentSeasonData = completedWeek > 0;
     const usingPrevSeason = !hasCurrentSeasonData && !!prevSeasonRosters && prevSeasonRosters.leagueId === league?.previous_league_id;
 
@@ -102,7 +109,7 @@ const DynastyLandscape = ({ rosters, users, players, league, state, currentWeek 
                 const ownerId = seasonRoster?.owner_id;
                 if (!ownerId) return;
 
-                const stats = computeSeasonStats(seasonRoster, players, yearsAgo);
+                const stats = computeSeasonStats(seasonRoster, players, yearsAgo, entry.settings);
                 if (!stats) return;
 
                 // Trail always plots per-game so seasons of different lengths
@@ -148,8 +155,9 @@ const DynastyLandscape = ({ rosters, users, players, league, state, currentWeek 
 
             let gamesPlayed;
             if (usingPrevSeason) {
-                const totalRecord = (ppgRoster.settings?.wins || 0) + (ppgRoster.settings?.losses || 0) + (ppgRoster.settings?.ties || 0);
-                gamesPlayed = Math.max(1, totalRecord > 18 ? totalRecord / 2 : totalRecord);
+                const prior = priorRecords.find(t => t.rosterId === ppgRoster.roster_id);
+                if (!prior?.complete || !prior.weeksPlayed) return null;
+                gamesPlayed = prior.weeksPlayed;
             } else {
                 gamesPlayed = finalProduction.find(t => t.rosterId === roster.roster_id)?.gamesPlayed || 0;
             }
@@ -182,8 +190,8 @@ const DynastyLandscape = ({ rosters, users, players, league, state, currentWeek 
             };
         });
 
-        return teams.filter(t => t.age > 0);
-    }, [rosters, users, players, league, seasonMatchups, useMaxPf, usingPrevSeason, effectiveRosters]);
+        return teams.filter(t => t && t.age > 0);
+    }, [rosters, users, players, league, seasonMatchups, useMaxPf, usingPrevSeason, effectiveRosters, priorRecords]);
 
     const averages = useMemo(() => {
         if (data.length === 0) return { age: 0, production: 0 };

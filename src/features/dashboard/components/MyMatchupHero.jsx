@@ -1,3 +1,4 @@
+import { leagueRecords } from '../../../utils/leagueRecords';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
@@ -6,7 +7,7 @@ import { Pip } from '../../../components/ui/Pip';
 import { LiveDot } from '../../../components/ui/LiveDot';
 import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
-import { projectMatchup, gamePhase, formatProjection } from '../../../lib/liveProjection';
+import { projectMatchup, gamePhase, formatProjection, estimateUnavailableMessage } from '../../../lib/liveProjection';
 import { useWeekProjections } from '../../league/hooks/useWeekProjections';
 
 const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
@@ -16,9 +17,9 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
  * dir-a.jsx MyMatchupHero composition (large pip, full team name,
  * 72px score with glow, live estimated final score, win-prob bar at bottom).
  */
-    const TeamSide = ({ league, navigate, user, roster, score, projFinal, isWinning, mirror = false }) => {
+    const TeamSide = ({ league, navigate, user, roster, score, projFinal, isFinal, record, isWinning, mirror = false }) => {
         const recordLabel = roster
-            ? `${roster.settings?.wins ?? 0}-${roster.settings?.losses ?? 0} · ${mirror ? 'Opp' : 'You'}`
+            ? `${record?.complete ? record.record : '—'} · ${mirror ? 'Opp' : 'You'} · through W${record?.throughWeek ?? 0}`
             : (mirror ? 'Opp' : 'You');
         const goTeam = (e) => {
             e.stopPropagation();
@@ -62,7 +63,7 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
                         {score.toFixed(1)}
                     </div>
                     <div className="font-mono text-2xs text-text-dim mt-1">
-                        Est. final <span className="tnum text-text-dim">{formatProjection(projFinal)}</span>
+                        {isFinal ? 'Final' : 'Est. final'} <span className="tnum text-text-dim">{formatProjection(projFinal)}</span>
                     </div>
                 </div>
             </div>
@@ -70,9 +71,10 @@ const ROSTER_HUE = (rosterId) => (Number(rosterId || 0) * 47) % 360;
     };
 
 
-const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, selectedUserId }) => {
+const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, selectedUserId, seasonMatchups }) => {
+    const records = leagueRecords(rosters, seasonMatchups, league);
     /* Real weekly projections scored with this league's settings. */
-    const { projections } = useWeekProjections(league?.season, week, league?.scoring_settings);
+    const { projections, error: projectionError, loading: projectionsLoading } = useWeekProjections(league?.season, week, league?.scoring_settings);
     const navigate = useNavigate();
     const { details: liveDetails, error: gameError } = useGameLiveDetails(week, league?.season);
 
@@ -195,11 +197,11 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
 
             {/* Teams + center pod */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 md:gap-6 items-center">
-                <TeamSide league={league} navigate={navigate}
+                <TeamSide record={records.find(r => r.rosterId === myRoster?.roster_id)} league={league} navigate={navigate}
                     user={myUser}
                     roster={myRoster}
                     score={myScore}
-                    projFinal={myProjFinal}
+                    projFinal={myProjFinal} isFinal={myProj.isFinal}
                     isWinning={winning && myScore > 0}
                 />
 
@@ -210,18 +212,18 @@ const MyMatchupHero = ({ league, week, viewMatchups, rosters, users, players, se
 
                 </div>
 
-                <TeamSide league={league} navigate={navigate}
+                <TeamSide record={records.find(r => r.rosterId === oppRoster?.roster_id)} league={league} navigate={navigate}
                     user={oppUser}
                     roster={oppRoster}
                     score={oppScore}
-                    projFinal={oppProjFinal}
+                    projFinal={oppProjFinal} isFinal={oppProj.isFinal}
                     isWinning={!winning && oppScore > 0}
                     mirror
                 />
             </div>
 
             {!projectionsAvailable && (
-                <p className="text-xs text-text-mute mt-3">Estimate unavailable — waiting for projections or regulation game clocks.</p>
+                <p className="text-xs text-text-mute mt-3">{estimateUnavailableMessage([myProj, oppProj], projectionError, projectionsLoading)}</p>
             )}
             {gameError && projectionsAvailable && (
                     <p className="text-xs text-text-mute mt-3">Game clock update delayed; estimates use the last available clock.</p>

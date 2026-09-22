@@ -55,7 +55,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
     const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(
         league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters
     );
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     /* Pick the four cells. */
     const cells = useMemo(() => {
@@ -91,7 +91,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                 valueTone: oddsStatus === 'Clinched' ? 'good' : oddsStatus === 'Eliminated' ? 'bad' : 'text',
             },
             {
-                label: 'Streak',
+                label: 'H2H Streak',
                 value: streak ? `${streak.kind}${streak.count}` : '—',
                 sub: streak ? `${streak.count} game${streak.count !== 1 ? 's' : ''}` : '—',
                 subTone: streak?.kind === 'W' ? 'good' : streak?.kind === 'L' ? 'bad' : 'mute',

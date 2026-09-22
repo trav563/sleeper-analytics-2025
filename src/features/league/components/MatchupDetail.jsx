@@ -1,3 +1,4 @@
+import { leagueRecords } from '../../../utils/leagueRecords';
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -11,7 +12,7 @@ import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
-import { projectMatchup, starterPoints, gamePhase, formatProjection } from '../../../lib/liveProjection';
+import { projectMatchup, starterPoints, gamePhase, formatProjection, estimateUnavailableMessage } from '../../../lib/liveProjection';
 import { WinProbabilityChart } from './WinProbabilityChart';
 
 /* ---------- helpers ---------- */
@@ -30,6 +31,8 @@ const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DE
 /* ---------- main component ---------- */
 const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, isHistoricalSeason, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
     const navigate = useNavigate();
+    const records = leagueRecords(rosters, seasonMatchups, league);
+    const recordLabel = id => { const r = records.find(t => t.rosterId === id); return `${r?.complete ? r.record : '—'} · through W${r?.throughWeek ?? 0}`; };
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
 
@@ -136,7 +139,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
 
     /* Build position-by-position rows. Computed unconditionally so we don't
        trip rules-of-hooks; the early-return below skips the render. */
-    const { projections } = useWeekProjections(
+    const { projections, error: projectionError, loading: projectionsLoading } = useWeekProjections(
         league?.season, week, league?.scoring_settings
     );
     const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails }),
@@ -171,7 +174,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     status: myStatus.status,
                     live: myStatus.live,
                     pid: myPid,
-                    proj: myProjection.bySlot[i]?.final,
+                    proj: projections[myPid],
                 } : null,
                 opp: opp ? {
                     name: `${opp.first_name} ${opp.last_name}`,
@@ -180,7 +183,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     status: oppStatus.status,
                     live: oppStatus.live,
                     pid: oppPid,
-                    proj: oppProjection.bySlot[i]?.final,
+                    proj: projections[oppPid],
                 } : null,
             });
         }
@@ -189,7 +192,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             const bi = orderedPositions.indexOf(b.slot);
             return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels, myProjection, oppProjection]);
+    }, [myMatchup, oppMatchup, players, gameStatuses, slotLabels, projections]);
 
     /* No matchup found */
     if (!myMatchup) {
@@ -367,7 +370,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         </button>
                         <div className="min-w-0 w-full md:w-auto">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                                {myRoster?.settings?.wins ?? 0}-{myRoster?.settings?.losses ?? 0} · You
+                                {recordLabel(myRoster?.roster_id)} · You
                             </div>
                             <button
                                 type="button"
@@ -383,7 +386,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 {myScore.toFixed(1)}
                             </div>
                             <div className="font-mono text-2xs text-text-mute mt-1.5">
-                                Est. final <span className="tnum">{formatProjection(myProjFinal)}</span>
+                                {myProjection.isFinal ? 'Final' : 'Est. final'} <span className="tnum">{formatProjection(myProjFinal)}</span>
                             </div>
                         </div>
                     </div>
@@ -406,7 +409,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         </button>
                         <div className="min-w-0 w-full md:w-auto">
                             <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                                {oppRoster?.settings?.wins ?? 0}-{oppRoster?.settings?.losses ?? 0} · Opp
+                                {recordLabel(oppRoster?.roster_id)} · Opp
                             </div>
                             <button
                                 type="button"
@@ -422,7 +425,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 {oppScore.toFixed(1)}
                             </div>
                             <div className="font-mono text-2xs text-text-mute mt-1.5">
-                                Est. final <span className="tnum">{formatProjection(oppProjFinal)}</span>
+                                {oppProjection.isFinal ? 'Final' : 'Est. final'} <span className="tnum">{formatProjection(oppProjFinal)}</span>
                             </div>
                         </div>
                     </div>
@@ -437,7 +440,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         </div>
 
                 {!projectionsAvailable && (
-                    <p className="text-xs text-text-mute mt-3">Estimate unavailable — waiting for projections or regulation game clocks.</p>
+                    <p className="text-xs text-text-mute mt-3">{estimateUnavailableMessage([myProjection, oppProjection], projectionError, projectionsLoading)}</p>
                 )}
                 {gameError && projectionsAvailable && (
                     <p className="text-xs text-text-mute mt-3">Game clock update delayed; estimates use the last available clock.</p>
@@ -501,7 +504,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         <SectionShell title="Totals">
                             <div className="grid grid-cols-3 gap-3 text-center">
                                 <Stat label="Current" value={`${myScore.toFixed(1)} – ${oppScore.toFixed(1)}`} />
-                                <Stat label="Est. final" value={`${formatProjection(myProjFinal)} – ${formatProjection(oppProjFinal)}`} />
+                                <Stat label={myProjection.isFinal && oppProjection.isFinal ? "Final" : "Est. final"} value={`${formatProjection(myProjFinal)} – ${formatProjection(oppProjFinal)}`} />
                                 <Stat label={marginLabel} value={(marginValue > 0 ? '+' : '') + margin} tone={marginTone} />
                             </div>
                         </SectionShell>
@@ -539,11 +542,11 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
                                     <th scope="col" className="px-2 py-2">Slot</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
-                                    <th scope="col" className="px-2 py-2 text-right">Est. final</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                     <th scope="col" className="px-2 py-2">vs</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
-                                    <th scope="col" className="px-2 py-2 text-right">Est. final</th>
+                                    <th scope="col" className="px-2 py-2 text-right">Proj</th>
                                     <th scope="col" className="px-2 py-2 text-right">Pts</th>
                                 </tr>
                             </thead>
@@ -657,7 +660,7 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
             </div>
             {Number.isFinite(player.proj) && (
                 <div className="font-mono text-2xs tnum text-text-mute">
-                    Est. final <span className="text-text-dim">{formatProjection(player.proj)}</span>
+                    Proj <span className="text-text-dim">{formatProjection(player.proj)}</span>
                 </div>
             )}
             </div>

@@ -53,7 +53,7 @@ const MyTeamPage = () => {
     const playoffStart = league?.settings?.playoff_week_start || 15;
     const { seasonMatchups: fullSchedule } = useSeasonMatchups(league?.league_id, playoffStart - 1, { includeIncomplete: true });
     const { projFor } = useWeekProjections(league?.season, currentWeek, league?.scoring_settings);
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     const { data: marketValues, snapshot: marketSnapshot } = useMarketValues(league, rosters?.length);
 

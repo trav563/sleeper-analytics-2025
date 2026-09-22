@@ -138,6 +138,7 @@ const DashboardPage = () => {
                             players={players}
                             viewMatchups={viewMatchups}
                             slotLabels={league?.roster_positions || []}
+                            allowRosterFallback={!isHistoricalSeason && selectedWeek >= currentNFLWeek}
                         />
                     </div>
                     {!isHistoricalSeason && !isTimeTraveling && <Insights

@@ -128,6 +128,8 @@ export function useLeagueData(leagueId) {
         queryClient.invalidateQueries({ queryKey: ['tradedPicks', leagueId] });
         queryClient.invalidateQueries({ queryKey: ['leagueDrafts', leagueId] });
         queryClient.invalidateQueries({ queryKey: ['leagueMatchups', leagueId] });
+        queryClient.invalidateQueries({ queryKey: ['weekProjections', league?.season] });
+        queryClient.invalidateQueries({ queryKey: ['gameLiveDetails', league?.season] });
     };
 
     return {

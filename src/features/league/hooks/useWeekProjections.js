@@ -10,7 +10,7 @@ import { projectedPointsOrNull } from '../../../utils/scoring';
  * gives that player's projected points for the week (0 when unknown).
  */
 export function useWeekProjections(season, week, scoringSettings, enabled = true) {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, error, dataUpdatedAt } = useQuery({
         queryKey: ['weekProjections', season, week],
         queryFn: () => fetchWeekProjections(season, week),
         enabled: enabled && !!season && !!week,
@@ -34,10 +34,14 @@ export function useWeekProjections(season, week, scoringSettings, enabled = true
         () => (pid) => projections[pid] ?? 0,
         [projections]
     );
+    const projectionFor = useMemo(() => pid => projections[pid] ?? null, [projections]);
 
     return {
         projections,
         projFor,
+        projectionFor,
+        error,
+        updatedAt: dataUpdatedAt,
         loading: isLoading,
         hasProjections: Object.keys(projections).length > 0,
     };

@@ -27,7 +27,7 @@ export function useSeasonMatchups(leagueId, requestedWeek, { includeIncomplete =
         combine: (results) => {
             const seasonMatchups = {};
             results.forEach((r, i) => {
-                if (r.data?.length) seasonMatchups[weeks[i]] = r.data;
+                if (r.data?.length || !includeIncomplete) seasonMatchups[weeks[i]] = r.data || [];
             });
             return {
                 seasonMatchups, completedWeek,

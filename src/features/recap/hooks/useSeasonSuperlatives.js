@@ -1,22 +1,15 @@
+import { assignLineup } from '../../../utils/lineupAssignment';
+import { starterPoints } from '../../../lib/liveProjection';
 import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
 import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
 
-// Reuse the flex-slot helper from useWeeklyRecap
-function isValidPosition(playerPos, slotPos) {
-    if (slotPos === playerPos) return true;
-    if (slotPos === 'FLEX' && ['RB', 'WR', 'TE'].includes(playerPos)) return true;
-    if (slotPos === 'SUPER_FLEX' && ['QB', 'RB', 'WR', 'TE'].includes(playerPos)) return true;
-    if (slotPos === 'WRRB_FLEX' && ['RB', 'WR'].includes(playerPos)) return true;
-    if (slotPos === 'REC_FLEX' && ['WR', 'TE'].includes(playerPos)) return true;
-    return false;
-}
 
-export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, players, currentWeek) {
+export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, players) {
     return useMemo(() => {
         if (!league || !seasonMatchups || !rosters || !users || !players) return null;
 
-        const weeks = Object.keys(seasonMatchups).map(Number).sort((a, b) => a - b);
+        const weeks = Object.keys(seasonMatchups).map(Number).filter(w => seasonMatchups[w]?.length === rosters.length && seasonMatchups[w].every(m => Number.isFinite(m.points))).sort((a, b) => a - b);
         if (weeks.length < 3) return null; // Need at least 3 weeks
 
         const getUserForRoster = buildOwnerLookup(rosters, users);
@@ -44,7 +37,7 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
         let seasonTank = null; // lowest team score
 
         weeks.forEach(week => {
-            const matchups = seasonMatchups[week];
+            const matchups = [...seasonMatchups[week]].sort((a, b) => a.roster_id - b.roster_id);
             if (!matchups || matchups.length === 0) return;
 
             // Calculate median score for lucky wins
@@ -54,7 +47,7 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
                 : allScores[Math.floor(allScores.length / 2)];
 
             // --- Per-matchup analysis ---
-            groupMatchups(matchups).forEach(group => {
+            groupMatchups(matchups.filter(m => m.matchup_id != null)).forEach(group => {
                 if (group.length !== 2) return;
                 const [t1, t2] = group;
                 const winner = t1.points > t2.points ? t1 : t2.points > t1.points ? t2 : null;
@@ -82,7 +75,8 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
             // --- Per-team analysis ---
             matchups.forEach(m => {
                 initManager(m.roster_id);
-                const squadPoints = m.players_points || {};
+                const squadPoints = { ...m.players_points };
+                (m.starters || []).forEach((pid, i) => { const pts = starterPoints(m, i); if (pid && pid !== '0' && Number.isFinite(pts)) squadPoints[pid] = pts; });
 
                 // Season Tank: lowest team score
                 if (Number.isFinite(m.points) && (!seasonTank || m.points < seasonTank.score)) {
@@ -109,7 +103,7 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
 
                 // Ghost count: starters with 0
                 (m.starters || []).forEach(pid => {
-                    if ((squadPoints[pid] || 0) === 0 && players[pid]) {
+                    if (squadPoints[pid] === 0 && players[pid]) {
                         managerStats[m.roster_id].ghostCount++;
                     }
                 });
@@ -128,43 +122,34 @@ export function useSeasonSuperlatives(league, seasonMatchups, rosters, users, pl
 
                 // Bench points (optimal - actual)
                 if (league.roster_positions) {
-                    const positions = league.roster_positions.filter(p => p !== 'BN');
-                    const squad = (m.players || []).map(pid => ({
-                        id: pid,
-                        points: squadPoints[pid] || 0,
-                        position: players[pid]?.fantasy_positions?.[0]
-                    })).sort((a, b) => b.points - a.points);
-
-                    let optimalPoints = 0;
-                    const usedPlayers = new Set();
-                    positions.forEach(pos => {
-                        const valid = squad.find(p => !usedPlayers.has(p.id) && isValidPosition(p.position, pos));
-                        if (valid) {
-                            usedPlayers.add(valid.id);
-                            optimalPoints += valid.points;
-                        }
-                    });
-                    const diff = optimalPoints - m.points;
+                    const positions = league.roster_positions.filter(p => !['BN', 'IR', 'TAXI'].includes(p));
+                    const starters = (m.starters || []).filter(pid => pid && pid !== '0');
+                    const known = starters.every(pid => Number.isFinite(squadPoints[pid]));
+                    const squad = (m.players || []).filter(pid => players[pid] && Number.isFinite(squadPoints[pid]))
+                        .map(pid => ({ ...players[pid], id: pid, points: squadPoints[pid] }));
+                    const starterTotal = starters.reduce((sum, pid) => sum + squadPoints[pid], 0);
+                    const diff = known ? assignLineup(positions, squad, p => p.points).total - starterTotal : 0;
                     if (diff > 0) managerStats[m.roster_id].totalBenchPoints += diff;
                 }
 
                 // Coin flip: points lost from bad start/sit at same position
                 const starters = (m.starters || []).map(pid => ({
                     id: pid,
-                    points: squadPoints[pid] || 0,
-                    pos: players[pid]?.fantasy_positions?.[0]
+                    points: squadPoints[pid],
+                    pos: players[pid]?.fantasy_positions?.[0] || players[pid]?.position
                 }));
                 const bench = (m.players || [])
                     .filter(pid => !m.starters.includes(pid))
                     .map(pid => ({
                         id: pid,
-                        points: squadPoints[pid] || 0,
-                        pos: players[pid]?.fantasy_positions?.[0]
+                        points: squadPoints[pid],
+                        pos: players[pid]?.fantasy_positions?.[0] || players[pid]?.position
                     }));
 
                 starters.forEach(starter => {
+                    if (!starter.pos || !Number.isFinite(starter.points)) return;
                     const betterOption = bench
-                        .filter(b => b.pos === starter.pos && b.points > starter.points)
+                        .filter(b => b.pos === starter.pos && Number.isFinite(b.points) && b.points > starter.points)
                         .sort((a, b) => b.points - a.points)[0];
                     if (betterOption) {
                         managerStats[m.roster_id].totalCoinFlipLost += (betterOption.points - starter.points);

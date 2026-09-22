@@ -4,6 +4,7 @@ import { Pip } from '../../../components/ui/Pip';
 import { Trend } from '../../../components/ui/Trend';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { usePowerRankings } from '../hooks/usePowerRankings';
+import { scheduleLuck } from '../../../utils/leagueRecords';
 import { theme } from '../../../lib/theme';
 
 /* Default Sleeper playoff bracket size when settings don't specify. */
@@ -14,7 +15,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
     const [tab, setTab] = useState('standings');
 
     const playoffSize = league?.settings?.playoff_teams || DEFAULT_PLAYOFF_TEAMS;
-    const { rankings, weeksPlayed } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, weeksPlayed } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     /* Sort by win-record for the "Standings" tab; by composite power
        (currentRank, already sorted) for "Power"; by all-play wins for
@@ -23,7 +24,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
         if (!rankings.length) return [];
         if (tab === 'standings') {
             return [...rankings].sort((a, b) => {
-                if (a.wins !== b.wins) return b.wins - a.wins;
+                if (a.winPct !== b.winPct) return b.winPct - a.winPct;
                 return b.pf - a.pf;
             });
         }
@@ -50,10 +51,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
     /* Luck index = actual wins - expected wins (from all-play %). */
     const luckRows = useMemo(() => {
         return rankings.map((r) => {
-            const totalGames = r.wins + r.losses;
-            const apTotal = r.allPlayWins + r.allPlayLosses;
-            const expected = apTotal > 0 ? (r.allPlayWins / apTotal) * totalGames : 0;
-            return { ...r, luck: r.wins - expected };
+            return { ...r, luck: scheduleLuck(r) };
         });
     }, [rankings]);
 
@@ -80,7 +78,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
                 <div className="bg-bg-1 rounded-xl border border-line p-8 shadow-card text-center">
                     <p className="font-display text-lg font-semibold text-text">Standings unavailable</p>
                     <p className="text-sm text-text-dim mt-1">
-                        Need at least one week of completed matchup data.
+                        Need complete league scores for the selected completed weeks.
                     </p>
                 </div>
             </section>
@@ -93,7 +91,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
             <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                 <div>
                     <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
-                        Power Rankings · WK <span className="tnum text-text-dim">{week}</span>
+                        Records through completed week <span className="tnum text-text-dim">{rankings[0]?.throughWeek ?? week}</span>
                     </div>
                     <h1 className="mt-1 font-display text-2xl md:text-3xl font-extrabold tracking-snug text-text">
                         {league?.name || 'Standings'}
@@ -297,7 +295,7 @@ const StandingsPower = ({ league, rosters, users, seasonMatchups, currentUserId,
 
                     <SectionShell title="Luck Index">
                         <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2">
-                            Actual wins minus expected wins (from all-play %).
+                            Head-to-head wins above all-play expectation; ties count half. Median results excluded.
                         </p>
                         <ul className="space-y-1.5">
                             {luckRows.map((r) => (

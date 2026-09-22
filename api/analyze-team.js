@@ -5,7 +5,7 @@ import { generateTradeCandidates, trustworthyMarket } from '../src/utils/tradeCa
 import { formatTradeResponse } from '../src/utils/tradeResponse.js';
 import { lastCompletedWeek } from '../src/utils/seasonState.js';
 import { aggregateCompletedStats } from '../src/utils/playerParticipation.js';
-import { completedStandings } from '../src/utils/completedStandings.js';
+import { leagueRecords } from '../src/utils/leagueRecords.js';
 import { optimizeRoster } from '../src/utils/lineupOptimizer.js';
 import { projectedPoints } from '../src/utils/scoring.js';
 import { streamText } from 'ai';
@@ -295,24 +295,24 @@ export function buildPrompt(data, analysisType, constraint) {
     // ── User team ──
     const userOwner = users.find(u => u.user_id === userRoster.owner_id);
     const teamName = cleanName(userOwner?.metadata?.team_name || userOwner?.display_name || userOwner?.username, 'My Team');
-    const finalStats = completedStandings(rosters, allMatchupHistory);
+    const finalStats = leagueRecords(rosters, allMatchupHistory, league);
     const myStats = finalStats.find(r => r.rosterId === userRoster.roster_id);
     const wins = myStats?.wins || 0;
     const losses = myStats?.losses || 0;
     const ties = myStats?.ties || 0;
-    const record = `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`;
+    const record = myStats?.complete ? `${wins}-${losses}${ties > 0 ? `-${ties}` : ''}` : 'Unavailable (incomplete completed-week data)';
     const fpts = myStats?.totalPoints || 0;
-    const gp = wins + losses + ties;
+    const gp = myStats?.weeksPlayed || 0;
     const ppg = gp > 0 ? (fpts / gp).toFixed(1) : 'N/A (no completed games)';
 
     // ── Standings ──
     const standings = [...finalStats].sort((a, b) => b.winPct - a.winPct || b.totalPoints - a.totalPoints);
-    const myRank = gp ? standings.findIndex(r => r.rosterId === userRoster.roster_id) + 1 : 'unranked';
+    const myRank = gp && myStats?.complete ? standings.findIndex(r => r.rosterId === userRoster.roster_id) + 1 : 'unranked';
     const standingsText = standings.map((r, i) => {
         const roster = rosters.find(t => t.roster_id === r.rosterId);
         const o = users.find(u => u.user_id === roster?.owner_id);
         const name = cleanName(o?.metadata?.team_name || o?.display_name || o?.username, `Team ${r.rosterId}`);
-        return `${r.gamesPlayed ? i + 1 : 'Unranked'}. ${name} (${r.record}, ${r.totalPoints.toFixed(1)} PF, completed weeks only)${r.rosterId === userRoster.roster_id ? ' ← YOU' : ''}`;
+        return `${r.gamesPlayed ? i + 1 : 'Unranked'}. ${name} (${r.complete ? r.record : 'record unavailable: incomplete data'}, ${r.totalPoints.toFixed(1)} PF, through Week ${r.throughWeek})${r.rosterId === userRoster.roster_id ? ' ← YOU' : ''}`;
     }).join('\n');
 
     // ── My roster mapped to lineup slots ──

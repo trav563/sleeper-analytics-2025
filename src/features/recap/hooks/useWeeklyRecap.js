@@ -1,3 +1,5 @@
+import { assignLineup } from '../../../utils/lineupAssignment';
+import { starterPoints } from '../../../lib/liveProjection';
 import { useMemo } from 'react';
 import { displayTeamName } from '../../../utils/nflData';
 import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
@@ -9,6 +11,21 @@ import { groupMatchups, buildOwnerLookup } from '../../../utils/leagueMath';
 export function computeWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups) {
         if (!league || !matchups || matchups.length === 0 || !players || !rosters) return null;
 
+        // Stable award ties; unknown scores never become zero-point players.
+        matchups = matchups.filter(m => Number.isFinite(m.points)).map(m => {
+            const points = { ...m.players_points };
+            (m.starters || []).forEach((pid, i) => {
+                const value = starterPoints(m, i);
+                if (pid && pid !== '0' && Number.isFinite(value)) points[pid] = value;
+            });
+            return { ...m, starters: (m.starters || []).filter(pid => pid && pid !== '0'), players_points: points };
+        }).sort((a, b) => a.roster_id - b.roster_id);
+        if (!matchups.length) return null;
+        const isRookie = player => {
+            const rookieYear = Number(player?.rookie_year || player?.draft_year || player?.metadata?.rookie_year);
+            return rookieYear > 0 ? rookieYear === Number(league.season)
+                : Number(league.season) === new Date().getFullYear() && player?.years_exp === 0;
+        };
         // 1. "The Robbery" (Bad Luck)
         // Find loser with highest score
         let robbery = null;
@@ -19,7 +36,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
         const getOwner = buildOwnerLookup(rosters, users);
 
         // Group by match_id to identify winners/losers
-        const matchGroups = groupMatchups(matchups);
+        const matchGroups = groupMatchups(matchups.filter(m => m.matchup_id != null));
 
         let highestLoserScore = -Infinity;
         let unluckyTeam = null;
@@ -69,12 +86,12 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
 
         matchups.forEach(m => {
             // Check starters
-            (m.starters || []).forEach((playerId, index) => {
+            (m.starters || []).forEach((playerId) => {
                 const player = players[playerId];
-                const points = m.starters_points[index];
+                const points = m.players_points[playerId];
                 // Check if rookie (years_exp is 0). 
                 // Note: Sleeper updates years_exp. 0 = Rookie.
-                if (player && player.years_exp === 0) {
+                if (player && isRookie(player) && Number.isFinite(points)) {
                     if (points > maxRookiePoints) {
                         maxRookiePoints = points;
                         const user = getOwner(m.roster_id);
@@ -93,8 +110,8 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
                 m.players.forEach(playerId => {
                     if (!m.starters.includes(playerId)) {
                         const player = players[playerId];
-                        const points = m.players_points[playerId] || 0;
-                        if (player && player.years_exp === 0) {
+                        const points = m.players_points[playerId];
+                        if (player && isRookie(player) && Number.isFinite(points)) {
                             if (points > maxRookiePoints) {
                                 maxRookiePoints = points;
                                 const user = getOwner(m.roster_id);
@@ -119,32 +136,14 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
         matchups.forEach(m => {
             // Calculate Optimal Score
             // We need roster positions from league settings
-            const positions = league.roster_positions.filter(p => p !== 'BN'); // Exclude Bench slots
-
-            // Get all players and their points
-            const squad = (m.players || []).map(pid => ({
-                id: pid,
-                points: m.players_points[pid] || 0,
-                position: players[pid]?.fantasy_positions?.[0] // Primary pos
-            })).sort((a, b) => b.points - a.points); // Sort by points desc
-
-            // Simple Greedy Solver
-            let optimalPoints = 0;
-            const usedPlayers = new Set();
-
-            // Helper to find best available valid player for a slot
-            const fillSlot = (posType) => {
-                const validPlayer = squad.find(p => !usedPlayers.has(p.id) && isValidPosition(p.position, posType));
-                if (validPlayer) {
-                    usedPlayers.add(validPlayer.id);
-                    optimalPoints += validPlayer.points;
-                    return validPlayer;
-                }
-                return null;
-            };
-
-            positions.forEach(pos => fillSlot(pos));
-
+            const positions = (league.roster_positions || []).filter(p => !['BN', 'IR', 'TAXI'].includes(p));
+            const squad = (m.players || []).filter(pid => players[pid] && Number.isFinite(m.players_points[pid]))
+                .map(pid => ({ ...players[pid], id: pid, points: m.players_points[pid] }))
+                .sort((a, b) => b.points - a.points || a.id.localeCompare(b.id));
+            if (m.starters.some(pid => !Number.isFinite(m.players_points[pid]))) return;
+            const starterTotal = m.starters.reduce((sum, pid) => sum + m.players_points[pid], 0);
+            const adjustment = m.points - starterTotal;
+            const optimalPoints = assignLineup(positions, squad, p => p.points).total + adjustment;
             const actualPoints = m.points;
             const diff = optimalPoints - actualPoints;
 
@@ -181,7 +180,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
             let bestPlayerPoints = -1;
 
             (m.starters || []).forEach(pid => {
-                const pts = squadPoints[pid] || 0;
+                const pts = squadPoints[pid];
                 if (pts > bestPlayerPoints) {
                     bestPlayerPoints = pts;
                     bestPlayerId = pid;
@@ -211,21 +210,22 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
             const squadPoints = m.players_points || {};
             const starters = (m.starters || []).map(pid => ({
                 id: pid,
-                points: squadPoints[pid] || 0,
-                pos: players[pid]?.fantasy_positions?.[0]
+                points: squadPoints[pid],
+                pos: (players[pid]?.fantasy_positions?.[0] || players[pid]?.position)
             }));
             const bench = (m.players || [])
                 .filter(pid => !m.starters.includes(pid))
                 .map(pid => ({
                     id: pid,
-                    points: squadPoints[pid] || 0,
-                    pos: players[pid]?.fantasy_positions?.[0]
+                    points: squadPoints[pid],
+                    pos: (players[pid]?.fantasy_positions?.[0] || players[pid]?.position)
                 }));
 
             starters.forEach(starter => {
+                if (!Number.isFinite(starter.points) || !starter.pos) return;
                 // Find bench player of SAME position (strict)
                 const betterOption = bench
-                    .filter(b => b.pos === starter.pos && b.points > starter.points)
+                    .filter(b => b.pos === starter.pos && Number.isFinite(b.points) && b.points > starter.points)
                     .sort((a, b) => b.points - a.points)[0]; // Best option
 
                 if (betterOption) {
@@ -256,9 +256,10 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
             const squadPoints = m.players_points || {};
             let count = 0;
             (m.starters || []).forEach(pid => {
-                if ((squadPoints[pid] || 0) < 5) count++;
+                if (players[pid] && Number.isFinite(squadPoints[pid]) && squadPoints[pid] < 5) count++;
             });
 
+            if (count === 0) return;
             if (count > maxNapCount) {
                 maxNapCount = count;
                 lowestCardioScore = m.points;
@@ -352,7 +353,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
             const squadPoints = m.players_points || {};
             let teamGhosts = [];
             (m.starters || []).forEach(pid => {
-                if ((squadPoints[pid] || 0) === 0 && players[pid]) {
+                if (squadPoints[pid] === 0 && players[pid]) {
                     teamGhosts.push(players[pid]);
                 }
             });
@@ -374,7 +375,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
         matchups.forEach(m => {
             const squadPoints = m.players_points || {};
             (m.starters || []).forEach(pid => {
-                const pts = squadPoints[pid] || 0;
+                const pts = squadPoints[pid];
                 if (pts > highestPlayerScore && players[pid]) {
                     highestPlayerScore = pts;
                     const user = getOwner(m.roster_id);
@@ -416,7 +417,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
                 const diff = m.points - avgPPG;
                 const user = getOwner(m.roster_id);
 
-                if (diff > biggestOver) {
+                if (diff > 0 && diff > biggestOver) {
                     biggestOver = diff;
                     overachiever = {
                         manager: displayTeamName(user),
@@ -425,7 +426,7 @@ export function computeWeeklyRecap(league, matchups, rosters, users, players, cu
                         diff: diff.toFixed(1),
                     };
                 }
-                if (diff < biggestUnder) {
+                if (diff < 0 && diff < biggestUnder) {
                     biggestUnder = diff;
                     underachiever = {
                         manager: displayTeamName(user),
@@ -445,14 +446,4 @@ export function useWeeklyRecap(league, matchups, rosters, users, players, curren
         () => computeWeeklyRecap(league, matchups, rosters, users, players, currentWeek, seasonMatchups),
         [league, matchups, rosters, users, players, seasonMatchups, currentWeek]
     );
-}
-
-// Helper for Flex logic
-function isValidPosition(playerPos, slotPos) {
-    if (slotPos === playerPos) return true;
-    if (slotPos === 'FLEX' && ['RB', 'WR', 'TE'].includes(playerPos)) return true;
-    if (slotPos === 'SUPER_FLEX' && ['QB', 'RB', 'WR', 'TE'].includes(playerPos)) return true;
-    if (slotPos === 'WRRB_FLEX' && ['RB', 'WR'].includes(playerPos)) return true;
-    if (slotPos === 'REC_FLEX' && ['WR', 'TE'].includes(playerPos)) return true;
-    return false;
 }

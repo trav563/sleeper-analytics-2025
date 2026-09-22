@@ -1,5 +1,6 @@
 import { useCompletedPlayerStats } from '../../stats/hooks/useCompletedPlayerStats';
 import { useLeagueData } from '../../league/hooks/useLeagueData';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, ReferenceLine, Tooltip } from 'recharts';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity } from 'lucide-react';
@@ -27,7 +28,7 @@ const timeAgo = (dateString) => {
     return `${Math.floor(hours / 24)}d ago`;
 };
 
-const PlayerDetail = ({ player, players, league, rosters, users, state, currentWeek, isHistoricalSeason }) => {
+const PlayerDetail = ({ player, players, league, rosters, users, state, currentWeek }) => {
     const navigate = useNavigate();
     const leagueId = league?.league_id;
     const week = currentWeek || state?.display_week || state?.week || 1;
@@ -41,7 +42,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
     // Needs the FULL player map: points allowed is aggregated across every
     // starter in the league, not just the player being viewed.
 
-    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
+    const { projectionFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     // usePlayerNews filters a roster's players against the feed, so a one-player
     // "roster" gives us this player's news and reuses the injury-alert and
@@ -156,9 +157,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
         },
         {
             label: 'Proj',
-            value: projFor(player.player_id)
-                ? projFor(player.player_id).toFixed(1)
-                : seasonStats.avg != null ? seasonStats.avg.toFixed(1) : '—',
+            value: projectionFor(player.player_id) != null ? projectionFor(player.player_id).toFixed(1) : '—',
             tone: 'text',
         },
         {
@@ -178,13 +177,6 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
             desktopOnly: true,
         },
     ];
-
-    /* ---- Bar chart geometry ---- */
-    const chartWeeks = weekly.length > 0 ? weekly : Array.from({ length: 8 }, (_, i) => ({ week: i + 1, points: 0 }));
-    const chartMin = Math.min(0, ...chartWeeks.map(w => w.points));
-    const chartMax = Math.max(10, ...chartWeeks.map(w => w.points));
-    const chartY = points => 190 - ((points - chartMin) / (chartMax - chartMin)) * 160;
-    const chartZero = chartY(0);
 
     return (
         <section className="space-y-5 pb-12">
@@ -294,14 +286,14 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                     </div>
 
                     {/* Action column (desktop only) */}
-                    <div className="hidden md:flex flex-col gap-2 shrink-0 self-start">
-                        <button
+                    <div className="flex flex-col gap-2 shrink-0 self-start">
+                        {ownerRoster && <button
                             type="button"
-                            onClick={() => navigate(`/league/${leagueId}/lineup`)}
+                            onClick={() => navigate(`/league/${leagueId}/team/${ownerRoster.roster_id}?player=${encodeURIComponent(player.player_id)}`)}
                             className="min-h-[44px] px-4 rounded-md bg-signal text-ink font-semibold text-sm hover:bg-signal/90 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
                         >
                             View in Lineup
-                        </button>
+                        </button>}
                         <button
                             type="button"
                             disabled
@@ -350,57 +342,17 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                             </div>
                         ) : (
                             <>
-                                <svg role="img" aria-label="Fantasy points in completed games, including zero and negative scores" viewBox={`0 0 ${chartWeeks.length * 80 + 40} 220`} className="w-full" preserveAspectRatio="none" style={{ maxHeight: 240 }}>
-                                    <line x1="0" x2={chartWeeks.length * 80 + 40} y1={chartZero} y2={chartZero} stroke={theme.color.mute} />
-                                    {seasonStats.avg != null && (
-                                        <line
-                                            x1="0"
-                                            x2={chartWeeks.length * 80 + 40}
-                                            y1={chartY(seasonStats.avg)}
-                                            y2={chartY(seasonStats.avg)}
-                                            stroke={theme.color.signal}
-                                            strokeDasharray="4 4"
-                                            opacity="0.4"
-                                        />
-                                    )}
-                                    {chartWeeks.map((w, i) => {
-                                        const y = chartY(w.points);
-                                        const h = Math.abs(y - chartZero);
-                                        const x = 20 + i * 80;
-                                        const isCurrent = !isHistoricalSeason && w.week === week;
-                                        return (
-                                            <g key={w.week}>
-                                                <rect
-                                                    x={x}
-                                                    y={Math.min(y, chartZero)}
-                                                    width="58"
-                                                    height={h}
-                                                    fill={isCurrent ? theme.color.signal : `oklch(62% 0.18 ${hue})`}
-                                                    rx="3"
-                                                />
-                                                {(
-                                                    <text
-                                                        x={x + 29}
-                                                        y={w.points < 0 ? y + 14 : y - 6}
-                                                        textAnchor="middle"
-                                                        fontSize="12"
-                                                        fontWeight="700"
-                                                        fill={theme.color.text}
-                                                        style={{ fontFamily: 'var(--font-sans)' }}
-                                                    >
-                                                        {w.points.toFixed(1)}
-                                                    </text>
-                                                )}
-                                            </g>
-                                        );
-                                    })}
-                                </svg>
-                                <div className="flex font-mono text-2xs uppercase tracking-wider text-text-mute mt-2 px-5">
-                                    {chartWeeks.map((w) => (
-                                        <span key={w.week} style={{ width: 78, textAlign: 'center' }} className="tnum">
-                                            W{w.week}
-                                        </span>
-                                    ))}
+                                <div className="h-60 min-w-0" role="img" aria-label="Fantasy points in completed games, including zero and negative scores">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={weekly} margin={{ top: 16, right: 8, left: 0, bottom: 4 }}>
+                                            <XAxis dataKey="week" tickFormatter={w => `W${w}`} stroke={theme.color.mute} />
+                                            <YAxis tickFormatter={value => Number(value.toFixed(1))} domain={[min => Math.min(0, min), max => Math.max(10, max)]} stroke={theme.color.mute} width={40} />
+                                            <Tooltip labelFormatter={w => `Week ${w}`} formatter={value => [Number(value).toFixed(1), 'Points']} />
+                                            <ReferenceLine y={0} stroke={theme.color.mute} />
+                                            {seasonStats.avg != null && <ReferenceLine y={seasonStats.avg} stroke={theme.color.signal} strokeDasharray="4 4" />}
+                                            <Bar dataKey="points" maxBarSize={48} fill={theme.color.signal} radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </>
                         )}
@@ -544,4 +496,3 @@ const ord = (n) => {
 };
 
 export default PlayerDetail;
-

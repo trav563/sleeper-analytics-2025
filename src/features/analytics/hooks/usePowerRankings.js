@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
-import { completedStandings } from '../../../utils/completedStandings';
+import { leagueRecords } from '../../../utils/leagueRecords';
 
 /** Composite is 25% each of normalized win%, PPG, all-play%, and schedule strength.
  * Callers supply only completed weeks; score magnitude cannot establish finality.
  */
-export function computePowerRankings(seasonMatchups, rosters, users) {
-    const weeksPlayed = Object.keys(seasonMatchups || {}).map(Number).filter(w => seasonMatchups[w]?.length).sort((a, b) => a - b);
+export function computePowerRankings(seasonMatchups, rosters, users, league) {
+    const weeksPlayed = Object.keys(seasonMatchups || {}).map(Number).filter(w => seasonMatchups[w]?.length && w >= (league?.settings?.start_week || 1) && w < (league?.settings?.playoff_week_start || 19)).sort((a, b) => a - b);
     if (!rosters?.length || !weeksPlayed.length) return { rankings: [], weeksPlayed: [], ranked: false };
+    if (leagueRecords(rosters, seasonMatchups, league).some(t => !t.complete)) return { rankings: [], weeksPlayed, ranked: false, incomplete: true };
     const trends = Object.fromEntries(rosters.map(r => [r.roster_id, []]));
     let latest = [];
     for (const week of weeksPlayed) {
-        const stats = completedStandings(rosters, Object.fromEntries(Object.entries(seasonMatchups).filter(([w]) => Number(w) <= week)));
+        const stats = leagueRecords(rosters, Object.fromEntries(Object.entries(seasonMatchups).filter(([w]) => Number(w) <= week)), league);
+        if (stats.some(t => !t.complete)) return { rankings: [], weeksPlayed, ranked: false, incomplete: true };
         const ranges = Object.fromEntries(['winPct', 'ppg', 'apWinPct', 'sos'].map(key => {
             const values = stats.map(t => t[key]);
             return [key, { min: Math.min(...values), range: Math.max(...values) - Math.min(...values) }];
@@ -27,5 +29,5 @@ export function computePowerRankings(seasonMatchups, rosters, users) {
             pf: t.totalPoints, pa: t.opponentPoints, trend, currentRank, prevRank, rankChange: prevRank - currentRank };
     }) };
 }
-export const usePowerRankings = (seasonMatchups, rosters, users) => useMemo(() => computePowerRankings(seasonMatchups, rosters, users), [seasonMatchups, rosters, users]);
+export const usePowerRankings = (seasonMatchups, rosters, users, league) => useMemo(() => computePowerRankings(seasonMatchups, rosters, users, league), [seasonMatchups, rosters, users, league]);
 export default usePowerRankings;

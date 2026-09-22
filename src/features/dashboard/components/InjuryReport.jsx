@@ -1,5 +1,5 @@
 import { Activity, Skull, AlertCircle, HelpCircle } from 'lucide-react';
-import { avatarUrl } from '../../../utils/nflData';
+import { PlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
 
 const STATUS_TONE = {
     IR:           'bg-bad/15 text-bad border-bad/40',
@@ -11,7 +11,7 @@ const defaultStatusTone = 'bg-bg-3 text-text-dim border-line';
 
 const InjuryReport = ({ roster, players }) => {
     const injuredPlayers = (roster?.players || [])
-        .map(pid => players?.[pid])
+        .map(pid => players?.[pid] ? { ...players[pid], player_id: pid } : null)
         .filter(p => p && p.position !== 'DEF' && (p.status !== 'Active' || p.injury_status))
         .sort((a, b) => {
             const priority = { IR: 5, Out: 4, Doubtful: 3, Questionable: 2, Sus: 1 };
@@ -46,11 +46,7 @@ const InjuryReport = ({ roster, players }) => {
                     return (
                         <div key={p.player_id} className="flex items-center justify-between gap-2 bg-bg-2 p-2 rounded-md border border-line">
                             <div className="flex items-center gap-3 min-w-0">
-                                <img
-                                    src={avatarUrl(p.player_id)}
-                                    alt=""
-                                    className="w-8 h-8 rounded-full ring-1 ring-line shrink-0"
-                                />
+                                <PlayerHeadshot playerId={p.player_id} name={`${p.first_name} ${p.last_name}`} size={32} />
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-text leading-none truncate">{p.first_name} {p.last_name}</p>
                                     <p className="font-mono text-2xs text-text-mute mt-1 uppercase tracking-wider">

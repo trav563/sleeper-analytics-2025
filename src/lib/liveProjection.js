@@ -25,10 +25,13 @@ export function regulationFractionRemaining(game) {
 
 export function projectPlayer({ actual, projection, position, game }) {
     const phase = gamePhase(game);
-    if (phase === 'DONE') return { remaining: 0, final: Number.isFinite(actual) ? actual : null, phase };
+    if (phase === 'DONE') return { remaining: Number.isFinite(actual) ? 0 : null, final: Number.isFinite(actual) ? actual : null, phase, reason: Number.isFinite(actual) ? null : 'missing_actual' };
     const r = regulationFractionRemaining(game);
     if (r == null || !Number.isFinite(projection) || !Number.isFinite(actual)) {
-        return { remaining: null, final: null, phase };
+        const reason = phase === 'LIVE' && Number(game?.period) > 4 ? 'overtime'
+            : phase === 'UNKNOWN' ? 'missing_game' : r == null ? 'invalid_clock'
+                : !Number.isFinite(projection) ? 'missing_projection' : 'missing_actual';
+        return { remaining: null, final: null, phase, reason };
     }
     if (phase === 'SOON') return { remaining: projection - actual, final: projection, phase };
     const remaining = Math.max(projection - actual, 0) * r + (position === 'DEF' ? 0 : actual * r * r);
@@ -54,7 +57,21 @@ export function projectMatchup({ matchup, players, projections, games }) {
     const available = Array.isArray(matchup?.starters) && bySlot.every(p => p.remaining != null);
     const remaining = available ? bySlot.reduce((sum, p) => sum + p.remaining, 0) : null;
     const final = available && Number.isFinite(matchup?.points) ? matchup.points + remaining : null;
-    return { remaining, final, bySlot, available: final != null };
+    return { remaining, final, bySlot, available: final != null,
+        isFinal: bySlot.some(p => p.phase === 'DONE') && bySlot.every(p => ['DONE', 'EMPTY'].includes(p.phase)) && final != null,
+        reasons: [...new Set(bySlot.map(p => p.reason).filter(Boolean))] };
+}
+
+export function estimateUnavailableMessage(estimates, projectionError = false, loading = false) {
+    const reasons = new Set(estimates.flatMap(e => e?.reasons || []));
+    if (reasons.has('overtime')) return 'Live estimate unavailable during overtime. Actual points and weekly projections remain available.';
+    if (projectionError) return 'Weekly projections could not be refreshed. Try Refresh data.';
+    if (loading) return 'Loading weekly projections…';
+    if (reasons.has('missing_game')) return 'Live estimate unavailable — game status is missing or not supported.';
+    if (reasons.has('invalid_clock')) return 'Live estimate unavailable — waiting for a valid regulation game clock.';
+    if (reasons.has('missing_projection')) return 'Live estimate unavailable — a starter has no weekly projection.';
+    if (reasons.has('missing_actual')) return 'Live estimate unavailable — waiting for starter points.';
+    return 'Live estimate unavailable — waiting for lineup data.';
 }
 
 export const formatProjection = value => Number.isFinite(value) ? value.toFixed(2) : '—';

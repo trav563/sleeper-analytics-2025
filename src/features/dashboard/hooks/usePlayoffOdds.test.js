@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simulateInSeasonOdds, firstWeekToSimulate } from './usePlayoffOdds';
+import { simulateInSeasonOdds, firstWeekToSimulate, applySimulatedWeek } from './usePlayoffOdds';
 import { computeWinProbability } from '../../../lib/winProbability';
 
 const team = (rosterId, ppg, { wins = 0, fpts = 0, gamesPlayed = 0 } = {}) => ({
@@ -61,7 +61,7 @@ describe('simulateInSeasonOdds', () => {
         expect(results[2]).toBeGreaterThan(0);
     });
 
-    it('coin-flips when both teams have zero ppg (week 1)', () => {
+    it('breaks unresolved playoff-seed ties fairly after awarding half-wins', () => {
         const results = simulateInSeasonOdds({
             teams: [team(1, 0), team(2, 0)],
             processedSchedule: [[[1, 2]]],
@@ -75,6 +75,23 @@ describe('simulateInSeasonOdds', () => {
     });
 });
 
+describe('median simulations', () => {
+    it('uses one score for both results without doubling points', () => {
+        const state = Object.fromEntries([1,2,3,4].map(id => [id, { wins: 0, fpts: 10 }]));
+        applySimulatedWeek(state, {1:120,2:110,3:100,4:90}, [[1,2],[3,4]], true);
+        expect(Object.values(state).map(t => t.wins)).toEqual([2,1,1,0]);
+        expect(Object.values(state).map(t => t.fpts)).toEqual([130,120,110,100]);
+    });
+    it('carries head-to-head and median ties as half wins', () => {
+        const state = {1:{wins:2,fpts:0},2:{wins:1,fpts:0}};
+        applySimulatedWeek(state, {1:0,2:0}, [[1,2]], true);
+        expect(state).toEqual({1:{wins:3,fpts:0},2:{wins:2,fpts:0}});
+    });
+    it('counts weeks rather than record results at rollover', () => {
+        expect(firstWeekToSimulate([{gamesPlayed:4,weeksPlayed:2,throughWeek:2}], 2)).toBe(3);
+        expect(firstWeekToSimulate([{gamesPlayed:8,weeksPlayed:4,throughWeek:6}], 6)).toBe(7);
+    });
+});
 describe('firstWeekToSimulate', () => {
     it('simulates the current week while it is still live', () => {
         const teams = [team(1, 100, { gamesPlayed: 5 }), team(2, 100, { gamesPlayed: 5 })];

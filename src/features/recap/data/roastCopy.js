@@ -7,9 +7,9 @@ export const WEEKLY_COPY = {
         { text: "Scored {score} points (would beat {percentile}% of the league) but lost to {opponent}. Call the cops.", sub: "Victim of circumstance" },
         { text: "Put up {score} and still caught an L from {opponent}. The fantasy gods chose violence.", sub: "Would've beaten {percentile}% of the league" },
         { text: "{score} points should win you a week. Unless you play {opponent}, apparently.", sub: "Better than {percentile}% of the field... still lost" },
-        { text: "Dropped {score} points and has nothing to show for it. {opponent} said 'cool story bro.'", sub: "Pain. Just pain." },
+        { text: "Dropped {score} points and still lost the head-to-head matchup. {opponent} said 'cool story bro.'", sub: "Pain. Just pain." },
         { text: "Imagine scoring {score} points and losing. Now imagine that's your actual life. Welcome to {opponent}'s world.", sub: "Would've won against {percentile}% of teams" },
-        { text: "{score} points. A heroic effort. A valiant performance. A completely wasted week thanks to {opponent}.", sub: "The schedule is a cruel mistress" },
+        { text: "{score} points. A heroic effort. A valiant performance. A head-to-head loss thanks to {opponent}.", sub: "The schedule is a cruel mistress" },
         { text: "The audacity of {opponent} to outscore {score} points. Some crimes go unpunished.", sub: "Would've beaten {percentile}% of the league" },
     ],
     worstManager: [
@@ -17,7 +17,7 @@ export const WEEKLY_COPY = {
         { text: "{benchPlayer} went off for {benchPoints} on the bench while the starters sleepwalked. Incredible.", sub: "Lineup efficiency: yikes" },
         { text: "Benched {benchPlayer} ({benchPoints} pts). Sometimes the best player on your team is the one you forgot about.", sub: "Left {diff} points on the table" },
         { text: "{benchPlayer} sitting on the bench with {benchPoints} points like a caged animal. Free them.", sub: "Optimal: {optimal} | Actual: {actual}" },
-        { text: "The disrespect to {benchPlayer}. {benchPoints} points from the bench. This manager simply does not check their lineup.", sub: "{diff} points left on the table" },
+        { text: "The disrespect to {benchPlayer}. {benchPoints} points from the bench. Hindsight has entered the chat.", sub: "{diff} points left on the table" },
         { text: "Lineup management? Never heard of it. {benchPlayer} dropped {benchPoints} from the shadow realm (the bench).", sub: "Actual: {actual} | Could've had: {optimal}" },
         { text: "If {benchPlayer} could talk, they'd request a trade. {benchPoints} points wasted on the bench.", sub: "Coaching: F-" },
     ],
@@ -62,28 +62,17 @@ export const WEEKLY_COPY = {
         { text: "{score} points. Even the kicker is disappointed.", sub: "Securing that draft position" },
     ],
     luckyCharm: [
-        { text: "Won with just {score} points because {opponent} was somehow even worse ({opponentScore}).", sub: "A win is a win... technically" },
-        { text: "Squeaked out a W with {score} pts. {opponent} ({opponentScore}) was the only team bad enough to lose to this.", sub: "Blessed by the schedule gods" },
-        { text: "{score} points and still got the W. When you're lucky, you're lucky.", sub: "Opponent {opponent} scored {opponentScore}" },
-        { text: "The football gods smiled upon {score} points this week. {opponent}'s {opponentScore} was the only thing uglier.", sub: "Luck > Skill" },
-        { text: "Winning with {score} points should be illegal. {opponent} ({opponentScore}) made it possible.", sub: "The schedule giveth" },
-        { text: "{score} points. In any other matchup, that's an L. But {opponent} ({opponentScore}) said 'hold my beer.'", sub: "Luckiest win of the week" },
+        { text: "{score} points was the lowest winning score this week. {opponent} finished with {opponentScore}. Take the W and keep walking.", sub: "Lowest-scoring head-to-head win" },
+        { text: "No extra credit for style: {score} beat {opponent}'s {opponentScore}. The week's lowest-scoring winner still gets the W.", sub: "Lowest-scoring head-to-head win" },
     ],
     closeCall: [
-        { text: "{winner} survived by {margin} points over {loser}. One garbage time catch changes everything.", sub: "{winnerScore} - {loserScore}" },
-        { text: "A {margin}-point margin. {winner} is thanking every stat correction that went their way.", sub: "Nail-biter: {winnerScore} to {loserScore}" },
-        { text: "{winner} won by {margin} points. {loser} is going to be refreshing stat corrections all week.", sub: "Heart rate: elevated" },
-        { text: "{margin} points. That's the difference between celebrating and refreshing the score page at 2am. {winner} celebrates.", sub: "{winnerScore} to {loserScore}" },
-        { text: "By {margin} points, {winner} escapes. {loser} will be haunted by every play they second-guessed.", sub: "Closest game of the week" },
-        { text: "{winner} over {loser} by {margin}. A single knee, a single spike, a single anything could've flipped it.", sub: "{winnerScore} - {loserScore}" },
+        { text: "{winner} beat {loser} by {margin} points — the closest matchup of the week. Bragging rights secured.", sub: "{winnerScore} - {loserScore}" },
+        { text: "The week's smallest winning margin: {margin} points. {winner} gets the W over {loser}.", sub: "{winnerScore} - {loserScore}" },
+        { text: "{winner} over {loser}, {winnerScore} to {loserScore}. A {margin}-point gap was as close as this week got.", sub: "Closest matchup of the week" },
     ],
     ghost: [
-        { text: "Started {count} player(s) who scored exactly 0 points. {ghostNames} were literal ghosts.", sub: "Check if they were even active" },
-        { text: "{ghostNames} combined for a grand total of zero. Not one. Zero.", sub: "{count} ghost(s) in the starting lineup" },
-        { text: "Had {count} starter(s) put up a donut. {ghostNames} gave new meaning to 'zero upside.'", sub: "Free roster spots, basically" },
-        { text: "{count} goose egg(s) from {ghostNames}. That's not bad luck, that's not checking injury reports.", sub: "Ghosts in the machine" },
-        { text: "Starting {ghostNames} and getting 0 points is a choice. A bad one, but a choice.", sub: "{count} ghost(s)" },
-        { text: "{ghostNames}: 0.00 points combined. Even a defense on bye would've been more useful.", sub: "Invisible on the field and the scoreboard" },
+        { text: "{ghostNames} finished with zero fantasy points. The scoreboard would like a word.", sub: "{count} zero-point starter(s)" },
+        { text: "A quiet week on the scoreboard for {ghostNames}: 0.00 points combined.", sub: "{count} zero-point starter(s)" },
     ],
     boomGame: [
         { text: "{playerName} erupted for {points} points. League-winner type performance.", sub: "Rostered by {manager}" },
@@ -133,8 +122,8 @@ export const SEASON_COPY = {
         { text: "Week {week}: {manager} put up {score} total points. That's the season low across the whole league.", sub: "Rock bottom" },
     ],
     ghostHunter: [
-        { text: "Started {count} total players who scored 0 all season. Either bad luck or just not checking lineups.", sub: "Most ghosts in the league" },
-        { text: "{count} goose eggs in the starting lineup across the season. That's commitment to chaos.", sub: "Lineup negligence award" },
+        { text: "Started {count} total players who scored 0 all season. The scoreboard kept receipts.", sub: "Most ghosts in the league" },
+        { text: "{count} goose eggs in the starting lineup across the season. That's commitment to chaos.", sub: "Zero-point starter tally" },
     ],
     coinFlipChamp: [
         { text: "Left {points} total points on the table from bad start/sit decisions. That's not unlucky, that's a pattern.", sub: "Worst lineup instincts all season" },
@@ -142,7 +131,7 @@ export const SEASON_COPY = {
     ],
     luckiestManager: [
         { text: "Won {count} games while scoring below the league median. Pure schedule luck.", sub: "Luckiest record in the league" },
-        { text: "{count} wins with a below-average score. This manager doesn't need skill when they have matchups like these.", sub: "Fantasy's luckiest soul" },
+        { text: "{count} head-to-head wins with a below-median score. This manager doesn't need skill when they have matchups like these.", sub: "Fantasy's luckiest soul" },
     ],
 };
 

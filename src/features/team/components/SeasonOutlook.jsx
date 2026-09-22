@@ -28,7 +28,7 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
         });
 
         const upcoming = [];
-        for (let w = currentWeek; w < playoffStart; w++) {
+        for (let w = Math.max(currentWeek, (mine?.throughWeek || 0) + 1); w < playoffStart; w++) {
             const wk = fullSchedule?.[w];
             if (!Array.isArray(wk)) continue;
             const me = wk.find((m) => m.roster_id === roster.roster_id);
@@ -42,7 +42,7 @@ const SeasonOutlook = ({ league, roster, users, rosters, odds, isProjection, ran
         const leagueAvg =
             Object.values(ppgByRoster).reduce((s, v) => s + v, 0) / Math.max(1, rosters.length);
         return { games: upcoming.length, avg, leagueAvg, upcoming };
-    }, [roster, rosters, fullSchedule, currentWeek, league, rankings]);
+    }, [roster, rosters, fullSchedule, currentWeek, league, rankings, mine]);
 
     const myOdds = odds?.[roster?.roster_id];
 

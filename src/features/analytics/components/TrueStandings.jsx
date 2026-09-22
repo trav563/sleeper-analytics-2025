@@ -1,10 +1,10 @@
-import { completedStandings } from '../../../utils/completedStandings';
+import { leagueRecords, scheduleLuck } from '../../../utils/leagueRecords';
 import { useMemo, useState } from 'react';
 import { useSeasonMatchups } from '../hooks/useSeasonMatchups';
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 
-const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
+const TrueStandings = ({ league, leagueId, currentWeek, rosters, users }) => {
     const { seasonMatchups, loading, error } = useSeasonMatchups(leagueId, currentWeek);
 
     const userById = useMemo(() => {
@@ -16,13 +16,10 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
     const stats = useMemo(() => {
         if (loading || !rosters || !seasonMatchups) return [];
 
-        return completedStandings(rosters, seasonMatchups).map(stat => {
+        return leagueRecords(rosters, seasonMatchups, league).filter(stat => stat.complete).map(stat => {
             const ownerId = rosters.find(r => r.roster_id === stat.rosterId)?.owner_id;
             const owner = userById.get(ownerId);
-            const allPlayWinPct = (stat.allPlayWins + stat.allPlayTies * 0.5) / (stat.allPlayWins + stat.allPlayLosses + stat.allPlayTies || 1);
-            const totalGames = stat.wins + stat.losses + stat.ties;
-            const expectedWins = allPlayWinPct * totalGames;
-            const luckIndex = (stat.wins + stat.ties * 0.5) - expectedWins;
+            const luckIndex = scheduleLuck(stat);
 
             return {
                 ...stat, ownerId,
@@ -33,7 +30,7 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                 luckIndex: luckIndex.toFixed(2)
             };
         }).sort((a, b) => b.allPlayWins - a.allPlayWins);
-    }, [seasonMatchups, rosters, userById, loading]);
+    }, [seasonMatchups, rosters, userById, loading, league]);
 
     const [showTooltip, setShowTooltip] = useState(false);
 
@@ -99,7 +96,7 @@ const TrueStandings = ({ leagueId, currentWeek, rosters, users }) => {
                                     }`}
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    Difference between Actual Wins and Expected Wins (based on All-Play record).
+                                    Head-to-head wins (ties count half) above expected from All-Play. Median results excluded.
                                 </div>
                             </th>
                         </tr>

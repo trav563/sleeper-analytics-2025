@@ -1,3 +1,4 @@
+import { PlayerHeadshot as SharedPlayerHeadshot } from '../../../components/ui/PlayerHeadshot';
 import { useState, useRef } from 'react';
 import { Trophy, AlertTriangle, TrendingUp, TrendingDown, Download, Copy, Dumbbell, Percent, Shuffle, Sparkles, Timer, Ghost, Flame } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -35,22 +36,12 @@ const RoastCard = ({ tone = 'neutral', icon: Icon, title, manager, children }) =
     );
 };
 
-const PlayerHeadshot = ({ playerId, lastName, ringTone = 'border-line' }) => (
-    <div className={`h-10 w-10 rounded-full overflow-hidden bg-bg-3 border ${ringTone} shrink-0`}>
-        <img
-            src={`https://sleepercdn.com/content/nfl/players/${playerId}.jpg`}
-            alt={lastName}
-            loading="lazy"
-            className="h-full w-full object-cover"
-            onError={(e) => { e.target.src = 'https://sleepercdn.com/images/v2/icons/player_default.webp'; }}
-        />
-    </div>
-);
+const PlayerHeadshot = ({ playerId, lastName, ringTone }) => <SharedPlayerHeadshot playerId={playerId} name={lastName} ringTone={ringTone} size={40} />;
 
 const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStarted = true, seasonMatchups, seasonMatchupsLoading }) => {
     const [tab, setTab] = useState('weekly');
     const [chosenWeek, setSelectedWeek] = useState(null);
-    const availableWeeks = Object.keys(seasonMatchups || {}).map(Number).filter(w => w < currentWeek).sort((a, b) => b - a);
+    const availableWeeks = Object.keys(seasonMatchups || {}).map(Number).filter(w => w < currentWeek && seasonMatchups[w]?.length === rosters?.length && seasonMatchups[w].every(m => Number.isFinite(m.points))).sort((a, b) => b - a);
     const selectedWeek = availableWeeks.includes(chosenWeek) ? chosenWeek : availableWeeks[0];
     const matchups = seasonMatchups?.[selectedWeek] || [];
     const loading = seasonMatchupsLoading;
@@ -103,7 +94,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStart
         if (stats.bagCarrier) add('The Backpack', 'bagCarrier', { ...stats.bagCarrier, playerName: `${stats.bagCarrier.player.first_name} ${stats.bagCarrier.player.last_name}` });
         if (stats.tankCommander) add('Tank Commander', 'tankCommander', { ...stats.tankCommander });
         if (stats.luckyCharm) add('Lucky Charm', 'luckyCharm', { ...stats.luckyCharm });
-        if (stats.closeCall) add('Close Call', 'closeCall', { ...stats.closeCall });
+        if (stats.closeCall) add('Closest Matchup', 'closeCall', { ...stats.closeCall });
         if (stats.coinFlipFail) add('Coin Flip Fail', 'coinFlipFail', { ...stats.coinFlipFail, starter: stats.coinFlipFail.starter.last_name, bench: stats.coinFlipFail.bench.last_name });
         if (stats.ghost) add('The Ghost', 'ghost', { ...stats.ghost, ghostNames: stats.ghost.players.map(p => p.last_name).join(', ') });
         if (stats.topRookie) add('Dynasty Flex', 'topRookie', { ...stats.topRookie, playerName: `${stats.topRookie.player.first_name} ${stats.topRookie.player.last_name}` });
@@ -283,7 +274,7 @@ const WeeklyRecap = ({ league, rosters, users, players, currentWeek, seasonStart
                                     )}
 
                                     {stats.closeCall && (
-                                        <RoastCard tone="signal" icon={Timer} title="Close Call" manager={stats.closeCall.winner}>
+                                        <RoastCard tone="signal" icon={Timer} title="Closest Matchup" manager={stats.closeCall.winner}>
                                             <p className="text-text-dim text-sm">{fillTemplate(roastCopy.closeCall?.text || '', getCardData('closeCall'))}</p>
                                             <p className="mt-2 text-xs text-text-mute">{fillTemplate(roastCopy.closeCall?.sub || '', getCardData('closeCall'))}</p>
                                         </RoastCard>

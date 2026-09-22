@@ -6,9 +6,9 @@ import { Pip } from '../../../components/ui/Pip';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { theme } from '../../../lib/theme';
 
-const PowerRankings = ({ leagueId, currentWeek, rosters, users }) => {
+const PowerRankings = ({ league, leagueId, currentWeek, rosters, users }) => {
     const { seasonMatchups, loading } = useSeasonMatchups(leagueId, currentWeek);
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     if (loading) return (
         <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card" aria-busy="true">

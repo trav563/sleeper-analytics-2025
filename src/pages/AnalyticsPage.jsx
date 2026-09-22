@@ -76,7 +76,7 @@ const AnalyticsPage = () => {
 
     return (
         <div className="space-y-6">
-            <PowerRankings
+            <PowerRankings league={league}
                 leagueId={leagueId}
                 currentWeek={currentWeek}
                 rosters={rosters}
@@ -84,7 +84,7 @@ const AnalyticsPage = () => {
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <TrueStandings
+                <TrueStandings league={league}
                     leagueId={leagueId}
                     currentWeek={currentWeek}
                     rosters={rosters}

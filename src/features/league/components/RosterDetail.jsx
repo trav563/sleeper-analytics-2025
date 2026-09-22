@@ -1,8 +1,8 @@
 import { useCompletedPlayerStats } from '../../stats/hooks/useCompletedPlayerStats';
 import { lastCompletedWeek } from '../../../utils/seasonState';
 import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { displayTeamName, avatarUrl, getByeMap } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
@@ -11,7 +11,7 @@ import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { deriveCurrentWeek } from '../../../utils/seasonState';
 
-const POSITION_GROUPS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+const POSITION_GROUPS = ['QB', 'RB', 'WR', 'TE'];
 const ROSTER_HUE = (rosterId) => (Number(rosterId) * 47) % 360;
 
 // Absolute PPG thresholds for the Positional Strength bars. Mirror the same
@@ -46,9 +46,17 @@ const labelForScore = (score) => {
 
 const RosterDetail = ({ league, rosters, users, players, state, roster, currentWeekMatchups, seasonMatchups }) => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const highlightedPlayer = searchParams.get('player');
+    const rosterRoot = useRef(null);
+    useEffect(() => {
+        if (!highlightedPlayer) return;
+        const row = Array.from(rosterRoot.current?.querySelectorAll('[data-player-id]') || []).find(el => el.dataset.playerId === highlightedPlayer);
+        if (row) { row.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); row.focus({ preventScroll: true }); }
+    }, [highlightedPlayer, roster, players]);
     const week = deriveCurrentWeek(league, state);
     const { logs } = useCompletedPlayerStats(league?.season, lastCompletedWeek(league, state), league?.scoring_settings);
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users);
+    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users, league);
     const owner = users?.find((u) => u.user_id === roster?.owner_id);
     const coOwners = (roster?.co_owners || [])
         .map((id) => users?.find((u) => u.user_id === id))
@@ -112,7 +120,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
     }, [roster, players, league?.roster_positions]);
 
     /* Real weekly projections scored with this league's settings. */
-    const { projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
+    const { projectionFor: projFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
 
     /* Positional strength: avg per-game points by position group, scored
        against absolute PPG thresholds (the same tiers the AI prompt uses).
@@ -198,7 +206,6 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
 
     /* Hero-strip stats. */
     const ranking = rankings.find(r => r.rosterId === roster?.roster_id);
-    const wins = ranking?.wins || 0, losses = ranking?.losses || 0, ties = ranking?.ties || 0;
     const pf = (ranking?.pf || 0).toFixed(1);
     const myRank = ranked ? ranking?.currentRank : null;
 
@@ -215,7 +222,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
     }
 
     return (
-        <section className="space-y-5 pb-12">
+        <section ref={rosterRoot} className="space-y-5 pb-12">
             <Back onClick={() => navigate(-1)} />
 
             {/* Team hero */}
@@ -242,7 +249,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             {displayTeamName(owner)}
                         </h1>
                         <div className="flex flex-wrap gap-3 mt-2 font-mono text-2xs uppercase tracking-wider text-text-dim">
-                            <span><span className="tnum text-text">{wins}-{losses}{ties > 0 ? `-${ties}` : ''}</span> Record</span>
+                            <span><span className="tnum text-text">{ranking ? ranking.record : '—'}</span> Record · through W{ranking?.throughWeek ?? 0}</span>
                             {myRank != null && <span><span className="tnum text-signal">#{myRank}</span> Rank</span>}
                             <span><span className="tnum text-text">{pf}</span> PF</span>
                         </div>
@@ -251,7 +258,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
 
                 {/* Desktop: 5 StatCells right-aligned (record/rank/PF/playoff/streak) */}
                 <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4">
-                    <HeroStat label="Record" value={`${wins}-${losses}${ties > 0 ? `-${ties}` : ''}`} />
+                    <HeroStat label={`Record · through W${ranking?.throughWeek ?? 0}`} value={ranking?.record ?? '—'} />
                     <HeroStat label="Power rank" value={myRank != null ? `#${myRank}` : '—'} tone={myRank === 1 ? 'signal' : 'text'} />
                     <HeroStat label="PF" value={pf} />
                     <HeroStat label="Playoff" value="—" />
@@ -277,6 +284,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                         rows={grouped.starters}
                         playerSeason={playerSeason}
                         projFor={projFor}
+                            highlightedPlayer={highlightedPlayer}
                         myMatchup={myMatchup}
                         gameStatuses={gameStatuses}
                         navigate={navigate}
@@ -291,6 +299,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             rows={grouped.bench}
                             playerSeason={playerSeason}
                             projFor={projFor}
+                            highlightedPlayer={highlightedPlayer}
                             myMatchup={myMatchup}
                             gameStatuses={gameStatuses}
                             navigate={navigate}
@@ -305,6 +314,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             rows={grouped.taxi}
                             playerSeason={playerSeason}
                             projFor={projFor}
+                            highlightedPlayer={highlightedPlayer}
                             navigate={navigate}
                             leagueId={league?.league_id}
                             byeMap={byeMap}
@@ -317,6 +327,7 @@ const RosterDetail = ({ league, rosters, users, players, state, roster, currentW
                             rows={grouped.ir}
                             playerSeason={playerSeason}
                             projFor={projFor}
+                            highlightedPlayer={highlightedPlayer}
                             navigate={navigate}
                             leagueId={league?.league_id}
                             byeMap={byeMap}
@@ -453,7 +464,7 @@ const SectionShell = ({ title, eyebrow, action, children }) => (
     </section>
 );
 
-const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, byeMap, projFor, showLive = false }) => (
+const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navigate, leagueId, byeMap, projFor, highlightedPlayer, showLive = false }) => (
     <div>
         <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold px-4 pt-3 pb-1.5 bg-bg-2/40 flex items-center justify-between gap-2">
             <span>{title}</span>
@@ -470,8 +481,8 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
             const livePts = showLive && player ? (myMatchup?.players_points?.[row.pid] ?? 0) : null;
             const seasonInfo = player ? playerSeason[row.pid] : null;
             const seasonAvg = seasonInfo && seasonInfo.n > 0 ? seasonInfo.sum / seasonInfo.n : null;
-            // A real projection when Sleeper has one; season average otherwise.
-            const proj = projFor?.(row.pid) || seasonAvg;
+            // Missing forecasts stay unavailable; season average is its own column.
+            const proj = projFor?.(row.pid) ?? null;
             const status = player?.team ? gameStatuses?.[player.team] : null;
             const isLive = status === 'STATUS_IN_PROGRESS' || status === 'STATUS_HALFTIME';
 
@@ -479,7 +490,7 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
                 return (
                     <div
                         key={`empty-${row.slot}-${i}`}
-                        className="grid grid-cols-[40px_1fr_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 items-center px-4 py-2.5 border-b border-line/60 last:border-0"
+                        className="grid grid-cols-[40px_28px_minmax(0,1fr)_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 items-center px-4 py-2.5 border-b border-line/60 last:border-0"
                     >
                         <span className="font-mono text-2xs font-bold uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm text-center">
                             {row.slot}
@@ -493,10 +504,12 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
             return (
                 <button
                     key={row.pid}
+                    data-player-id={row.pid}
+                    aria-current={highlightedPlayer === row.pid ? "true" : undefined}
                     type="button"
                     onClick={() => navigate(`/league/${leagueId}/player/${row.pid}`)}
-                    className={`w-full grid grid-cols-[40px_1fr_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 md:gap-3 items-center px-4 py-2.5 text-left border-b border-line/60 last:border-0 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
-                        isLive ? 'bg-gradient-to-r from-signal-2/8 to-transparent' : ''
+                    className={`w-full grid grid-cols-[40px_28px_minmax(0,1fr)_auto] md:grid-cols-[46px_28px_1fr_60px_60px_60px_44px] gap-2 md:gap-3 items-center px-4 py-2.5 text-left border-b border-line/60 last:border-0 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
+                        highlightedPlayer === row.pid ? 'bg-signal/10 ring-1 ring-inset ring-signal' : isLive ? 'bg-gradient-to-r from-signal-2/8 to-transparent' : ''
                     }`}
                 >
                     <span className={`font-mono text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm text-center ${
@@ -504,7 +517,7 @@ const RosterTable = ({ title, rows, playerSeason, myMatchup, gameStatuses, navig
                     }`}>
                         {row.slot}
                     </span>
-                    <span className="hidden md:block">
+                    <span>
                         <PlayerHeadshot playerId={row.pid} name={player.last_name} size={28} />
                     </span>
                     <div className="min-w-0">
