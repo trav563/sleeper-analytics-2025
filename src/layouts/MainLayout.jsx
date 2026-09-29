@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 
@@ -12,10 +13,10 @@ const MainLayout = () => {
             </a>
             <Navbar />
             <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <Outlet />
+                <Suspense fallback={<p role="status" className="min-h-[50vh] py-12 text-center text-text-dim">Loading page…</p>}><Outlet /></Suspense>
             </main>
             <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-2 border-t border-line mt-4">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs uppercase tracking-wider text-text-mute">
                     <span>Data from the Sleeper public API</span>
                     <Link to="/privacy" className="hover:text-signal transition-colors">
                         Privacy

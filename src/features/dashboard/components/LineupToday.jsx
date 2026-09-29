@@ -6,7 +6,7 @@ import { gamePhase, starterPoints } from '../../../lib/liveProjection';
 import { LiveDot } from '../../../components/ui/LiveDot';
 import { useGameLiveDetails } from '../hooks/useGameLiveDetails';
 
-/** Compact "Today's Lineup" card — first 5 starters with live highlighting. */
+/** Week-specific lineup card with live highlighting when games are in progress. */
 const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, allowRosterFallback = false }) => {
     const navigate = useNavigate();
     const { projectionFor } = useWeekProjections(league?.season, week, league?.scoring_settings);
@@ -39,11 +39,11 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
             <header className="px-4 pt-3 pb-2 border-b border-line flex items-center justify-between">
-                <h3 className="font-display text-md font-semibold text-text">Today's Lineup</h3>
+                <h3 className="font-display text-md font-semibold text-text">Week {week} lineup</h3>
                 <button
                     type="button"
                     onClick={() => navigate(`/league/${league?.league_id}/team/${roster.roster_id}`)}
-                    className="font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast"
+                    className="min-h-11 px-2 font-mono text-xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast"
                 >
                     <span className="tnum">{totalSet}</span> / <span className="tnum">{totalSlots}</span> set ›
                 </button>
@@ -54,7 +54,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
                 if (!row.player) {
                     return (
                         <div key={i} className="grid grid-cols-[36px_28px_minmax(0,1fr)_auto] gap-3 items-center px-4 py-2.5 border-t border-line/60">
-                            <span className="font-mono text-2xs font-bold uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm text-center">
+                            <span className="font-mono text-xs font-bold uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm text-center">
                                 {row.slot}
                             </span>
                             <span className="text-sm text-text-mute italic col-span-2">Empty</span>
@@ -71,7 +71,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
                             row.live ? 'bg-gradient-to-r from-signal-2/8 to-transparent' : ''
                         }`}
                     >
-                        <span className={`font-mono text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm text-center ${
+                        <span className={`font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm text-center ${
                             row.live ? 'text-signal bg-signal/15' : 'text-text-dim bg-bg-2'
                         }`}>
                             {row.slot}
@@ -81,7 +81,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
                             <div className="text-sm font-semibold text-text truncate">
                                 {row.player.first_name?.[0]}. {row.player.last_name}
                             </div>
-                            <div className={`font-mono text-2xs uppercase tracking-wider mt-0.5 inline-flex items-center gap-1 ${row.live ? 'text-signal-2' : 'text-text-mute'}`}>
+                            <div className={`font-mono text-xs uppercase tracking-wider mt-0.5 inline-flex items-center gap-1 ${row.live ? 'text-signal-2' : 'text-text-mute'}`}>
                                 {row.live && <LiveDot />}
                                 {row.player.team || 'FA'}
                                 {row.gameInfo?.displayClock && row.live && (
@@ -91,7 +91,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
                         </div>
                         <div className="text-right">
                             <div className={`tnum text-md font-extrabold tracking-tight ${row.pts > 0 ? 'text-text' : 'text-text-mute'}`}>
-                                {row.projected && <span className="text-2xs text-text-dim font-normal mr-1">Proj</span>}{Number.isFinite(row.pts) ? row.pts.toFixed(1) : '—'}
+                                {row.projected && <span className="text-xs text-text-dim font-normal mr-1">Proj</span>}{Number.isFinite(row.pts) ? row.pts.toFixed(1) : '—'}
                             </div>
                         </div>
                     </button>
@@ -101,7 +101,7 @@ const LineupToday = ({ league, week, roster, players, viewMatchups, slotLabels, 
             <button
                 type="button"
                 onClick={() => navigate(`/league/${league?.league_id}/team/${roster.roster_id}`)}
-                className="w-full text-center px-4 py-2.5 font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal hover:bg-bg-2/60 border-t border-line/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
+                className="w-full min-h-11 text-center px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-text-dim hover:text-signal hover:bg-bg-2/60 border-t border-line/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
             >
                 Bench, taxi & IR · view full team ›
             </button>

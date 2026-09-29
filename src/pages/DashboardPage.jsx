@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useId, useState } from 'react';
+import { useLeagueView } from '../hooks/useLeagueView';
 import { useOutletContext } from 'react-router-dom';
 import { displayTeamName } from '../utils/nflData';
 import MyMatchupHero from '../features/dashboard/components/MyMatchupHero';
@@ -13,43 +14,31 @@ import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups
 import { fetchLeagueMatchups } from '../utils/sleeper';
 
 const DashboardPage = () => {
-    const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, seasonStarted, loading, error, user, league } = useOutletContext();
-    const [chosenUser, setSelectedUserId] = useState('');
-    const selectedUserId = rosters?.some(r => r.owner_id === chosenUser) ? chosenUser : (rosters?.find(r => r.owner_id === user?.user_id) || rosters?.[0])?.owner_id;
-
+    const { users, rosters, matchups: currentWeekMatchups, players, state, currentWeek, loading, error, user, league } = useOutletContext();
     const currentNFLWeek = currentWeek || 1;
-    const isHistoricalSeason = league?.season && state?.season &&
-        Number(league.season) < Number(state.season);
-    // Before kickoff week 1 is upcoming, not "current" — don't imply games exist.
-    const anchorLabel = isHistoricalSeason ? '(Final)' : seasonStarted ? '(Current)' : '(Upcoming)';
-    const anchor = `${league?.league_id}:${currentNFLWeek}`;
-    const [weekSelection, setWeekSelection] = useState(null);
-    const selectedWeek = weekSelection?.anchor === anchor ? weekSelection.week : currentNFLWeek;
-    const setSelectedWeek = week => setWeekSelection({ anchor, week });
-    const { data: selectedMatchups, isFetching: loadingMatchups, error: matchupError } = useQuery({
+    const { roster: myRoster, week: selectedWeek, selectRoster, selectWeek: setSelectedWeek } = useLeagueView(league?.league_id, rosters, user, currentNFLWeek);
+    const selectedUserId = myRoster?.owner_id;
+    const isHistoricalSeason = league?.season && state?.season && Number(league.season) < Number(state.season);
+    const { data: selectedMatchups, isLoading: loadingMatchups, error: matchupError, refetch: retryMatchups } = useQuery({
         queryKey: ['leagueMatchups', league?.league_id, selectedWeek],
         queryFn: () => fetchLeagueMatchups(league.league_id, selectedWeek),
         enabled: !!league?.league_id && selectedWeek !== currentNFLWeek,
         staleTime: 60000,
     });
     const viewMatchups = selectedWeek === currentNFLWeek ? currentWeekMatchups || [] : selectedMatchups || [];
-    const { seasonMatchups } = useSeasonMatchups(league?.league_id, selectedWeek);
-
-    const myRoster = useMemo(
-        () => rosters?.find((r) => r.owner_id === selectedUserId) || null,
-        [rosters, selectedUserId]
-    );
+    const { seasonMatchups, completedWeek, loading: recordsLoading, error: recordsError } = useSeasonMatchups(league?.league_id, selectedWeek);
+    const waitingForMatchups = selectedWeek !== currentNFLWeek && loadingMatchups;
 
     if (loading) {
         return (
-            <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+            <div className="p-8 text-center font-mono text-xs uppercase tracking-wider text-text-mute">
                 Loading dashboard…
             </div>
         );
     }
     if (error) {
         return (
-            <div className="p-8 text-center font-mono text-2xs uppercase tracking-wider text-bad">
+            <div className="p-8 text-center font-mono text-xs uppercase tracking-wider text-bad">
                 Error loading dashboard data
             </div>
         );
@@ -63,42 +52,37 @@ const DashboardPage = () => {
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-line pb-5">
                 <div>
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
-                        {isTimeTraveling
-                            ? <>Time Travel · Week <span className="tnum text-signal">{selectedWeek}</span></>
-                            : <>Current Week Overview</>}
-                    </div>
-                    <h1 className="mt-1 font-display text-3xl font-bold tracking-snug text-text">
+                    <h1 className="font-display text-2xl md:text-3xl font-bold tracking-snug text-text">
                         League Dashboard
                     </h1>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
-                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
+                <div className="grid grid-cols-[minmax(0,110px)_minmax(0,1fr)] md:flex gap-2">
+                    <label className="min-w-0 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
+                        <span className="font-mono text-xs uppercase tracking-wider text-text-mute">Week</span>
                         <select
-                            className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
+                            className="min-w-0 min-h-11 w-full md:w-auto bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
                             aria-label="Select week"
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(Number(e.target.value))}
                         >
                             {weekOptions.map((w) => (
                                 <option key={w} value={w}>
-                                    {w}{w === currentNFLWeek ? ` ${anchorLabel}` : ''}
+                                    {w}
                                 </option>
                             ))}
                         </select>
                     </label>
-                    <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
-                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">View as</span>
+                    <label className="min-w-0 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line focus-within:ring-1 focus-within:ring-signal focus-within:border-signal">
+                        <span className="font-mono text-xs uppercase tracking-wider text-text-mute">View as</span>
                         <select
-                            className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6"
+                            className="min-w-0 min-h-11 w-full md:w-auto bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6"
                             aria-label="View as team"
-                            value={selectedUserId}
-                            onChange={(e) => setSelectedUserId(e.target.value)}
+                            value={myRoster?.roster_id || ""}
+                            onChange={(e) => selectRoster(e.target.value)}
                         >
-                            {users?.map((u) => (
-                                <option key={u.user_id} value={u.user_id}>
-                                    {displayTeamName(u)}
+                            {rosters?.map((r) => (
+                                <option key={r.roster_id} value={r.roster_id}>
+                                    {displayTeamName(users?.find(u => u.user_id === r.owner_id)) || `Team ${r.roster_id}`}
                                 </option>
                             ))}
                         </select>
@@ -106,71 +90,55 @@ const DashboardPage = () => {
                 </div>
             </header>
 
-            {matchupError && <p role="alert" className="text-bad text-sm">Could not load the selected week. Try Refresh data.</p>}
-            {/* Two-column body matching design composition */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
-                {/* LEFT column: Hero → LeaguePulse → LineupToday (mobile) → Insights */}
-                <div className={`flex flex-col gap-4 min-w-0 ${loadingMatchups ? 'opacity-90' : ''}`}>
-                    <MyMatchupHero
-                        league={league}
-                        week={selectedWeek}
-                        viewMatchups={viewMatchups}
-                        rosters={rosters}
-                        users={users}
-                        players={players}
-                        seasonMatchups={seasonMatchups}
-                        selectedUserId={selectedUserId}
-                    />
-                    <LeaguePulse
-                        league={league}
-                        week={selectedWeek}
-                        viewMatchups={viewMatchups}
-                        rosters={rosters}
-                        users={users}
-                        players={players}
-                    />
-                    {/* Mobile-only: full lineup. Hidden ≥ lg per design composition. */}
-                    <div className="lg:hidden">
-                        <LineupToday
-                            league={league}
-                            week={selectedWeek}
-                            roster={myRoster}
-                            players={players}
-                            viewMatchups={viewMatchups}
-                            slotLabels={league?.roster_positions || []}
-                            allowRosterFallback={!isHistoricalSeason && selectedWeek >= currentNFLWeek}
-                        />
-                    </div>
-                    {!isHistoricalSeason && !isTimeTraveling && <Insights
-                        leagueId={league?.league_id}
-                        userId={selectedUserId}
-                        week={selectedWeek}
-                    />}
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
+                <div className="min-w-0">
+                    {waitingForMatchups ? <div role="status" className="rounded-xl border border-line bg-bg-1 p-6 min-h-64 flex items-center justify-center text-text-dim">Loading Week {selectedWeek} matchup…</div>
+                    : matchupError && selectedWeek !== currentNFLWeek ? <div role="alert" className="rounded-xl border border-line bg-bg-1 p-6"><p>Could not load Week {selectedWeek}.</p><button type="button" className="min-h-11 text-signal" onClick={() => retryMatchups()}>Try again</button></div>
+                    : <MyMatchupHero league={league} week={selectedWeek} viewMatchups={viewMatchups}
+                        rosters={rosters} users={users} players={players} seasonMatchups={seasonMatchups}
+                        selectedUserId={selectedUserId} selectedRosterId={myRoster?.roster_id}
+                        ownTeam={!!user?.user_id && (myRoster?.owner_id === user.user_id || myRoster?.co_owners?.includes(user.user_id))}
+                        completedWeek={completedWeek} recordsLoading={recordsLoading} recordsError={recordsError} />}
                 </div>
-
-                {/* RIGHT rail: 4 stats → Standings → Roster News */}
-                <div className="flex flex-col gap-4 min-w-0">
-                    <QuickStats4
-                        rosters={rosters}
-                        users={users}
-                        selectedUserId={selectedUserId}
-                        league={league}
-                        currentWeek={selectedWeek}
-                        seasonMatchups={seasonMatchups}
-                        state={state}
-                    />
-                    <StandingsStrip
-                        league={league}
-                        rosters={rosters}
-                        users={users}
-                        seasonMatchups={seasonMatchups}
-                        currentUserId={selectedUserId}
-                    />
-                    <RosterNews roster={myRoster} players={players} />
+                <QuickStats4 rosters={rosters} users={users} selectedUserId={selectedUserId}
+                    league={league} currentWeek={selectedWeek} seasonMatchups={seasonMatchups} state={state}
+                    recordsLoading={recordsLoading} recordsError={recordsError} />
+                <div className="min-w-0 space-y-4">
+                    {!waitingForMatchups && !matchupError && <>
+                        <div className="lg:hidden">
+                            <LineupToday league={league} week={selectedWeek} roster={myRoster} players={players}
+                                viewMatchups={viewMatchups} slotLabels={league?.roster_positions || []}
+                                allowRosterFallback={!isHistoricalSeason && selectedWeek >= currentNFLWeek} />
+                        </div>
+                        <DashboardDisclosure title="League matchups">
+                            <LeaguePulse league={league} week={selectedWeek} viewMatchups={viewMatchups}
+                                rosters={rosters} users={users} players={players} completedWeek={completedWeek} />
+                        </DashboardDisclosure>
+                    </>}
+                    {!isHistoricalSeason && !isTimeTraveling && <DashboardDisclosure title="AI team analysis">
+                        <Insights leagueId={league?.league_id} userId={selectedUserId} week={selectedWeek} />
+                    </DashboardDisclosure>}
+                </div>
+                <div className="min-w-0 space-y-4">
+                    <StandingsStrip league={league} rosters={rosters} users={users} seasonMatchups={seasonMatchups}
+                        currentUserId={selectedUserId} loading={recordsLoading} error={recordsError} />
+                    {!isHistoricalSeason && <RosterNews roster={myRoster} players={players} />}
                 </div>
             </div>
         </div>
     );
 };
+
+function DashboardDisclosure({ title, children }) {
+    const [open, setOpen] = useState(false);
+    const id = useId();
+    return <section>
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}
+            className="lg:hidden min-h-12 w-full flex justify-between items-center border-b border-line py-3 text-sm font-semibold">
+            {title}<span className="text-text-dim text-xs">{open ? 'Hide' : 'Show'}</span>
+        </button>
+        <div id={id} className={open ? 'pt-3 lg:pt-0' : 'hidden lg:block'}>{children}</div>
+    </section>;
+}
 
 export default DashboardPage;

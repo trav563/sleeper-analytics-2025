@@ -4,9 +4,9 @@ import { Trend } from '../../../components/ui/Trend';
 import { usePowerRankings } from '../../analytics/hooks/usePowerRankings';
 
 /** Full standings preview with deep-link to power rankings page. */
-const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId }) => {
+const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId, loading = false, error = null }) => {
     const navigate = useNavigate();
-    const { rankings } = usePowerRankings(seasonMatchups, rosters, users, league);
+    const { rankings, incomplete } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card overflow-hidden">
@@ -15,22 +15,27 @@ const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId 
                 <button
                     type="button"
                     onClick={() => navigate(`/league/${league?.league_id}/standings`)}
-                    className="font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast"
+                    className="min-h-11 text-xs text-text-dim hover:text-signal transition-colors duration-fast"
                 >
-                    Power ›
+                    Full standings
                 </button>
             </header>
 
-            {rankings.length === 0 ? (
-                <div className="font-mono text-2xs uppercase tracking-wider text-text-mute py-6 text-center">
+            {loading || error || incomplete ? <p role={error || incomplete ? 'alert' : 'status'} className="p-6 text-sm text-text-dim">
+                {error || incomplete ? 'Rankings could not load. Use Refresh data to try again.' : 'Calculating rankings…'}
+            </p> : rankings.length === 0 ? (
+                <div className="font-mono text-xs uppercase tracking-wider text-text-mute py-6 text-center">
                     Standings appear once games are played.
                 </div>
             ) : (
-                rankings.map((row, i) => {
+                <><div aria-hidden="true" className="grid grid-cols-[24px_28px_1fr_44px_44px_36px] gap-2 px-4 py-2 text-xs text-text-dim">
+                    <span>#</span><span className="col-span-2">Team</span><span className="text-right">W–L</span><span className="text-right" title="Points scored">PF</span><span className="text-right" title="Change in power rank">Δ</span>
+                </div>{rankings.map((row, i) => {
                     const isMe = row.ownerId === currentUserId;
                     return (
                         <button
                             key={row.rosterId}
+                            aria-label={`${row.name}, power rank ${i + 1}, record ${row.record}, ${row.pf.toFixed(0)} points scored, rank change ${row.rankChange}`}
                             type="button"
                             onClick={() => navigate(`/league/${league?.league_id}/team/${row.rosterId}`)}
                             className={`w-full text-left grid grid-cols-[24px_28px_1fr_44px_44px_36px] gap-2 items-center px-4 py-2.5 border-t border-line/60 hover:bg-bg-2/60 transition-colors duration-fast focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal ${
@@ -57,7 +62,7 @@ const StandingsStrip = ({ league, rosters, users, seasonMatchups, currentUserId 
                             </div>
                         </button>
                     );
-                })
+                })}</>
             )}
         </section>
     );

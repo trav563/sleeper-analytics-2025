@@ -218,31 +218,31 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 mb-2">
                             <span
-                                className="font-mono text-2xs font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-sm text-signal"
+                                className="font-mono text-xs font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-sm text-signal"
                                 style={{ background: 'rgba(245, 179, 1, 0.15)' }}
                             >
                                 {player.position}
                             </span>
                             {player.team && (
                                 <span
-                                    className="font-mono text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm text-text"
+                                    className="font-mono text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm text-text"
                                     style={{ background: tintBgSoft }}
                                 >
                                     {player.team}
                                 </span>
                             )}
                             {player.number && (
-                                <span className="font-mono text-2xs uppercase tracking-wider text-text-dim tnum">
+                                <span className="font-mono text-xs uppercase tracking-wider text-text-dim tnum">
                                     #{player.number}
                                 </span>
                             )}
                             {player.age && (
-                                <span className="font-mono text-2xs uppercase tracking-wider text-text-dim">
+                                <span className="font-mono text-xs uppercase tracking-wider text-text-dim">
                                     Age <span className="tnum">{player.age}</span>
                                 </span>
                             )}
                             {player.injury_status && (
-                                <span className="font-mono text-2xs font-bold uppercase tracking-wider text-bad bg-bad/10 border border-bad/30 px-1.5 py-0.5 rounded-sm">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-bad bg-bad/10 border border-bad/30 px-1.5 py-0.5 rounded-sm">
                                     {player.injury_status}
                                 </span>
                             )}
@@ -250,7 +250,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                         <h1 className="font-display text-2xl md:text-4xl font-extrabold tracking-tight text-text leading-none">
                             {fullName}
                         </h1>
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-dim mt-3">
+                        <div className="font-mono text-xs uppercase tracking-wider text-text-dim mt-3">
                             {oppTeam
                                 ? <>{live?.isHome ? 'vs' : '@'} {oppTeam}{live?.displayClock ? <> · <span className="tnum text-signal-2">{live.statusName === 'STATUS_FINAL' ? 'Final' : `Q${live.period} ${live.displayClock}`}</span></> : ''}</>
                                 : <span>{seasonType === 'pre' ? 'Preseason' : `Week ${week}`}</span>}
@@ -274,7 +274,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                                     key={s.label}
                                     className={`rounded-md md:bg-transparent md:border-0 md:p-0 bg-bg-2 border border-line p-2.5 text-center md:text-left ${s.desktopOnly ? 'hidden md:block' : ''}`}
                                 >
-                                    <div className="font-mono text-2xs font-bold uppercase tracking-wider text-text-mute">
+                                    <div className="font-mono text-xs font-bold uppercase tracking-wider text-text-mute">
                                         {s.label}
                                     </div>
                                     <div className={`font-display tnum text-xl md:text-2xl font-extrabold tracking-tight mt-0.5 ${STAT_TONE[s.tone] || 'text-text'}`}>
@@ -326,7 +326,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                             <div className="font-display text-md font-semibold text-text">
                                 <span className="tnum">{league?.season || ''}</span> Weekly Points
                             </div>
-                            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                            <div className="font-mono text-xs uppercase tracking-wider text-text-mute">
                                 Avg <span className="tnum text-text">{seasonStats.avg != null ? seasonStats.avg.toFixed(1) : '—'}</span>
                                 {seasonStats.high != null && (
                                     <> · High <span className="tnum text-good">{seasonStats.high.toFixed(1)}</span></>
@@ -337,7 +337,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                             </div>
                         </header>
                         {weekly.length === 0 ? (
-                            <div className="h-48 flex items-center justify-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+                            <div className="h-48 flex items-center justify-center font-mono text-xs uppercase tracking-wider text-text-mute">
                                 {statsLoading ? "Loading completed games…" : statsError ? "Completed game statistics unavailable" : "No completed games with confirmed participation"}
                             </div>
                         ) : (
@@ -379,7 +379,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                                 player.age != null && `Age ${player.age}`,
                                 player.team && `On ${player.team}`,
                             ].filter(Boolean).map((tag) => (
-                                <span key={tag} className="font-mono text-2xs uppercase tracking-wider text-text-dim bg-bg-2 border border-line px-2 py-1 rounded-sm">
+                                <span key={tag} className="font-mono text-xs uppercase tracking-wider text-text-dim bg-bg-2 border border-line px-2 py-1 rounded-sm">
                                     {tag}
                                 </span>
                             ))}
@@ -398,7 +398,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                             <div className="h-14 w-full bg-bg-2 rounded-md animate-pulse" />
                         </div>
                     ) : personalNews.length === 0 ? (
-                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        <p className="font-mono text-xs uppercase tracking-wider text-text-mute">
                             No recent headlines mentioning {fullName}.
                         </p>
                     ) : (
@@ -422,7 +422,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                                                 {isAlert && <Activity className="w-3 h-3 inline-block mr-1.5 -mt-0.5" aria-hidden="true" />}
                                                 {item.title}
                                             </p>
-                                            <div className="flex items-center gap-2 mt-1.5 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                                            <div className="flex items-center gap-2 mt-1.5 font-mono text-xs uppercase tracking-wider text-text-mute">
                                                 <span>{isAlert ? 'Status update' : timeAgo(item.pubDate)}</span>
                                                 {item.trending === 'down' && (
                                                     <span className="text-bad bg-bad/10 px-1.5 py-0.5 rounded-sm border border-bad/30">
@@ -445,7 +445,7 @@ const PlayerDetail = ({ player, players, league, rosters, users, state, currentW
                         Matchup{oppTeam ? <> · {live?.isHome ? 'vs' : '@'} {oppTeam}</> : ''}
                     </header>
                     {!oppTeam ? (
-                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        <p className="font-mono text-xs uppercase tracking-wider text-text-mute">
                             No live game data for this player's team this week.
                         </p>
                     ) : (
@@ -483,7 +483,7 @@ const Row = ({ k, v, sub, tone = 'text' }) => {
             <span className="text-sm text-text-dim">{k}</span>
             <span className="text-right">
                 <span className={`tnum font-semibold ${toneClass}`}>{v}</span>
-                {sub && <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">{sub}</div>}
+                {sub && <div className="font-mono text-xs uppercase tracking-wider text-text-mute">{sub}</div>}
             </span>
         </li>
     );

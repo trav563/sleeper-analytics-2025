@@ -1,6 +1,6 @@
-import { useSleeper } from '../context/SleeperContext';
+import { useLeagueView } from '../hooks/useLeagueView';
 import { useMarketValues } from '../features/tools/hooks/useMarketValues';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutletContext, useParams, useSearchParams, Link } from 'react-router-dom';
 
 import RosterDetail from '../features/league/components/RosterDetail';
@@ -16,34 +16,25 @@ import { useWeekProjections } from '../features/league/hooks/useWeekProjections'
 import { fetchLeagueRosters } from '../utils/sleeper';
 
 /**
- * The team page. Reached as /my-team (your own roster, from the nav) or
- * /team/:rosterId (anyone else's). One implementation either way — the roster
+ * The team page. /my-team follows the league viewing selection, defaulting
+ * to an owned roster. /team/:rosterId explicitly selects a roster. One implementation either way — the roster
  * view plus the analysis sections.
  */
 const MyTeamPage = () => {
     const { rosterId } = useParams();
     const [searchParams] = useSearchParams();
     const choosingTeam = !rosterId && searchParams.get('choose-team') === '1';
-    const { viewedTeams, selectViewedTeam } = useSleeper();
     const ctx = useOutletContext();
     const {
         league, rosters, users, players, state, user,
         matchups: currentWeekMatchups, currentWeek, tradedPicks,
     } = ctx || {};
 
+    const { roster: viewedRoster, selectRoster } = useLeagueView(league?.league_id, rosters, user, currentWeek);
+    const roster = rosterId ? rosters?.find(r => r.roster_id === Number(rosterId)) : viewedRoster;
     useEffect(() => {
-        if (rosterId && league?.league_id && rosters?.some(r => r.roster_id === Number(rosterId))) selectViewedTeam(league.league_id, Number(rosterId));
-    }, [rosterId, league?.league_id, rosters, selectViewedTeam]);
-    const viewedRosterId = viewedTeams[league?.league_id];
-    // /team/:rosterId targets a specific roster; /my-team resolves the signed-in user's.
-    const roster = useMemo(() => {
-        if (!rosters?.length) return null;
-        if (rosterId) return rosters.find((r) => r.roster_id === Number(rosterId)) || null;
-        if (!user?.user_id) return rosters.find(r => r.roster_id === viewedRosterId) || null;
-        return rosters.find(
-            (r) => r.owner_id === user.user_id || (r.co_owners || []).includes(user.user_id)
-        ) || null;
-    }, [rosters, rosterId, user, viewedRosterId]);
+        if (rosterId && roster) selectRoster(roster.roster_id);
+    }, [rosterId, roster, selectRoster]);
 
     const isSuperflex = (league?.roster_positions || []).filter(p => p === 'QB' || p === 'SUPER_FLEX').length >= 2;
     const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentWeek);
@@ -71,7 +62,7 @@ const MyTeamPage = () => {
         league, rosters, currentWeek, marketValues, state?.season_type || 'regular', prevSeasonRosters
     );
 
-    // Signed out with no explicit roster — nothing to show.
+    // Let visitors explicitly switch the shared league selection.
     if (rosters?.length && (choosingTeam || (!rosterId && !roster && !user?.user_id))) {
         return <section className="space-y-4"><h1 className="text-2xl font-bold">Choose a team</h1><p className="text-sm text-text-dim">Select a roster to view its lineup, players, and dynasty assets.</p><div className="grid sm:grid-cols-2 gap-3">{rosters.map(r => <Link key={r.roster_id} to={`/league/${league.league_id}/team/${r.roster_id}`} className="min-h-12 p-4 bg-bg-1 border border-line rounded-lg text-sm font-semibold">{users?.find(u => u.user_id === r.owner_id)?.metadata?.team_name || users?.find(u => u.user_id === r.owner_id)?.display_name || `Team ${r.roster_id}`}</Link>)}</div></section>;
     }
@@ -81,16 +72,16 @@ const MyTeamPage = () => {
             <div className="text-center p-12 space-y-3 bg-bg-1 rounded-xl border border-line">
                 <h3 className="font-display text-lg font-semibold text-text">No team found</h3>
                 <p className="text-sm text-text-dim max-w-md mx-auto">
-                    You don't appear to own a roster in this league. Pick a team from the Standings
-                    to view it instead.
+                    This roster is unavailable. Choose another team to view its lineup and analysis.
                 </p>
+                <Link to={`/league/${league.league_id}/my-team?choose-team=1`} className="inline-flex min-h-11 items-center text-signal">Choose a team</Link>
             </div>
         );
     }
 
     return (
         <div className="space-y-5">
-            {!user?.user_id && <Link className="inline-flex items-center min-h-11 text-sm text-signal" to={`/league/${league.league_id}/my-team?choose-team=1`}>Change team</Link>}
+            <Link className="inline-flex items-center min-h-11 text-sm text-signal" to={`/league/${league.league_id}/my-team?choose-team=1`}>Change team</Link>
             <RosterDetail
                 league={league}
                 rosters={rosters}

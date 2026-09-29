@@ -12,6 +12,7 @@ import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
+import { matchupStatus, remainingStarters } from '../../../lib/matchupStatus';
 import { projectMatchup, starterPoints, gamePhase, formatProjection, estimateUnavailableMessage } from '../../../lib/liveProjection';
 import { WinProbabilityChart } from './WinProbabilityChart';
 
@@ -29,10 +30,10 @@ const bucketStarter = (m, idx, players, gameStatuses) => {
 const orderedPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'];
 
 /* ---------- main component ---------- */
-const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, isHistoricalSeason, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster }) => {
+const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, isHistoricalSeason, onWeekChange, viewMatchups, seasonMatchups, selectedRosterId, onSelectRoster, completedWeek = 0, ownTeam = false, recordsLoading = false, recordsError = null }) => {
     const navigate = useNavigate();
     const records = leagueRecords(rosters, seasonMatchups, league);
-    const recordLabel = id => { const r = records.find(t => t.rosterId === id); return `${r?.complete ? r.record : '—'} · through W${r?.throughWeek ?? 0}`; };
+    const recordLabel = id => { if (recordsLoading) return 'Record loading…'; if (recordsError) return 'Record unavailable'; const r = records.find(t => t.rosterId === id); return `${r?.complete ? r.record : '—'} · through W${r?.throughWeek ?? 0}`; };
     const [tab, setTab] = useState('side');
     const [seriesHistory, setSeriesHistory] = useState([]);
 
@@ -142,10 +143,10 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const { projections, error: projectionError, loading: projectionsLoading } = useWeekProjections(
         league?.season, week, league?.scoring_settings
     );
-    const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails }),
-        [myMatchup, players, projections, liveDetails]);
-    const oppProjection = useMemo(() => projectMatchup({ matchup: oppMatchup, players, projections, games: liveDetails }),
-        [oppMatchup, players, projections, liveDetails]);
+    const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails, isWeekFinal: week > 0 && week <= completedWeek }),
+        [myMatchup, players, projections, liveDetails, week, completedWeek]);
+    const oppProjection = useMemo(() => projectMatchup({ matchup: oppMatchup, players, projections, games: liveDetails, isWeekFinal: week > 0 && week <= completedWeek }),
+        [oppMatchup, players, projections, liveDetails, week, completedWeek]);
 
     const positionRows = useMemo(() => {
         if (!myMatchup) return [];
@@ -234,17 +235,13 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const marginTone = marginValue > 0 ? 'good' : marginValue < 0 ? 'bad' : 'mute';
 
     const winning = myScore > oppScore;
-    const remainingMine = (myMatchup.starters || []).filter((pid, idx) => {
-        const b = bucketStarter(myMatchup, idx, players, gameStatuses);
-        return b.status === 'LIVE' || b.status === 'SOON';
-    }).length;
-    const totalSlots = (myMatchup.starters || []).length;
-
-    /* Live eyebrow text. */
-    const anyLive = (myMatchup.starters || []).some((pid, idx) => {
-        const b = bucketStarter(myMatchup, idx, players, gameStatuses);
-        return b.status === 'LIVE';
-    });
+    const status = matchupStatus({ matchups: oppMatchup ? [myMatchup, oppMatchup] : [myMatchup], players, games: liveDetails, week, completedWeek });
+    const outcome = status === 'Final' && oppMatchup
+        ? myScore > oppScore ? 'Win' : myScore < oppScore ? 'Loss' : 'Tie'
+        : null;
+    const remainingMine = remainingStarters(myMatchup, players, liveDetails, status === 'Final');
+    const totalSlots = (myMatchup.starters || []).filter(id => id && id !== '0').length;
+    const anyLive = status === 'Live';
 
     // (slotLabels + positionRows now computed above the early return)
 
@@ -259,7 +256,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                 <Back onClick={() => navigate(-1)} />
                 {onWeekChange && (
                     <label className="inline-flex items-center gap-2 bg-bg-2 px-2.5 py-1 rounded-md border border-line">
-                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">Week</span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-text-mute">Week</span>
                         <select
                             className="bg-transparent text-sm font-semibold text-text border-none focus:ring-0 focus:outline-none cursor-pointer py-1 pr-6 tnum"
                             value={week}
@@ -278,7 +275,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
             {/* Matchup picker — horizontal scroll of all pairs this week */}
             {matchupPairs.length > 1 && (
                 <div className="space-y-2">
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    <div className="font-mono text-xs uppercase tracking-wider text-text-mute">
                         Week <span className="tnum text-text-dim">{week}</span> · {matchupPairs.length} matchups
                     </div>
                     <div
@@ -336,21 +333,21 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                         {anyLive ? (
                             <>
                                 <LiveDot />
-                                <span className="font-mono text-2xs uppercase tracking-wider font-bold text-signal-2">
+                                <span className="font-mono text-xs uppercase tracking-wider font-bold text-signal-2">
                                     Live · Week <span className="tnum">{week}</span>
                                 </span>
                             </>
                         ) : (
-                            <span className="font-mono text-2xs uppercase tracking-wider font-bold text-text-mute">
-                                Week <span className="tnum">{week}</span>
+                            <span className="font-mono text-xs uppercase tracking-wider font-bold text-text-mute">
+                                {status === 'Unavailable' ? 'Status unavailable' : status} · Week <span className="tnum">{week}</span>
                             </span>
                         )}
                     </div>
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                        <span className="tnum">{remainingMine}</span> of <span className="tnum">{totalSlots}</span> players remaining
+                    <div className="font-mono text-xs uppercase tracking-wider text-text-dim">
+                        {remainingMine == null ? 'Players remaining unavailable' : <><span className="tnum">{remainingMine}</span> of <span className="tnum">{totalSlots}</span> players remaining</>}
                     </div>
                     </div>
-                    <WinProbabilityBadge probability={winProb} />
+                    <WinProbabilityBadge probability={winProb} outcome={outcome} />
                 </div>
 
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 md:gap-6 items-center">
@@ -369,8 +366,8 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             )}
                         </button>
                         <div className="min-w-0 w-full md:w-auto">
-                            <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
-                                {recordLabel(myRoster?.roster_id)} · You
+                            <div className="font-mono text-xs uppercase tracking-wider text-text-dim">
+                                {recordLabel(myRoster?.roster_id)} · {ownTeam ? 'You' : 'Viewing'}
                             </div>
                             <button
                                 type="button"
@@ -385,13 +382,13 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             >
                                 {myScore.toFixed(1)}
                             </div>
-                            <div className="font-mono text-2xs text-text-mute mt-1.5">
+                            <div className="font-mono text-xs text-text-mute mt-1.5">
                                 {myProjection.isFinal ? 'Final' : 'Est. final'} <span className="tnum">{formatProjection(myProjFinal)}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">VS</div>
+                    <div className="font-mono text-xs uppercase tracking-wider text-text-mute font-bold border border-line rounded-sm px-2 py-0.5">VS</div>
 
                     {/* Opp side */}
                     <div className="text-center md:text-right flex flex-col items-center md:flex-row-reverse md:items-center gap-2 md:gap-5 min-w-0">
@@ -408,7 +405,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             )}
                         </button>
                         <div className="min-w-0 w-full md:w-auto">
-                            <div className="font-mono text-2xs uppercase tracking-wider text-text-dim">
+                            <div className="font-mono text-xs uppercase tracking-wider text-text-dim">
                                 {recordLabel(oppRoster?.roster_id)} · Opp
                             </div>
                             <button
@@ -424,14 +421,14 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             >
                                 {oppScore.toFixed(1)}
                             </div>
-                            <div className="font-mono text-2xs text-text-mute mt-1.5">
+                            <div className="font-mono text-xs text-text-mute mt-1.5">
                                 {oppProjection.isFinal ? 'Final' : 'Est. final'} <span className="tnum">{formatProjection(oppProjFinal)}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                        <div className="font-mono text-2xs uppercase tracking-wider text-text-dim text-center mt-4">
+                        <div className="font-mono text-xs uppercase tracking-wider text-text-dim text-center mt-4">
                             {marginLabel} <span className={`tnum font-bold ${
                                 marginTone === 'good' ? 'text-good' : marginTone === 'bad' ? 'text-bad' : 'text-text-mute'
                             }`}>
@@ -484,10 +481,10 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                     >
                                         <PlayerCell side="me" player={row.me} winning={meWin} navigate={navigate} leagueId={league?.league_id} />
                                         <div className="text-center">
-                                            <div className="font-mono text-2xs font-bold tracking-wider uppercase text-signal bg-signal/15 px-2 py-0.5 rounded-sm inline-block">
+                                            <div className="font-mono text-xs font-bold tracking-wider uppercase text-signal bg-signal/15 px-2 py-0.5 rounded-sm inline-block">
                                                 {row.slot}
                                             </div>
-                                            <div className={`font-mono text-2xs font-bold tnum mt-1 ${meWin ? 'text-good' : oppWin ? 'text-bad' : 'text-text-mute'}`}>
+                                            <div className={`font-mono text-xs font-bold tnum mt-1 ${meWin ? 'text-good' : oppWin ? 'text-bad' : 'text-text-mute'}`}>
                                                 {meWin ? '+' : oppWin ? '−' : ''}
                                                 {Math.abs((row.me?.pts || 0) - (row.opp?.pts || 0)).toFixed(1)}
                                             </div>
@@ -539,7 +536,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
+                                <tr className="font-mono text-xs uppercase tracking-wider text-text-mute bg-bg-2 text-left">
                                     <th scope="col" className="px-2 py-2">Slot</th>
                                     <th scope="col" className="px-2 py-2">Player</th>
                                     <th scope="col" className="px-2 py-2 text-right">Proj</th>
@@ -553,7 +550,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             <tbody>
                                 {positionRows.map((row) => (
                                     <tr key={row.slotIndex} className="border-b border-line/60 last:border-0">
-                                        <td className="px-2 py-2 font-mono text-2xs uppercase tracking-wider text-signal">{row.slot}</td>
+                                        <td className="px-2 py-2 font-mono text-xs uppercase tracking-wider text-signal">{row.slot}</td>
                                         <td className="px-2 py-2 text-text truncate">{row.me?.name || '—'}</td>
                                         <td className="px-2 py-2 text-right tnum text-text-mute">
                                             {formatProjection(row.me?.proj)}
@@ -561,7 +558,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                         <td className={`px-2 py-2 text-right tnum font-semibold ${(row.me?.pts || 0) > (row.opp?.pts || 0) ? 'text-good' : 'text-text'}`}>
                                             {(row.me?.pts || 0).toFixed(1)}
                                         </td>
-                                        <td className="px-2 py-2 font-mono text-2xs uppercase text-text-mute">vs</td>
+                                        <td className="px-2 py-2 font-mono text-xs uppercase text-text-mute">vs</td>
                                         <td className="px-2 py-2 text-text truncate">{row.opp?.name || '—'}</td>
                                         <td className="px-2 py-2 text-right tnum text-text-mute">
                                             {formatProjection(row.opp?.proj)}
@@ -581,7 +578,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                 <section className="bg-bg-1 rounded-xl border border-line p-5 shadow-card">
                     <header className="font-display text-md font-semibold text-text mb-3">Head-to-Head History</header>
                     {allHistory.length === 0 ? (
-                        <p className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        <p className="font-mono text-xs uppercase tracking-wider text-text-mute">
                             No prior meetings on record yet.
                         </p>
                     ) : (
@@ -590,7 +587,7 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                                 const meWin = g.me > g.opp;
                                 return (
                                     <li key={`${g.season || ''}-${g.week}`} className="grid grid-cols-[80px_1fr_1fr] items-center gap-3 border-b border-line/60 last:border-0 pb-2 last:pb-0">
-                                        <span className="font-mono text-2xs uppercase tracking-wider text-text-mute tnum">
+                                        <span className="font-mono text-xs uppercase tracking-wider text-text-mute tnum">
                                             {g.season || (league?.season || '')} W{g.week}
                                         </span>
                                         <span className={`text-sm tnum text-right ${meWin ? 'text-signal font-bold' : 'text-text-dim'}`}>
@@ -652,14 +649,14 @@ const PlayerCell = ({ side, player, winning, navigate, leagueId }) => {
             <div className="text-sm font-semibold text-text truncate group-hover:text-signal transition-colors duration-fast">
                 {player.name}
             </div>
-            <div className={`font-mono text-2xs uppercase tracking-wider ${player.live ? 'text-signal-2' : 'text-text-mute'}`}>
+            <div className={`font-mono text-xs uppercase tracking-wider ${player.live ? 'text-signal-2' : 'text-text-mute'}`}>
                 {player.live && '● '}{player.team || '—'} · {player.status}
             </div>
             <div className={`tnum text-lg font-extrabold tracking-tight mt-0.5 ${winning ? 'text-good' : 'text-text'}`}>
                 {(player.pts || 0).toFixed(1)}
             </div>
             {Number.isFinite(player.proj) && (
-                <div className="font-mono text-2xs tnum text-text-mute">
+                <div className="font-mono text-xs tnum text-text-mute">
                     Proj <span className="text-text-dim">{formatProjection(player.proj)}</span>
                 </div>
             )}
@@ -672,7 +669,7 @@ const SectionShell = ({ title, sub, children }) => (
     <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card">
         <header className="flex items-baseline justify-between mb-3">
             <h3 className="font-display text-md font-semibold text-text">{title}</h3>
-            {sub && <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">{sub}</span>}
+            {sub && <span className="font-mono text-xs uppercase tracking-wider text-text-mute">{sub}</span>}
         </header>
         {children}
     </section>
@@ -682,7 +679,7 @@ const Stat = ({ label, value, tone }) => {
     const t = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : 'text-text';
     return (
         <div>
-            <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">{label}</div>
+            <div className="font-mono text-xs uppercase tracking-wider text-text-mute font-bold">{label}</div>
             <div className={`tnum font-display text-md font-bold ${t} mt-0.5`}>{value}</div>
         </div>
     );

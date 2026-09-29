@@ -34,10 +34,10 @@ const InjuryReport = ({ roster, players }) => {
     return (
         <section className="bg-bg-1 rounded-xl border border-line shadow-card mt-3">
             <header className="px-4 pt-3 pb-2 border-b border-line">
-                <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute flex items-center gap-1.5">
+                <h4 className="font-display text-sm font-semibold text-text flex items-center gap-1.5">
                     <Activity className="w-3 h-3 text-bad" aria-hidden="true" />
                     Injury Report
-                </h3>
+                </h4>
             </header>
             <div className="px-4 py-3 space-y-2">
                 {injuredPlayers.map(p => {
@@ -49,12 +49,12 @@ const InjuryReport = ({ roster, players }) => {
                                 <PlayerHeadshot playerId={p.player_id} name={`${p.first_name} ${p.last_name}`} size={32} />
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold text-text leading-none truncate">{p.first_name} {p.last_name}</p>
-                                    <p className="font-mono text-2xs text-text-mute mt-1 uppercase tracking-wider">
+                                    <p className="font-mono text-xs text-text-mute mt-1 uppercase tracking-wider">
                                         {p.team || 'FA'} · {p.position}
                                     </p>
                                 </div>
                             </div>
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-sm font-mono text-2xs font-bold uppercase tracking-wider border shrink-0 ${tone}`}>
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-sm font-mono text-xs font-bold uppercase tracking-wider border shrink-0 ${tone}`}>
                                 {getStatusIcon(status)}
                                 {status}
                             </div>

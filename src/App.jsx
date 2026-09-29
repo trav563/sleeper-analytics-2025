@@ -29,7 +29,8 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 // Loading fallback
 const PageLoader = () => (
-  <div className="flex h-[50vh] w-full items-center justify-center">
+  <div role="status" className="flex h-[50vh] w-full items-center justify-center gap-3">
+    <span className="text-sm text-text-dim">Loading page…</span>
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
   </div>
 );

@@ -68,6 +68,12 @@
         /* Brand / Signal (renamed from --accent / --accent-2 to avoid shadcn collision) */
         --signal:    #F5B301;
         --signal-2:  #FF5A36;
+        /* Text variants retain bright signal fills while meeting contrast in light mode. */
+        --signal-text: var(--signal);
+        --signal-2-text: var(--signal-2);
+        --good-text: var(--good);
+        --bad-text: var(--bad);
+        --warn-text: var(--warn);
 
         /* Always-dark ink for use on gold/light surfaces (CTA button text, AI badges).
            Stays #0B0C10 in light mode too — it's "ink", not a theme color. */
@@ -193,6 +199,11 @@
         --ring: 222.2 84% 4.9%;
 
         /* Broadcast Scoreboard tokens */
+        --signal-text: #805400;
+        --signal-2-text: #B33317;
+        --good-text: #176B36;
+        --bad-text: #B42330;
+        --warn-text: #805400;
         --bg:        #FAFAF7;
         --bg-1:      #FFFFFF;
         --bg-2:      #F3F3EE;
@@ -274,17 +285,16 @@
 :root { --text-mute: #828b9b; }
 [data-theme="light"] { --text-mute: #626b79; }
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
-    outline: 2px solid var(--signal); outline-offset: 3px;
+    outline: 2px solid var(--signal-text); outline-offset: 3px;
 }
 @media (max-width: 767px) {
     main { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 1023px) {
     select, input, button { touch-action: manipulation; }
     select, input { font-size: 16px; min-height: 44px; }
+    button, summary { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-
-@media (max-width: 767px) {
-    button, summary { min-height: 44px; }
+    .animate-spin, .animate-pulse, .animate-fade-in, .animate-slide-up { animation: none !important; }
 }

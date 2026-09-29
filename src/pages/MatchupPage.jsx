@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useLeagueView, validWeek } from '../hooks/useLeagueView';
+import { useParams, useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import MatchupDetail from '../features/league/components/MatchupDetail';
 import { fetchLeagueMatchups } from '../utils/sleeper';
 import { useSeasonMatchups } from '../features/analytics/hooks/useSeasonMatchups';
@@ -11,59 +13,30 @@ const MatchupPage = () => {
     const ctx = useOutletContext();
     const { league, rosters, users, players, state, matchups: currentWeekMatchups, user, currentWeek } = ctx || {};
     const currentNFLWeek = currentWeek || state?.display_week || state?.week || 1;
-    const week = weekParam ? Number(weekParam) : currentNFLWeek;
-    const handleWeekChange = (nextWeek) => {
-        const w = Number(nextWeek);
-        if (!w || w === week) return;
-        navigate(`/league/${leagueId}/matchup/${w}`);
+    const [searchParams] = useSearchParams();
+    const { roster, week: savedWeek, selectRoster, selectWeek } = useLeagueView(leagueId, rosters, user, currentNFLWeek);
+    const week = validWeek(weekParam) ? Number(weekParam) : savedWeek;
+    const requestedRoster = Number(searchParams.get('roster'));
+    const selectedRosterId = rosters?.some(r => r.roster_id === requestedRoster) ? requestedRoster : roster?.roster_id;
+    useEffect(() => { selectWeek(week); }, [week, selectWeek]);
+    useEffect(() => { if (selectedRosterId) selectRoster(selectedRosterId); }, [selectedRosterId, selectRoster]);
+    const handleWeekChange = next => {
+        if (validWeek(next)) navigate(`/league/${leagueId}/matchup/${Number(next)}?roster=${selectedRosterId}`);
     };
+    const handleRosterChange = id => {
+        selectRoster(id);
+        navigate(`/league/${leagueId}/matchup/${week}?roster=${id}`);
+    };
+    const { data, isLoading, error, refetch } = useQuery({
+        queryKey: ['leagueMatchups', leagueId, week],
+        queryFn: () => fetchLeagueMatchups(leagueId, week),
+        enabled: !!leagueId && week !== currentNFLWeek,
+        staleTime: 60000,
+    });
+    const viewMatchups = week === currentNFLWeek ? currentWeekMatchups || [] : data || [];
+    const loading = week !== currentNFLWeek && isLoading;
 
-    const [viewMatchups, setViewMatchups] = useState(week === currentNFLWeek ? currentWeekMatchups : []);
-    const [loading, setLoading] = useState(week !== currentNFLWeek);
-    const [error, setError] = useState(null);
-    const [reloadKey, setReloadKey] = useState(0);
-
-    /* Selected roster for the focused matchup. Defaults to the logged-in
-       user's roster; falls back to the first roster if the user isn't in
-       this league. The picker UI inside MatchupDetail can change it. */
-    const defaultRosterId = useMemo(() => {
-        if (!rosters?.length) return null;
-        const mine = rosters.find((r) => r.owner_id === user?.user_id);
-        return (mine || rosters[0]).roster_id;
-    }, [rosters, user?.user_id]);
-    const [selectedRosterId, setSelectedRosterId] = useState(defaultRosterId);
-
-    // Reset selection when the user/league changes.
-    useEffect(() => { setSelectedRosterId(defaultRosterId); }, [defaultRosterId]);
-
-    useEffect(() => {
-        if (!league?.league_id) return;
-        if (week === currentNFLWeek && currentWeekMatchups?.length > 0) {
-            setViewMatchups(currentWeekMatchups);
-            setLoading(false);
-            return;
-        }
-        let cancelled = false;
-        setLoading(true);
-        setError(null);
-        fetchLeagueMatchups(league.league_id, week)
-            .then((data) => {
-                if (!cancelled) {
-                    setViewMatchups(data || []);
-                    setLoading(false);
-                }
-            })
-            .catch((err) => {
-                if (!cancelled) {
-                    console.error('Failed to load matchup', err);
-                    setError(`Couldn't load week ${week} matchups.`);
-                    setLoading(false);
-                }
-            });
-        return () => { cancelled = true; };
-    }, [week, league?.league_id, currentNFLWeek, currentWeekMatchups, reloadKey]);
-
-    const { seasonMatchups } = useSeasonMatchups(league?.league_id, currentNFLWeek);
+    const { seasonMatchups, completedWeek, loading: recordsLoading, error: recordsError } = useSeasonMatchups(league?.league_id, week);
 
     if (loading) {
         return (
@@ -73,12 +46,12 @@ const MatchupPage = () => {
         );
     }
 
-    if (error) {
+    if (error && week !== currentNFLWeek && !data) {
         return (
             <ErrorState
                 className="py-12"
-                message={error}
-                onRetry={() => setReloadKey((k) => k + 1)}
+                message={`Could not load Week ${week}. Check your connection and try again.`}
+                onRetry={refetch}
             />
         );
     }
@@ -87,6 +60,8 @@ const MatchupPage = () => {
         Number(league.season) < Number(state.season);
 
     return (
+        <>
+        {error && week !== currentNFLWeek && <p role="status" className="text-sm text-warn mb-4">This week could not refresh. Showing the last available scores. <button type="button" onClick={() => refetch()} className="min-h-11 underline">Try again</button></p>}
         <MatchupDetail
             league={league}
             rosters={rosters}
@@ -98,9 +73,14 @@ const MatchupPage = () => {
             onWeekChange={handleWeekChange}
             viewMatchups={viewMatchups}
             seasonMatchups={seasonMatchups}
+            completedWeek={completedWeek}
+            recordsLoading={recordsLoading}
+            recordsError={recordsError}
+            ownTeam={!!user?.user_id && rosters?.some(r => r.roster_id === selectedRosterId && (r.owner_id === user.user_id || r.co_owners?.includes(user.user_id)))}
             selectedRosterId={selectedRosterId}
-            onSelectRoster={setSelectedRosterId}
+            onSelectRoster={handleRosterChange}
         />
+        </>
     );
 };
 

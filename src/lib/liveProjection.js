@@ -46,7 +46,12 @@ export function starterPoints(matchup, index) {
 }
 
 /** Keep slot indices intact, exclude the bench, and preserve team score adjustments. */
-export function projectMatchup({ matchup, players, projections, games }) {
+export function projectMatchup({ matchup, players, projections, games, isWeekFinal = false }) {
+    // NFL week rollover also proves finality when historical game clocks are unavailable.
+    if (isWeekFinal && Array.isArray(matchup?.starters) && Number.isFinite(matchup?.points)) {
+        return { remaining: 0, final: matchup.points, available: true, isFinal: true, reasons: [],
+            bySlot: matchup.starters.map((id, i) => ({ remaining: 0, final: starterPoints(matchup, i), phase: !id || id === '0' ? 'EMPTY' : 'DONE' })) };
+    }
     const bySlot = (matchup?.starters || []).map((pid, index) => {
         if (!pid || pid === '0') return { remaining: 0, final: 0, phase: 'EMPTY' };
         const player = players?.[pid];

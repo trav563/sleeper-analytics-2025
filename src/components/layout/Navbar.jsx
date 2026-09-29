@@ -61,7 +61,7 @@ const Navbar = () => {
     const navItems = [
         { href: `/league/${leagueId}`, label: 'Dashboard', icon: LayoutDashboard, exact: true },
         { href: `/league/${leagueId}/matchup`, label: 'Matchup', icon: Swords },
-        { href: `/league/${leagueId}/my-team`, label: 'My Team', icon: Users },
+        { href: `/league/${leagueId}/my-team`, label: 'Team', icon: Users },
         { href: `/league/${leagueId}/standings`, label: 'Standings', icon: Crown },
         { href: `/league/${leagueId}/analytics`, label: 'Analytics', icon: BarChart2 },
         { href: `/league/${leagueId}/recap`, label: 'The Roast', icon: Flame },
@@ -70,7 +70,7 @@ const Navbar = () => {
     ];
 
     const activeLeague = leagueHistory?.find(l => l.league_id === leagueId) || leagues.find(l => l.league_id === leagueId);
-    const primaryItems = navItems.filter(i => ['Dashboard', 'Matchup', 'My Team', 'Tools'].includes(i.label));
+    const primaryItems = navItems.filter(i => ['Dashboard', 'Matchup', 'Team', 'Tools'].includes(i.label));
     return (
         <>
         <nav className="sticky top-0 z-50 w-full border-b border-line bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
@@ -221,8 +221,9 @@ const Navbar = () => {
                             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                         </Button>
 
-                        {/* Mobile Menu Button */}
-                        <Button
+                        {/* Show a menu only when it contains navigation or account actions. */}
+                        {(leagueId || user) && <Button
+                            id="mobile-menu-toggle"
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -236,15 +237,15 @@ const Navbar = () => {
                             ) : (
                                 <Menu className="h-6 w-6" />
                             )}
-                        </Button>
+                        </Button>}
                     </div>
                 </div>
             </div>
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div id="mobile-navigation" onKeyDown={e => { if (e.key === 'Escape') { setIsMobileMenuOpen(false); document.getElementById('mobile-more')?.focus(); } }} className="md:hidden max-h-[65dvh] overflow-y-auto border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1">
-                    {leagueId && navItems.filter(i => !['Dashboard', 'Matchup', 'My Team', 'Tools'].includes(i.label)).map((item) => {
+                <div id="mobile-navigation" onKeyDown={e => { if (e.key === 'Escape') { setIsMobileMenuOpen(false); (document.getElementById('mobile-more') || document.getElementById('mobile-menu-toggle'))?.focus(); } }} className="md:hidden max-h-[65dvh] overflow-y-auto border-t border-line bg-bg/95 backdrop-blur px-2 pt-2 pb-3 space-y-1">
+                    {leagueId && navItems.filter(i => !['Dashboard', 'Matchup', 'Team', 'Tools'].includes(i.label)).map((item) => {
                         const active = isActive(item.exact ? '' : item.href.split('/').pop());
                         return (
                             <Link

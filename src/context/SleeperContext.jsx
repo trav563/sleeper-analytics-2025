@@ -25,6 +25,10 @@ export const SleeperProvider = ({ children }) => {
 
     const [viewedTeams, setViewedTeams] = useState({});
     const selectViewedTeam = useCallback((leagueId, rosterId) => setViewedTeams(prev => prev[leagueId] === rosterId ? prev : ({ ...prev, [leagueId]: rosterId })), []);
+    const [viewedWeeks, setViewedWeeks] = useState({});
+    const selectViewedWeek = useCallback((leagueId, week, anchor) => setViewedWeeks(prev =>
+        prev[leagueId]?.week === week && prev[leagueId]?.anchor === anchor ? prev : { ...prev, [leagueId]: { week, anchor } }
+    ), []);
     const [leagues, setLeagues] = useState([]);
     const historyRequest = useRef(0);
     const [leagueHistory, setLeagueHistory] = useState(null);
@@ -59,6 +63,7 @@ export const SleeperProvider = ({ children }) => {
         clearLocalUserData();
         setUser(null);
         setViewedTeams({});
+        setViewedWeeks({});
         setLeagues([]);
         setLeagueHistory(null);
         setLeagueChains({});
@@ -73,13 +78,13 @@ export const SleeperProvider = ({ children }) => {
             const userData = await fetchUser(username);
             if (!userData) throw new Error('User not found');
             setUser(userData);
-            localStorage.setItem('sleeper_user', JSON.stringify(userData));
+            try { localStorage.setItem('sleeper_user', JSON.stringify(userData)); } catch { /* Lookup still works when storage is blocked. */ }
             return userData;
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to fetch user');
+            setError(err.message === 'User not found' ? 'No Sleeper user found. Check the username and try again.' : 'Could not reach Sleeper. Check your connection and try again.');
             setUser(null);
-            localStorage.removeItem('sleeper_user');
+            try { localStorage.removeItem('sleeper_user'); } catch { /* Storage may be blocked. */ }
             return null;
         } finally {
             setLoading(false);
@@ -109,7 +114,7 @@ export const SleeperProvider = ({ children }) => {
             return userLeagues;
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to fetch leagues');
+            setError('Could not load your leagues. Check your connection and try again.');
             setLeagues([]);
             return [];
         } finally {
@@ -176,7 +181,7 @@ export const SleeperProvider = ({ children }) => {
     }, []);
 
     const value = useMemo(() => ({
-        user, viewedTeams, selectViewedTeam,
+        user, viewedTeams, selectViewedTeam, viewedWeeks, selectViewedWeek,
         leagues,
         loading,
         error,
@@ -191,7 +196,7 @@ export const SleeperProvider = ({ children }) => {
         findChainContaining,
         selectActiveChain
     }), [
-        user, viewedTeams, selectViewedTeam, leagues, loading, error, season,
+        user, viewedTeams, selectViewedTeam, viewedWeeks, selectViewedWeek, leagues, loading, error, season,
         searchUser, signOut, getLeagues, fetchLeagueData, loadHistory,
         leagueHistory, leagueChains, findChainContaining, selectActiveChain
     ]);

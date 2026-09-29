@@ -32,6 +32,7 @@ const LeagueLayout = () => {
 
     const currentWeek = deriveCurrentWeek(league, state);
     const seasonStarted = isSeasonStarted(league, state);
+    const historicalSeason = league?.season && state?.season && Number(league.season) < Number(state.season);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -53,7 +54,7 @@ const LeagueLayout = () => {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] gap-3">
                 <div className="h-10 w-10 rounded-full border-2 border-line border-t-signal animate-spin" />
-                <span className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                <span className="font-mono text-xs uppercase tracking-wider text-text-mute">
                     Loading league data…
                 </span>
             </div>
@@ -85,9 +86,10 @@ const LeagueLayout = () => {
             <meta name="twitter:description" content={league ? `View trade analysis, power rankings, and draft ROI for ${league.name}.` : "View trade analysis, power rankings, and draft ROI for your fantasy league."} />
             <meta name="twitter:image" content="/favicon.png" />
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-dim mb-4" role="status">
-                <span>{league?.season} season · {lastCompletedWeek(league, state) ? `Completed through Week ${lastCompletedWeek(league, state)}` : 'No completed weeks yet'}</span>
-                <span>{scoresError ? 'Scores may be stale · refresh failed' : scoresUpdatedAt ? `Week ${currentWeek} scores updated ${new Date(scoresUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Scores unavailable'} <button type="button" className="min-h-11 px-2 text-signal" onClick={refresh}>Refresh data</button></span>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 text-xs text-text-dim mb-3" role="status">
+                <span>{league?.season} · {historicalSeason ? 'Season complete' : lastCompletedWeek(league, state) ? `Through Week ${lastCompletedWeek(league, state)}` : 'No completed weeks yet'}</span>
+                <button type="button" className="min-h-11 text-signal" onClick={refresh}>Refresh data</button>
+                <span className="basis-full">{scoresError ? 'Scores may be stale · refresh failed' : scoresUpdatedAt ? `Week ${currentWeek} scores checked at ${new Date(scoresUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Scores unavailable'}</span>
             </div>
             {gameStatusError && <p role="status" className="text-sm text-warn mb-4">Game status is unavailable or stale. Live indicators and lineup recommendations may be unavailable.</p>}
             <AnimatePresence mode="wait">

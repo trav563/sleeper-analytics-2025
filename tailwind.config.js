@@ -62,6 +62,13 @@ export default {
         warn:      "var(--warn)",
         live:      "var(--live)",
       },
+      textColor: {
+        signal: 'var(--signal-text)',
+        'signal-2': 'var(--signal-2-text)',
+        good: 'var(--good-text)',
+        bad: 'var(--bad-text)',
+        warn: 'var(--warn-text)',
+      },
       fontFamily: {
         sans:    ["var(--font-sans)"],
         display: ["var(--font-display)"],

@@ -1,6 +1,5 @@
 import { usePlayerNews } from '../hooks/usePlayerNews';
 import { Newspaper, Clock, Flame, Activity } from 'lucide-react';
-import { LiveDot } from '../../../components/ui/LiveDot';
 import InjuryReport from './InjuryReport';
 
 const isBreaking = (dateString) => {
@@ -8,7 +7,7 @@ const isBreaking = (dateString) => {
         const newsDate = new Date(dateString);
         const now = new Date();
         const diffInHours = (now - newsDate) / 1000 / 60 / 60;
-        return diffInHours < 1.0;
+        return Number.isFinite(diffInHours) && diffInHours >= 0 && diffInHours < 1;
     } catch {
         return false;
     }
@@ -19,7 +18,8 @@ const formatTime = (dateString) => {
         const date = new Date(dateString);
         const now = new Date();
         const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
+        if (!Number.isFinite(diffMs)) return 'Time unavailable';
+        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
 
         if (diffMins < 60) return `${diffMins}m ago`;
         const diffHours = Math.floor(diffMins / 60);
@@ -30,30 +30,30 @@ const formatTime = (dateString) => {
     }
 };
 
-const NewsItem = ({ item }) => {
+export const NewsItem = ({ item }) => {
+    const href = /^https?:\/\//i.test(item.link || '') ? item.link : null;
+    const Wrapper = href ? 'a' : 'div';
     const isAlert = item.type === 'alert';
     const cardClass = isAlert
         ? 'bg-bad/10 border-bad/30 hover:bg-bad/15'
         : 'bg-bg-2 border-line hover:bg-bg-3';
 
     return (
-        <a
-            href={/^https?:\/\//i.test(item.link || '') ? item.link : '#'}
-            target={item.link ? '_blank' : '_self'}
-            rel="noreferrer"
-            className={`block mb-2 last:mb-0 group ${!item.link ? 'cursor-default' : ''}`}
+        <Wrapper
+            {...(href ? { href, target: "_blank", rel: "noreferrer" } : {})}
+            className={`block mb-2 last:mb-0 group ${!href ? 'cursor-default' : ''}`}
         >
             <div className={`border rounded-md p-3 transition-colors duration-fast ${cardClass}`}>
                 <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold text-sm group-hover:text-signal transition-colors duration-fast ${isAlert ? 'text-bad' : 'text-text'}`}>
+                        <h4 className={`font-semibold text-sm ${href ? 'group-hover:text-signal' : ''} transition-colors duration-fast ${isAlert ? 'text-bad' : 'text-text'}`}>
                             {isAlert && <Activity className="w-3 h-3 inline-block mr-1.5 -mt-0.5" aria-hidden="true" />}
                             {item.title}
                         </h4>
 
-                        <div className="flex items-center gap-2 mt-2 font-mono text-2xs uppercase tracking-wider text-text-mute">
+                        <div className="flex items-center gap-2 mt-2 font-mono text-xs uppercase tracking-wider text-text-mute">
                             <Clock className="w-3 h-3" aria-hidden="true" />
-                            <span>{isAlert ? 'Live Update' : formatTime(item.pubDate)}</span>
+                            <span>{isAlert ? 'Roster status' : formatTime(item.pubDate)}</span>
                             {item.trending === 'down' && (
                                 <span className="inline-flex items-center gap-1 text-bad bg-bad/10 px-1.5 py-0.5 rounded-sm border border-bad/30 ml-1">
                                     Selling Off · <span className="tnum">{item.count}</span>
@@ -63,19 +63,19 @@ const NewsItem = ({ item }) => {
                     </div>
 
                     {isBreaking(item.pubDate) && !isAlert && (
-                        <div className="flex items-center gap-1 bg-signal-2/15 text-signal-2 font-mono text-2xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-sm border border-signal-2/30 shrink-0">
+                        <div className="flex items-center gap-1 bg-signal-2/15 text-signal-2 font-mono text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-sm border border-signal-2/30 shrink-0">
                             <Flame className="w-3 h-3" aria-hidden="true" />
                             Breaking
                         </div>
                     )}
                 </div>
             </div>
-        </a>
+        </Wrapper>
     );
 };
 
 const RosterNews = ({ roster, players }) => {
-    const { personalNews, topHeadlines, isLoading } = usePlayerNews(roster, players);
+    const { personalNews, topHeadlines, isLoading, error, retry } = usePlayerNews(roster, players);
 
     if (isLoading) {
         return (
@@ -92,7 +92,8 @@ const RosterNews = ({ roster, players }) => {
         );
     }
 
-    const hasNews = personalNews && personalNews.length > 0;
+    const hasNews = personalNews.length > 0;
+    const hasHeadlines = topHeadlines.length > 0;
     const displayNews = hasNews ? personalNews : topHeadlines;
 
     return (
@@ -101,21 +102,19 @@ const RosterNews = ({ roster, players }) => {
                 <div className="flex items-center gap-2">
                     <Newspaper className="w-4 h-4 text-signal" aria-hidden="true" />
                     <h3 className="font-display text-md font-semibold text-text">Roster News</h3>
-                    {hasNews && <LiveDot />}
                 </div>
                 {hasNews && (
-                    <span className="font-mono text-2xs uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm border border-line">
+                    <span className="font-mono text-xs uppercase tracking-wider text-text-mute bg-bg-2 px-2 py-0.5 rounded-sm border border-line">
                         <span className="tnum">{personalNews.length}</span> Updates
                     </span>
                 )}
             </header>
 
             <div className="flex-1 overflow-y-auto max-h-[400px] px-4 py-3">
-                {!hasNews && (
-                    <p className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-3 italic">
-                        No recent news for your roster · top headlines:
-                    </p>
-                )}
+                {error && <p role="alert" className="text-sm text-text-dim mb-3">Headlines could not load. <button type="button" onClick={retry} className="min-h-11 font-semibold text-signal underline underline-offset-2">Retry news</button></p>}
+                {!hasNews && !error && <p className="text-sm text-text-dim mb-3">
+                    {hasHeadlines ? 'No recent news for this roster. Showing top headlines.' : 'No recent roster news or headlines available.'}
+                </p>}
 
                 <div className="space-y-1">
                     {displayNews.map((item) => (

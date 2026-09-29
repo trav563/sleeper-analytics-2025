@@ -33,7 +33,7 @@ function renderMarkdown(text) {
         const h2 = line.match(/^##\s+(.+)$/);
         if (h2) {
             out.push(
-                <h4 key={i} className="font-mono text-2xs font-bold uppercase tracking-wider text-signal mt-3 mb-1">
+                <h4 key={i} className="font-mono text-xs font-bold uppercase tracking-wider text-signal mt-3 mb-1">
                     {h2[1]}
                 </h4>
             );

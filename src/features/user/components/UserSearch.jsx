@@ -9,17 +9,24 @@ const UserSearch = () => {
     const navigate = useNavigate();
     const { user, leagues, loading, error, searchUser, signOut, getLeagues, season } = useSleeper();
     const [username, setUsername] = useState('');
-    const [showLeagues, setShowLeagues] = useState(false);
+    const [showLeagues, setShowLeagues] = useState(!!user);
+    const [submitting, setSubmitting] = useState(false);
+    const [validationError, setValidationError] = useState('');
+    const busy = submitting || loading;
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        if (!username.trim()) return;
-
-        const userData = await searchUser(username);
-        if (userData) {
-            await getLeagues(userData.user_id);
-            setShowLeagues(true);
-        }
+        if (busy) return;
+        if (!username.trim()) { setValidationError('Enter your Sleeper username to find your leagues.'); return; }
+        setValidationError('');
+        setSubmitting(true);
+        try {
+            const userData = await searchUser(username.trim());
+            if (userData) {
+                await getLeagues(userData.user_id);
+                setShowLeagues(true);
+            }
+        } finally { setSubmitting(false); }
     };
 
     const handleLeagueChange = (e) => {
@@ -30,33 +37,33 @@ const UserSearch = () => {
     };
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-bg px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-center bg-bg py-8 sm:py-16">
             <div className="max-w-md w-full space-y-6 animate-fade-in">
                 <div className="text-center">
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute">
+                    <div className="font-mono text-xs uppercase tracking-wider text-text-mute">
                         {showLeagues ? 'Step 2 · choose league' : 'Step 1 · find user'}
                     </div>
                     <h2 className="mt-2 font-display text-3xl font-bold tracking-snug text-text">
                         League Analysis
                     </h2>
-                    <p className="mt-2 text-sm text-text-dim">
-                        Find your league and check your lineup
+                    <p className="mt-2 text-base text-text-dim">
+                        Matchup insights, dynasty values, and league history
                     </p>
                 </div>
 
                 <Card className="bg-bg-1 border border-line shadow-card rounded-xl">
                     <CardHeader>
                         <CardTitle className="text-center font-display text-md font-semibold text-text">
-                            {!showLeagues ? 'Search User' : 'Select League'}
+                            {!showLeagues ? 'Find your leagues' : 'Select League'}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         {!showLeagues ? (
-                            <form className="space-y-5" onSubmit={handleSearch}>
+                            <form noValidate className="space-y-5" onSubmit={handleSearch}>
                                 <div>
                                     <label
                                         htmlFor="username"
-                                        className="block font-mono text-2xs uppercase tracking-wider text-text-mute mb-1.5"
+                                        className="block font-mono text-xs uppercase tracking-wider text-text-mute mb-1.5"
                                     >
                                         Sleeper Username
                                     </label>
@@ -68,21 +75,27 @@ const UserSearch = () => {
                                             type="text"
                                             name="username"
                                             id="username"
-                                            className="block w-full min-h-[44px] pl-10 pr-3 text-sm rounded-md bg-bg-2 text-text border border-line placeholder:text-text-mute focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
+                                            className="block w-full min-h-[44px] pl-10 pr-3 text-base rounded-md bg-bg-2 text-text border border-line placeholder:text-text-mute focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal transition-colors duration-fast"
                                             placeholder="username"
                                             value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
+                                            onChange={(e) => { setUsername(e.target.value); setValidationError(''); }}
                                             autoComplete="username"
+                                            required
+                                            autoCapitalize="none"
+                                            spellCheck={false}
+                                            aria-invalid={!!validationError}
+                                            aria-describedby="username-hint"
                                         />
                                     </div>
                                 </div>
 
+                                <p id="username-hint" className="text-base text-text-dim">Uses your public Sleeper profile. No password or new account needed.</p>
                                 <Button
                                     type="submit"
-                                    disabled={loading}
+                                    disabled={busy}
                                     className="w-full min-h-[44px] bg-signal text-ink font-semibold hover:bg-signal/90 focus-visible:ring-signal disabled:opacity-60"
                                 >
-                                    {loading ? (
+                                    {busy ? (
                                         <>
                                             <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
                                             Searching…
@@ -96,6 +109,7 @@ const UserSearch = () => {
                             </form>
                         ) : (
                             <div className="space-y-5">
+                                {busy && <p role="status" className="text-base text-text-dim">Loading leagues…</p>}
                                 <div className="flex items-center gap-3 p-3 bg-bg-2 rounded-md border border-line">
                                     {user?.avatar ? (
                                         <img
@@ -113,7 +127,7 @@ const UserSearch = () => {
                                         <button
                                             type="button"
                                             onClick={() => { signOut(); setShowLeagues(false); }}
-                                            className="font-mono text-2xs uppercase tracking-wider text-text-dim hover:text-signal transition-colors duration-fast"
+                                            className="inline-flex min-h-11 items-center text-sm text-text-dim hover:text-signal transition-colors duration-fast"
                                         >
                                             ← Sign out
                                         </button>
@@ -123,7 +137,7 @@ const UserSearch = () => {
                                 <div>
                                     <label
                                         htmlFor="league"
-                                        className="block font-mono text-2xs uppercase tracking-wider text-text-mute mb-1.5"
+                                        className="block font-mono text-xs uppercase tracking-wider text-text-mute mb-1.5"
                                     >
                                         Select a League <span className="tnum text-text-dim">({season || '…'})</span>
                                     </label>
@@ -131,8 +145,9 @@ const UserSearch = () => {
                                         <select
                                             id="league"
                                             name="league"
-                                            className="block w-full min-h-[44px] pl-3 pr-10 text-sm rounded-md bg-bg-2 text-text border border-line focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal cursor-pointer appearance-none transition-colors duration-fast"
+                                            className="block w-full min-h-[44px] pl-3 pr-10 text-base rounded-md bg-bg-2 text-text border border-line focus:outline-none focus:ring-1 focus:ring-signal focus:border-signal cursor-pointer appearance-none transition-colors duration-fast"
                                             onChange={handleLeagueChange}
+                                            disabled={busy || !leagues.length}
                                             defaultValue=""
                                         >
                                             <option value="" disabled>Choose a league…</option>
@@ -148,18 +163,19 @@ const UserSearch = () => {
                                     </div>
                                 </div>
 
-                                {leagues.length === 0 && (
-                                    <p className="text-center text-sm text-text-dim">
-                                        No leagues found for the <span className="tnum">{season}</span> season.
+                                {!busy && (error || leagues.length === 0) && <Button type="button" onClick={() => getLeagues(user?.user_id)}>Retry league lookup</Button>}
+                                {!busy && !error && leagues.length === 0 && (
+                                    <p className="text-center text-base text-text-dim">
+                                        No leagues found for the <span className="tnum">{season}</span> season. Try another Sleeper username or retry the league lookup.
                                     </p>
                                 )}
                             </div>
                         )}
 
-                        {error && (
-                            <div className="mt-4 p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-sm flex items-start gap-2">
+                        {(validationError || error) && (
+                            <div role="alert" className="mt-4 p-3 rounded-md bg-bad/10 border border-bad/30 text-bad text-base flex items-start gap-2">
                                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-                                <span>{error}</span>
+                                <span>{validationError || error}</span>
                             </div>
                         )}
                     </CardContent>

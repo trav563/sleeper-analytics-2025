@@ -33,7 +33,7 @@ const computeStreak = (rosterId, seasonMatchups) => {
  * Right-rail 2x2 grid of league-context stats. Mirrors design's dir-a.jsx
  * QuickStats block (RANK / PLAYOFF / STREAK / PF-PA).
  */
-const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seasonMatchups, state }) => {
+const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seasonMatchups, state, recordsLoading = false, recordsError = null }) => {
     const myRoster = useMemo(
         () => rosters?.find((r) => r.owner_id === selectedUserId) || null,
         [rosters, selectedUserId]
@@ -55,7 +55,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
     const { odds, loading: oddsLoading, isProjection } = usePlayoffOdds(
         league, rosters, currentWeek, marketValues, seasonType, prevSeasonRosters
     );
-    const { rankings, ranked } = usePowerRankings(seasonMatchups, rosters, users, league);
+    const { rankings, ranked, incomplete } = usePowerRankings(seasonMatchups, rosters, users, league);
 
     /* Pick the four cells. */
     const cells = useMemo(() => {
@@ -84,9 +84,9 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                 valueTone: rank === 1 ? 'signal' : 'text',
             },
             {
-                label: 'Playoff',
+                label: 'Playoff odds',
                 value: oddsPct,
-                sub: isProjection ? 'projection' : oddsStatus === 'Clinched' ? 'clinched' : oddsStatus === 'Eliminated' ? 'eliminated' : 'monte carlo',
+                sub: oddsLoading ? 'calculating…' : !myOdds ? 'unavailable' : isProjection ? 'preseason estimate' : oddsStatus === 'Clinched' ? 'clinched' : oddsStatus === 'Eliminated' ? 'eliminated' : 'simulated estimate',
                 subTone: oddsStatus === 'Clinched' ? 'good' : oddsStatus === 'Eliminated' ? 'bad' : 'mute',
                 valueTone: oddsStatus === 'Clinched' ? 'good' : oddsStatus === 'Eliminated' ? 'bad' : 'text',
             },
@@ -98,8 +98,8 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                 valueTone: streak?.kind === 'W' ? 'good' : streak?.kind === 'L' ? 'bad' : 'text',
             },
             {
-                label: 'PF / PA',
-                value: (margin >= 0 ? '+' : '') + margin.toFixed(0),
+                label: 'Points +/−',
+                value: ranked ? (margin >= 0 ? '+' : '') + margin.toFixed(0) : '—',
                 sub: pfSub,
                 subTone: margin > 0 ? 'good' : margin < 0 ? 'bad' : 'mute',
                 valueTone: 'text',
@@ -109,11 +109,14 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
 
     if (cells.length === 0) return null;
 
+    const displayCells = cells.map(cell => (recordsLoading || recordsError || incomplete) && cell.label !== 'Playoff odds'
+        ? { ...cell, value: '—', sub: recordsError || incomplete ? 'unavailable · refresh data' : 'calculating…', valueTone: 'text', subTone: 'mute' } : cell);
+
     return (
-        <div className="grid grid-cols-2 gap-3">
-            {cells.map((s) => (
-                <div key={s.label} className="rounded-xl bg-bg-1 border border-line p-3 shadow-card">
-                    <div className="font-mono text-2xs uppercase tracking-wider text-text-mute font-bold">
+        <div className="grid grid-cols-2 gap-3" aria-busy={recordsLoading} aria-label="Team summary">
+            {displayCells.map((s) => (
+                <div key={s.label} title={s.label === 'Points +/−' ? 'Points scored minus points allowed in completed matchups' : undefined} className="rounded-xl bg-bg-1 border border-line p-3 shadow-card">
+                    <div className="font-mono text-xs uppercase tracking-wider text-text-mute font-bold">
                         {s.label}
                     </div>
                     <div
@@ -127,7 +130,7 @@ const QuickStats4 = ({ rosters, users, selectedUserId, league, currentWeek, seas
                         {s.value}
                     </div>
                     <div
-                        className={`font-mono text-2xs mt-1 tnum ${
+                        className={`font-mono text-xs mt-1 tnum ${
                             s.subTone === 'good' ? 'text-good'
                             : s.subTone === 'bad' ? 'text-bad'
                             : 'text-text-mute'

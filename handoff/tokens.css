@@ -132,3 +132,19 @@ html, body {
 .team-tint-soft {
   background: oklch(62% 0.18 var(--h) / 0.18);
 }
+
+/* Readable semantic text variants used by the implementation. Signal fills remain unchanged. */
+:root {
+  --signal-text: var(--accent);
+  --signal-2-text: var(--accent-2);
+  --good-text: var(--good);
+  --bad-text: var(--bad);
+  --warn-text: var(--warn);
+}
+[data-theme="light"] {
+  --signal-text: #805400;
+  --signal-2-text: #B33317;
+  --good-text: #176B36;
+  --bad-text: #B42330;
+  --warn-text: #805400;
+}

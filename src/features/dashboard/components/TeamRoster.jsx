@@ -30,7 +30,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
 
     if (!roster) {
         return (
-            <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card text-center font-mono text-2xs uppercase tracking-wider text-text-mute">
+            <section className="bg-bg-1 rounded-xl border border-line p-4 shadow-card text-center font-mono text-xs uppercase tracking-wider text-text-mute">
                 Select a team to view roster
             </section>
         );
@@ -83,7 +83,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
             className="group w-full flex items-center justify-between gap-3 p-2 hover:bg-bg-2 rounded-md transition-colors duration-fast border-b border-line/30 last:border-0 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal"
         >
             <div className="flex items-center gap-3 min-w-0">
-                <div className={`font-mono text-2xs font-bold w-9 text-center py-0.5 rounded-sm border uppercase tracking-wider ${POS_TONE[player.position] || defaultPosTone}`}>
+                <div className={`font-mono text-xs font-bold w-9 text-center py-0.5 rounded-sm border uppercase tracking-wider ${POS_TONE[player.position] || defaultPosTone}`}>
                     {player.position}
                 </div>
                 <img
@@ -99,7 +99,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
                             <Flame className="w-3 h-3 text-signal-2 shrink-0" aria-label="Trending" />
                         )}
                     </div>
-                    <div className="font-mono text-2xs text-text-mute mt-0.5 flex gap-1.5 uppercase tracking-wider">
+                    <div className="font-mono text-xs text-text-mute mt-0.5 flex gap-1.5 uppercase tracking-wider">
                         <span>{player.team || 'FA'}</span>
                         {player.injury_status && (
                             <span className="text-bad font-bold">{player.injury_status}</span>
@@ -111,7 +111,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
             <div className="flex items-center gap-3 shrink-0">
                 {marketValues && marketValues[player.player_id] && (
                     <div className="hidden sm:block text-right">
-                        <p className="font-mono text-2xs text-text-mute uppercase tracking-wider">Value</p>
+                        <p className="font-mono text-xs text-text-mute uppercase tracking-wider">Value</p>
                         <p className="font-mono text-xs text-signal-2 tnum">{marketValues[player.player_id].toLocaleString()}</p>
                     </div>
                 )}
@@ -131,7 +131,7 @@ const TeamRoster = ({ roster, players, league, rosters }) => {
                     if (playerGroups[group].length === 0) return null;
                     return (
                         <div key={group}>
-                            <h4 className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-2 border-b border-line pb-1">
+                            <h4 className="font-mono text-xs uppercase tracking-wider text-text-mute mb-2 border-b border-line pb-1">
                                 {group}
                             </h4>
                             <div className="space-y-0.5">
