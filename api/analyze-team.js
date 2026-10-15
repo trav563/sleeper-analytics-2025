@@ -2,6 +2,7 @@ import { generateWaiverMoves } from '../src/utils/waiverCandidates.js';
 import { fetchValuationSnapshot } from '../src/utils/fantasyCalc.js';
 import { valuationSettings, ownedPlayerIds } from '../src/utils/valuation.js';
 import { generateTradeCandidates, trustworthyMarket } from '../src/utils/tradeCandidates.js';
+import { buildPickLedger } from '../src/features/tools/utils/pickLedger.js';
 import { formatTradeResponse } from '../src/utils/tradeResponse.js';
 import { lastCompletedWeek } from '../src/utils/seasonState.js';
 import { aggregateCompletedStats } from '../src/utils/playerParticipation.js';
@@ -127,6 +128,11 @@ function hasActualScoring(stats) {
 function pName(p) {
     if (!p) return 'Unknown';
     return `${p.first_name || ''} ${p.last_name || ''}`.trim();
+}
+
+// Verified trade assets: players carry Sleeper names, draft picks carry their ledger label.
+function tradeAsset(p) {
+    return { id: p.id, name: p.kind === 'pick' ? p.name : pName(p), age: p.age, position: p.position, value: p.tradeValue, availability: p.ownershipStatus };
 }
 
 // Server-side mirror of getRookieLockState in src/utils/sleeper.js. Kept inline
@@ -562,9 +568,8 @@ ${leagueRostersText}
 
 VERIFIED TRADE CANDIDATES:
 ${JSON.stringify(tradeCandidates.map(c => ({ opponentRosterId: c.opponentRosterId,
-    give: c.give.map(p => ({ id: p.id, name: pName(p), age: p.age, position: p.position, value: p.tradeValue, availability: p.ownershipStatus })),
-    receive: c.receive.map(p => ({ id: p.id, name: pName(p), age: p.age, position: p.position, value: p.tradeValue, availability: p.ownershipStatus })),
-    giveValue: c.giveValue, receiveValue: c.receiveValue, myGain: c.myGain, theirGain: c.theirGain, reason: c.reason })))}
+    give: c.give.map(tradeAsset), receive: c.receive.map(tradeAsset),
+    giveValue: c.giveValue, receiveValue: c.receiveValue, me: c.me, them: c.them })))}
 
 Return only the requested trade section. Empty candidates mean no supported deals, not permission to discuss other tools.`;
     }
@@ -668,7 +673,7 @@ VERIFIED LINEUP (full legal assignment, slot indices match Starting Slots):
 ${JSON.stringify(legalLineup || { unavailable: "Game status unavailable" })}
 
 VERIFIED TRADE CANDIDATES (only these packages are allowed; player IDs are identity, names are labels):
-${JSON.stringify(tradeCandidates.map(c => ({ ...c, give: c.give.map(p => ({ id: p.id, name: pName(p), position: p.position, age: p.age, availability: p.ownershipStatus, value: p.tradeValue })), receive: c.receive.map(p => ({ id: p.id, name: pName(p), position: p.position, age: p.age, availability: p.ownershipStatus, value: p.tradeValue })) })))}
+${JSON.stringify(tradeCandidates.map(c => ({ ...c, give: c.give.map(tradeAsset), receive: c.receive.map(tradeAsset) })))}
 
 ${instructions}${constraintTail}`;
 }
@@ -730,7 +735,8 @@ export default async function handler(req, res) {
         const leaguePrevSeason = String(Number(leagueSeason) - 1);
 
         // Fetch all data in parallel (Sleeper + ESPN week context for opponent/weather/snaps).
-        const [users, matchups, nflPlayers, prevStats, weekProjections, weekContext, drafts, nflState, marketSnapshot] = await Promise.all([
+        const marketFormat = valuationSettings(league, rosters.length);
+        const [users, matchups, nflPlayers, prevStats, weekProjections, weekContext, drafts, nflState, marketSnapshot, winNowSnapshot, tradedPicks] = await Promise.all([
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/users`),
             fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/matchups/${week}`),
             fetchCached('players', `${SLEEPER_BASE}/players/nfl`),
@@ -739,7 +745,10 @@ export default async function handler(req, res) {
             fetchWeekContext(week, leagueSeason).catch(() => ({})),
             fetchCached(`drafts-${leagueId}`, `${SLEEPER_BASE}/league/${leagueId}/drafts`).catch(() => []),
             fetchCached('nfl-state', `${SLEEPER_BASE}/state/nfl`, CURRENT_WEEK_TTL),
-            fetchValuationSnapshot(valuationSettings(league, rosters.length)),
+            fetchValuationSnapshot(marketFormat),
+            // Dynasty trade fit also needs this-season values and the league's pick ledger.
+            marketFormat.isDynasty ? fetchValuationSnapshot({ ...marketFormat, isDynasty: false }) : null,
+            fetchJSON(`${SLEEPER_BASE}/league/${leagueId}/traded_picks`).catch(() => []),
         ]);
 
         const completed = Math.min(week - 1, lastCompletedWeek(league, nflState));
@@ -831,7 +840,8 @@ export default async function handler(req, res) {
             });
 
         // A deterministic screen gates concrete offers before the model sees them.
-        const tradeCandidates = generateTradeCandidates({ league, rosters, players: nflPlayers, snapshot: marketSnapshot, rosterId: userRoster.roster_id, mode: constraint === 'sell-high' ? 'sell-high' : 'trade-up', state: nflState });
+        const picks = buildPickLedger(league, rosters, Array.isArray(tradedPicks) ? tradedPicks : [], marketSnapshot.values, marketFormat.numQbs === 2).allPicks;
+        const tradeCandidates = generateTradeCandidates({ league, rosters, players: nflPlayers, snapshot: marketSnapshot, winNowSnapshot, picks, rosterId: userRoster.roster_id, mode: constraint === 'sell-high' ? 'trade-down' : 'trade-up', state: nflState });
         if (analysisType === 'roster' && ['trade-up', 'sell-high'].includes(constraint)) {
             const ownerName = rid => {
                 const owner = users.find(u => u.user_id === rosters.find(r => r.roster_id === rid)?.owner_id);

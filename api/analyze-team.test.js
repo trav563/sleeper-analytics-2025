@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('ai', () => ({ streamText: vi.fn() }));
 vi.mock('./_rateLimit.js', () => ({ checkRateLimit: vi.fn(async () => ({ allowed: true, remaining: 9 })), clientIp: () => 'test' }));
-vi.mock('../src/utils/fantasyCalc.js', () => ({ fetchValuationSnapshot: vi.fn(async () => ({ values: {}, source: 'Unavailable', trustworthy: false, fetchedAt: Date.now() })) }));
+vi.mock('../src/utils/fantasyCalc.js', () => ({ fetchValuationSnapshot: vi.fn(async () => ({ values: {}, source: 'Unavailable', trustworthy: false, fetchedAt: Date.now() })), getMarketPickValue: () => undefined }));
 vi.mock('rss-parser', () => ({ default: class { async parseURL() { return { items: [] }; } } }));
 import { streamText } from 'ai';
 import handler, { buildPrompt } from './analyze-team';

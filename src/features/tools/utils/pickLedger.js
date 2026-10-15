@@ -1,4 +1,4 @@
-import { getMarketPickValue } from '../../../utils/fantasyCalc';
+import { getMarketPickValue } from '../../../utils/fantasyCalc.js';
 
 export const ordinal = (n) => {
     if (n === 1) return '1st';

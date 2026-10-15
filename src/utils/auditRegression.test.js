@@ -5,7 +5,7 @@ import { completedStandings } from './completedStandings';
 import { playerGameLogs, aggregateCompletedStats } from './playerParticipation';
 import { assignLineup } from './lineupAssignment';
 import { optimizeRoster } from './lineupOptimizer';
-import { generateTradeCandidates, trustworthyMarket, MARKET_MAX_AGE_MS } from './tradeCandidates';
+import { generateTradeCandidates, classifyTeams, futureFactor, trustworthyMarket, MARKET_MAX_AGE_MS } from './tradeCandidates';
 
 const live = { season: '2026', season_type: 'regular', week: 1 };
 const league = { season: '2026', settings: { type: 2, trade_deadline: 12 }, roster_positions: ['QB', 'RB', 'WR', 'BN'], scoring_settings: { rec: 1, pass_int: -2 } };
@@ -92,39 +92,117 @@ describe('legal coordinated lineups', () => {
     });
 });
 
-describe('conservative trade screening', () => {
+describe('trade screening guards', () => {
     const players = { q: player('q','QB'), r: player('r','RB'), w: player('w','WR'), d1: player('d1','QB'), d2: player('d2','WR'), oq: player('oq','QB'), or: player('or','RB'), ow: player('ow','WR'), rb: player('rb','RB') };
     const values = { q: 120, r: 50, w: 120, d1: 60, d2: 55, oq: 20, or: 100, ow: 10, rb: 90 };
     const rosters = [{ roster_id: 1, players: ['q','r','w','d1','d2'] }, { roster_id: 2, players: ['oq','or','ow','rb'] }];
     const args = () => ({ league, rosters, players, rosterId: 1, state: live, snapshot: { values, source: 'Fixture', fetchedAt: Date.now(), trustworthy: true } });
+    const ids = offers => offers.flatMap(o => [...o.give, ...o.receive]).map(a => a.id);
     it.each([0, 2])('finds a useful consolidation with premium for format type %i', type => {
         const offers = generateTradeCandidates({ ...args(), league: { ...league, settings: { ...league.settings, type } } });
         expect(offers).toHaveLength(1);
         expect(offers[0].giveValue).toBe(115);
         expect(offers[0].receive[0].id).toBe('or');
-        expect(offers[0].myGain).toBeGreaterThan(0); expect(offers[0].theirGain).toBeGreaterThan(0);
+        expect(offers[0].me.gain).toBeGreaterThan(0); expect(offers[0].them.gain).toBeGreaterThan(0);
     });
-    it('rejects a QB sale to an already strong one-QB room', () => {
-        const argsStrong = args(); argsStrong.snapshot = { ...argsStrong.snapshot, values: { ...values, oq: 150 } };
-        expect(generateTradeCandidates(argsStrong)).toEqual([]);
+    it('never leaves a required second QB slot empty', () => {
+        const offers = generateTradeCandidates({ ...args(), league: { ...league, roster_positions: ['QB','QB','RB','WR'] } });
+        expect(offers.length).toBeGreaterThan(0);
+        expect(ids(offers)).not.toContain('d1');
     });
-    it.each([['QB','QB','RB','WR'], ['QB','SUPER_FLEX','RB','WR']])('does not call a needed second QB expendable in %j', (...slots) => {
-        expect(generateTradeCandidates({ ...args(), league: { ...league, roster_positions: slots } })).toEqual([]);
+    it('requires the consolidation premium and rejects low-value throw-ins', () => {
+        const offers = generateTradeCandidates({ ...args(), snapshot: { ...args().snapshot, values: { ...values, d2: 5 } } });
+        expect(ids(offers)).not.toContain('d2');
+        for (const o of offers) {
+            expect(o.giveValue).toBeGreaterThanOrEqual(o.receiveValue * 1.1 - 1e-9);
+            expect(o.giveValue).toBeLessThanOrEqual(o.receiveValue * 1.25 + 1e-9);
+        }
     });
-    it('requires premium and rejects unequal low-value depth', () => {
-        expect(generateTradeCandidates({ ...args(), snapshot: { ...args().snapshot, values: { ...values, d2: 5 } } })).toEqual([]);
-    });
-    it('rejects missing, stale, future-dated, or unavailable values', () => {
-        for (const patch of [{ trustworthy: false }, { fetchedAt: Date.now()-MARKET_MAX_AGE_MS-1 }, { values: { ...values, oq: undefined } }])
+    it('rejects stale, future-dated, or untrusted markets', () => {
+        for (const patch of [{ trustworthy: false }, { fetchedAt: Date.now()-MARKET_MAX_AGE_MS-1 }])
             expect(generateTradeCandidates({ ...args(), snapshot: { ...args().snapshot, ...patch } })).toEqual([]);
         expect(trustworthyMarket({ trustworthy: true, fetchedAt: Date.now()+10000 })).toBe(false);
+    });
+    it('keeps screening a team with an unvalued player but never offers that player', () => {
+        const offers = generateTradeCandidates({ ...args(), snapshot: { ...args().snapshot, values: { ...values, oq: undefined } } });
+        expect(offers.length).toBeGreaterThan(0);
+        expect(ids(offers)).not.toContain('oq');
     });
     it('verifies ownership and includes separately listed IR/taxi assets', () => {
         const withStashes = [{ ...rosters[0], players: ['q','r','w'], reserve: ['d1'], taxi: ['d2'] }, rosters[1]];
         expect(generateTradeCandidates({ ...args(), rosters: withStashes })[0].give.map(p => p.id).sort()).toEqual(['d1','d2']);
-        expect(generateTradeCandidates({ ...args(), rosters: [rosters[0], { ...rosters[1], players: [...rosters[1].players,'d1'] }] })).toEqual([]);
+        expect(ids(generateTradeCandidates({ ...args(), rosters: [rosters[0], { ...rosters[1], players: [...rosters[1].players,'d1'] }] }))).not.toContain('d1');
+    });
+    it('does not count the two-for-one premium as future value for the team receiving two', () => {
+        // d1 + d2 = 110 for or (100) only reaches the premium; net of it, the rebuilder gains nothing.
+        const offers = generateTradeCandidates({ ...args(), snapshot: { ...args().snapshot, values: { ...values, d2: 50 } } });
+        expect(offers.map(o => o.receive[0].id)).toEqual(['rb']);
+        expect(offers[0].them.futureDelta).toBeCloseTo(110 / 1.1 - 90);
+        expect(offers[0].me.nowDelta).toBe(40);
     });
     it('returns none after the deadline', () => expect(generateTradeCandidates({ ...args(), state: { ...live, week: 13 } })).toEqual([]));
+});
+
+describe('strategy-aware trade fit', () => {
+    const dynasty = { season: '2026', settings: { type: 2, trade_deadline: 12 }, roster_positions: ['QB', 'RB', 'WR', 'BN', 'BN', 'BN'] };
+    const people = {
+        aq: player('aq','QB',{ age: 26 }), ar: player('ar','RB',{ age: 24 }), aw: player('aw','WR',{ age: 25 }), ao: player('ao','WR',{ age: 32 }),
+        bq: player('bq','QB'), br: player('br','RB'), bw: player('bw','WR'),
+        cq: player('cq','QB',{ age: 30 }), cr: player('cr','RB',{ age: 29 }), cb: player('cb','RB',{ age: 23 }), cw: player('cw','WR',{ age: 24 }),
+    };
+    // Market prices fairness; this-season values make the 29-year-old RB a contender's upgrade.
+    const market = { aq: 300, ar: 150, aw: 300, ao: 115, bq: 150, br: 150, bw: 150, cq: 50, cr: 110, cb: 30, cw: 40 };
+    const thisSeason = { aq: 300, ar: 100, aw: 300, ao: 5, bq: 150, br: 150, bw: 150, cq: 50, cr: 250, cb: 15, cw: 20 };
+    const snap = values => ({ values, source: 'Fixture', fetchedAt: Date.now(), trustworthy: true });
+    const record = (wins, losses, fpts) => ({ wins, losses, ties: 0, fpts });
+    const pick = (id, tradeValue) => ({ id, year: 2027, round: 1, original_owner_id: 1, roster_id: 1, tradeValue, description: `2027 pick ${id}` });
+    const contender = { roster_id: 1, players: ['aq','ar','aw','ao'], settings: record(4, 0, 500) };
+    const middle = { roster_id: 3, players: ['bq','br','bw'], settings: record(2, 2, 400) };
+    const rebuilder = { roster_id: 2, players: ['cq','cr','cb','cw'], settings: record(0, 4, 300) };
+    const args = (extra = {}) => ({ league: dynasty, rosters: [contender, rebuilder], players: people, snapshot: snap(market), winNowSnapshot: snap(thisSeason),
+        picks: [pick('p1', 115)], rosterId: 1, mode: 'swap', state: live, ...extra });
+
+    it('classifies contenders, balanced teams, and rebuilders', () => {
+        expect(classifyTeams({ ...args(), rosters: [contender, middle, rebuilder] })).toEqual({ 1: 'contender', 3: 'balanced', 2: 'rebuilder' });
+        expect(classifyTeams({ ...args(), rosters: [contender, middle, rebuilder], league: { ...dynasty, settings: { ...dynasty.settings, type: 0 } } }))
+            .toEqual({ 1: 'contender', 3: 'contender', 2: 'contender' });
+        // Before two games, only this season's lineup strength counts.
+        const early = [{ ...contender, settings: record(0, 1, 90) }, { ...rebuilder, settings: record(1, 0, 120) }];
+        expect(classifyTeams({ ...args(), rosters: early })).toEqual({ 1: 'contender', 2: 'rebuilder' });
+    });
+    it('lets a contender buy a productive veteran from a rebuilder with a pick', () => {
+        const offers = generateTradeCandidates(args());
+        expect(offers).toHaveLength(1);
+        expect(offers[0].give.map(a => a.id)).toEqual(['p1']);
+        expect(offers[0].give[0]).toMatchObject({ kind: 'pick', position: 'PICK', name: '2027 pick p1' });
+        expect(offers[0].receive.map(a => a.id)).toEqual(['cr']);
+        expect(offers[0].me).toMatchObject({ strategy: 'contender' });
+        expect(offers[0].me.nowChange).toBeGreaterThan(0.2);
+        expect(offers[0].them).toMatchObject({ strategy: 'rebuilder' });
+        expect(offers[0].them.futureChange).toBeGreaterThan(0);
+    });
+    it('never sends a rebuilder a player past the age cliff at equal market value', () => {
+        expect(futureFactor({ position: 'WR', age: 32 })).toBe(0.35);
+        expect(futureFactor({ position: 'RB', age: 24 })).toBe(1);
+        expect(futureFactor({ kind: 'pick', position: 'PICK' })).toBe(1);
+        const offered = generateTradeCandidates(args()).flatMap(o => o.give.map(a => a.id));
+        expect(offered).not.toContain('ao');
+    });
+    it('sells a rebuilder\'s veteran for two younger pieces', () => {
+        const offers = generateTradeCandidates(args({ rosterId: 2, mode: 'trade-down', picks: [pick('p2a', 60), pick('p2b', 65)] }));
+        expect(offers).toHaveLength(1);
+        expect(offers[0].give.map(a => a.id)).toEqual(['cr']);
+        expect(offers[0].receive.map(a => a.id).sort()).toEqual(['p2a', 'p2b']);
+        expect(offers[0].me.strategy).toBe('rebuilder');
+        expect(offers[0].them.strategy).toBe('contender');
+    });
+    it('honors a strategy override for your own team', () => {
+        expect(generateTradeCandidates(args({ strategyOverride: 'rebuilder' }))).toEqual([]);
+    });
+    it('falls back to market values when this-season values are unavailable', () => {
+        for (const winNowSnapshot of [undefined, { ...snap(thisSeason), fetchedAt: Date.now() - MARKET_MAX_AGE_MS - 1 }])
+            expect(generateTradeCandidates(args({ winNowSnapshot }))).toEqual([]);
+    });
 });
 
 describe('incomplete and canceled context', () => {
