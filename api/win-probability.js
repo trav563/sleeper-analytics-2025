@@ -31,9 +31,9 @@ async function trackLeague(req, res) {
     if (!rateCheck.allowed) return res.status(rateCheck.unavailable ? 503 : 429).json({ error: rateCheck.reason });
 
     const [leagueRes, stateRes] = await Promise.all([fetch(`${SLEEPER_BASE}/league/${leagueId}`), fetch(`${SLEEPER_BASE}/state/nfl`)]);
+    if (leagueRes.status === 404) return res.status(404).json({ error: 'League not found' });
     if (!leagueRes.ok || !stateRes.ok) throw new Error(`Sleeper ${leagueRes.status}/${stateRes.status}`);
     const [league, state] = await Promise.all([leagueRes.json(), stateRes.json()]);
-    if (!league) return res.status(404).json({ error: 'League not found' });
     if (league.sport !== 'nfl' || String(league.season) !== String(state?.season)) return res.status(200).json({ tracked: false });
 
     const now = Date.now();

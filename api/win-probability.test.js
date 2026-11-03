@@ -19,7 +19,7 @@ function fakeWorld({ flat = [], existing = null, active = 0, league = { sport: '
             }));
         }
         if (url.includes('/state/nfl')) return ok({ season: '2026' });
-        if (url.includes('/league/')) return ok(league);
+        if (url.includes('/league/')) return league ? ok(league) : { ok: false, status: 404, json: async () => null };
         throw new Error(`unexpected fetch ${url}`);
     });
     vi.stubGlobal('fetch', fetchImpl);
@@ -97,6 +97,13 @@ describe('POST tracking', () => {
     it('returns 404 for a league Sleeper does not know', async () => {
         const world = fakeWorld({ league: null });
         expect((await post({ leagueId: '123' })).statusCode).toBe(404);
+        expect(names(world)).not.toContain('ZADD');
+    });
+    it('reports a Sleeper failure as an outage, not a missing league', async () => {
+        const world = fakeWorld();
+        const real = world.fetchImpl.getMockImplementation();
+        world.fetchImpl.mockImplementation(async (url, options) => String(url).includes('api.sleeper.app') ? { ok: false, status: 500 } : real(url, options));
+        expect((await post({ leagueId: '123' })).statusCode).toBe(503);
         expect(names(world)).not.toContain('ZADD');
     });
     it('does not track another sport or a past season', async () => {
