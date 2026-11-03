@@ -2,43 +2,66 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { WinProbabilityChart } from './WinProbabilityChart';
-import { HISTORY_STORAGE_KEY, probabilityHistoryKey, appendProbabilitySnapshot, subscribeProbabilityHistory } from '../../../lib/winProbabilityHistory';
 
-const props = { leagueId: 'test-chart', season: '2026', week: 1, matchupId: 1, myRosterId: 1, oppRosterId: 2,
-    winProb: .8, myName: 'Team A', oppName: 'Team B', myHue: 45, oppHue: 200 };
-const key = probabilityHistoryKey({ ...props, rosterIds: [1, 2] });
+const props = { myRosterId: 1, oppRosterId: 2, winProb: .8, myName: 'Team A', oppName: 'Team B', myHue: 45, oppHue: 200 };
+const MIN = 60_000;
+const start = Date.UTC(2026, 10, 6, 1, 0); // Thursday evening in the US.
+const point = (minutes, p) => ({ at: start + minutes * MIN, p });
 let container, root;
-const now = Date.now() - 600_000;
-const add = (offset, p) => act(() => appendProbabilitySnapshot(key, { at: now + offset, p, source: String(offset) }));
 beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    localStorage.clear();
-    const unsubscribe = subscribeProbabilityHistory(() => {});
-    window.dispatchEvent(new StorageEvent('storage', { key: HISTORY_STORAGE_KEY })); unsubscribe();
     container = document.createElement('div'); document.body.append(container); root = createRoot(container);
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 const render = overrides => act(() => root.render(<WinProbabilityChart {...props} {...overrides} />));
+const svgOf = () => {
+    const svg = container.querySelector('svg');
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 125 });
+    return svg;
+};
 
-describe('recorded probability chart', () => {
-    it('shows first-observation guidance then draws lines as real snapshots arrive', () => {
-        render(); expect(container.textContent).toContain('No recorded history yet');
-        add(0, .6); expect(container.textContent).toContain('First observation saved');
+describe('win probability chart', () => {
+    it('explains each empty state', () => {
+        render(); expect(container.textContent).toContain('Tracking starts with the next game');
+        render({ loading: true }); expect(container.textContent).toContain('Loading history');
+        render({ unavailable: true }); expect(container.textContent).toContain('temporarily unavailable');
+        render({ canRecord: false }); expect(container.textContent).toContain('No history was recorded');
+    });
+    it('shows first-sample guidance, then a line once there are two', () => {
+        render({ points: [point(0, .6)] });
+        expect(container.textContent).toContain('First sample saved');
         expect(container.querySelectorAll('path')).toHaveLength(0);
-        add(60_000, .8); expect(container.querySelectorAll('path')).toHaveLength(2);
-        expect(container.textContent).toContain('Recording began');
+        render({ points: [point(0, .6), point(5, .8)] });
+        expect(container.querySelectorAll('path')).toHaveLength(2);
     });
-    it('uses elapsed time for spacing and does not draw through recording gaps', () => {
-        add(0, .5); add(60_000, .6); add(180_000, .8); render();
-        expect(container.querySelector('path').getAttribute('d')).toContain('L110.666');
-        add(600_000, .9);
-        expect(container.querySelectorAll('path')).toHaveLength(2); // Seven-minute gap is not a solid recorded line...
-        expect(container.querySelectorAll('line[data-gap]')).toHaveLength(2); // ...but a dashed connector per team.
+    it('does not promise more samples for a finished matchup', () => {
+        render({ points: [point(0, 1)], complete: true });
+        expect(container.textContent).toContain('Only one sample');
+        expect(container.textContent).not.toContain('next one');
     });
-    it('shows recorded probabilities for the nearest observation on hover or tap', () => {
-        add(0, .5); add(60_000, .6); add(120_000, .8); render();
-        const svg = container.querySelector('svg');
-        svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 125 });
+    it('dashes over missed samples inside a game window', () => {
+        render({ points: [point(0, .5), point(5, .6), point(40, .7), point(45, .8)] });
+        expect(container.querySelectorAll('path')).toHaveLength(4);
+        expect(container.querySelectorAll('line[data-gap]')).toHaveLength(2);
+        expect(container.querySelectorAll('line[data-window-break]')).toHaveLength(0);
+    });
+    it('treats normal 5-minute sampling as continuous', () => {
+        render({ points: Array.from({ length: 30 }, (_, i) => point(i * 5, .5)) });
+        expect(container.querySelectorAll('line[data-gap]')).toHaveLength(0);
+        expect(container.querySelectorAll('path')).toHaveLength(2);
+    });
+    it('separates game windows with a day label and no connecting line', () => {
+        const sunday = 3 * 24 * 60;
+        render({ points: [point(0, .5), point(5, .6), point(10, .6), point(sunday, .6), point(sunday + 5, .7), point(sunday + 10, .8)] });
+        expect(container.querySelectorAll('line[data-window-break]')).toHaveLength(1);
+        expect(container.querySelectorAll('line[data-gap]')).toHaveLength(0);
+        const labels = [...container.querySelectorAll('svg text')].map(t => t.textContent);
+        const day = at => new Date(at).toLocaleDateString([], { weekday: 'short' }).toUpperCase();
+        expect(labels).toEqual(['100%', day(start), day(start + sunday * MIN)]);
+    });
+    it('shows probabilities for the nearest sample on hover or tap', () => {
+        render({ points: [point(0, .5), point(30, .6), point(60, .8)] });
+        const svg = svgOf();
         act(() => svg.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 150 })));
         const tip = container.querySelector('[role="status"]');
         expect(tip.textContent).toContain('Team A60%');
@@ -46,26 +69,15 @@ describe('recorded probability chart', () => {
         act(() => svg.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 300 })));
         expect(container.querySelector('[role="status"]').textContent).toContain('Team A80%');
     });
-    it('changes perspective without mixing team or week histories', () => {
-        add(0, .8); render({ winProb: null, myRosterId: 2, oppRosterId: 1 });
-        const svg = container.querySelector('svg');
-        svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 125 });
+    it('flips perspective for the higher roster id', () => {
+        render({ winProb: null, myRosterId: 2, oppRosterId: 1, points: [point(0, .8)] });
+        const svg = svgOf();
         act(() => svg.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 160 })));
         expect(container.querySelector('[role="status"]').textContent).toContain('Team A20%');
-        render({ week: 2 });
-        expect(container.querySelectorAll('circle')).toHaveLength(0);
-        render(); expect(container.querySelectorAll('circle')).toHaveLength(2);
     });
-    it('retains history during unavailable current data', () => {
-        add(0, .8); add(60_000, .9); render({ winProb: null });
+    it('retains history when the current estimate is unavailable', () => {
+        render({ winProb: null, points: [point(0, .8), point(5, .9)] });
         expect(container.querySelectorAll('path')).toHaveLength(2);
         expect(container.textContent).toContain('Showing the last recorded probabilities');
-    });
-    it('does not promise new observations for a finished or historical matchup', () => {
-        render({ canRecord: false });
-        expect(container.textContent).toContain('No history was recorded');
-        add(0, 1); render({ complete: true });
-        expect(container.textContent).toContain('Only one observation');
-        expect(container.textContent).not.toContain('next score refresh');
     });
 });

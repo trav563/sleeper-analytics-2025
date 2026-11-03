@@ -63,10 +63,10 @@ const PrivacyPage = () => (
                 their own policies, not ours.
             </p>
             <p>
-                This is the only feature that sends league data anywhere other than your own
-                browser, and it only runs when you explicitly ask for it. Because it includes your
-                league-mates' names and records, it shares a little about people who never opened
-                this app — so if that matters in your league, don't use it.
+                This is the only feature that sends your league-mates' names and records anywhere
+                other than your own browser, and it only runs when you explicitly ask for it. Because
+                of that, it shares a little about people who never opened this app — so if that
+                matters in your league, don't use it.
             </p>
         </Section>
 
@@ -76,7 +76,7 @@ const PrivacyPage = () => (
                 <li>Your Sleeper profile (username, user ID, avatar) so you don't re-enter it</li>
                 <li>Cached AI analyses — automatically deleted after 7 days</li>
                 <li>Cached playoff-odds simulations</li>
-                <li>Recorded win-probability history for up to 32 matchups, capped at 1,440 observations each. Histories older than 45 days are discarded when history is next loaded or updated. This history stays in your browser and is not uploaded.</li>
+                <li>The date each league was last registered for win-probability tracking, so it is only sent once a day</li>
                 <li>Anything you've saved in the schedule generator</li>
                 <li>Your light/dark theme choice</li>
             </ul>
@@ -88,9 +88,16 @@ const PrivacyPage = () => (
 
         <Section icon={Shield} title="What's stored on the server">
             <p>
-                One thing: a counter that limits how many AI analyses can be requested per hour and
-                per day. It is keyed on IP address, expires within 24 hours, and is not linked to
-                your Sleeper account or any league.
+                Counters that limit how many AI analyses and league registrations can be requested
+                per hour and per day. They are keyed on IP address, expire within 24 hours, and are
+                not linked to your Sleeper account or any league.
+            </p>
+            <p>
+                Win-probability history, so the chart works without the page staying open. Opening a
+                league sends its public ID to the server, which then samples that league while games
+                are on and stops 30 days after anyone last opened it. It stores the league ID, its
+                scoring settings and each matchup's probabilities, kept for about 180 days. It does
+                not store names, Sleeper user IDs or who opened the league.
             </p>
         </Section>
 
@@ -108,7 +115,9 @@ const PrivacyPage = () => (
             <p>
                 Use <span className="text-text">Sign out</span> in the menu. It clears your stored
                 Sleeper profile, cached AI analyses, cached odds, and saved schedules from this
-                browser. Clearing site data for this domain does the same thing.
+                browser. Clearing site data for this domain does the same thing. Win-probability
+                history belongs to the league rather than to you, so it isn't removed by signing out;
+                it expires on the schedule above.
             </p>
             <p>
                 To change what's in your league, change it in Sleeper — this app only reads.

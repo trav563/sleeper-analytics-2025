@@ -1,104 +1,24 @@
-import { projectMatchup } from './liveProjection';
-import { computeWinProbability } from './winProbability';
+// A sample lands every 5 minutes while games are on, so a longer silence inside
+// a game window means samples were missed, and a much longer one is the idle
+// time between windows (Thursday night to Sunday), which the chart collapses.
+export const HISTORY_GAP_MS = 15 * 60_000;
+export const WINDOW_GAP_MS = 60 * 60_000;
+const MIN_WINDOW_SPAN_MS = 60 * 60_000;
+const LEGACY_STORAGE_KEY = 'league-win-history-v1-uncertainty45';
 
-// Version includes the probability calibration; do not mix different models.
-export const HISTORY_STORAGE_KEY = 'league-win-history-v1-uncertainty45';
-export const MAX_HISTORY_POINTS = 1440;
-export const HISTORY_GAP_MS = 150_000;
-const MAX_HISTORIES = 32;
-const MAX_AGE_MS = 45 * 86400_000;
-const EMPTY = Object.freeze([]);
-let records;
-const listeners = new Set();
-
-export function probabilityHistoryKey({ leagueId, season, week, matchupId, rosterIds = [] }) {
-    if (!leagueId || !season || !week || matchupId == null || rosterIds.length !== 2 || rosterIds.some(id => id == null)) return null;
-    return JSON.stringify([String(leagueId), String(season), Number(week), String(matchupId), ...rosterIds.map(Number).sort((a, b) => a - b)]);
+/** Browser-recorded history predates server sampling and is no longer read. */
+export function clearLegacyProbabilityHistory() {
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch { /* Storage unavailable: nothing to clear. */ }
 }
 
-function load() {
-    if (records) return records;
-    records = Object.create(null);
-    try {
-        const stored = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '{}');
-        for (const [key, value] of Object.entries(stored)) {
-            if (!Array.isArray(value?.points) || !Number.isFinite(value.updatedAt) || value.updatedAt < Date.now() - MAX_AGE_MS) continue;
-            const points = value.points.filter(p => p && Number.isFinite(p.at) && p.at <= Date.now() + 60_000 && Number.isFinite(p.p) && p.p >= 0 && p.p <= 1)
-                .sort((a, b) => a.at - b.at).filter((p, i, all) => i === 0 || p.at > all[i - 1].at).slice(-MAX_HISTORY_POINTS);
-            if (points.length) records[key] = { ...value, points };
-        }
-        records = Object.fromEntries(Object.entries(records).sort((a, b) => b[1].updatedAt - a[1].updatedAt).slice(0, MAX_HISTORIES));
-    } catch { /* Storage unavailable or corrupted: recording still works in memory. */ }
-    return records;
-}
-
-export function readProbabilityHistory(key) {
-    return key ? load()[key]?.points || EMPTY : EMPTY;
-}
-
-export function subscribeProbabilityHistory(listener) {
-    listeners.add(listener);
-    const onStorage = event => {
-        if (event.key === HISTORY_STORAGE_KEY || event.key === null) {
-            records = undefined;
-            listeners.forEach(notify => notify());
-        }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => { listeners.delete(listener); window.removeEventListener('storage', onStorage); };
-}
-
-function persistHistory() {
-    try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(records)); } catch { /* Session-only fallback. */ }
-    listeners.forEach(notify => notify());
-}
-
-export function appendProbabilitySnapshot(key, { at, p, source, complete = false }, deferWrite = false) {
-    if (!key || !Number.isFinite(at) || !Number.isFinite(p) || p < 0 || p > 1) return;
-    const data = load();
-    const previous = data[key];
-    const last = previous?.points.at(-1);
-    if (previous?.source === source || (last && at <= last.at) || (previous?.complete && complete && last.p === p)) return;
-    // Score and clock queries often finish seconds apart. Replace that observation
-    // rather than drawing two apparently independent samples from the same poll.
-    const points = [...(previous?.points || [])];
-    if (last && at - last.at < 30_000) points.pop();
-    points.push({ at, p });
-    data[key] = { updatedAt: at, source, complete, points: points.slice(-MAX_HISTORY_POINTS) };
-    const retained = Object.entries(data).filter(([, value]) => value.updatedAt >= at - MAX_AGE_MS)
-        .sort((a, b) => b[1].updatedAt - a[1].updatedAt).slice(0, MAX_HISTORIES);
-    records = Object.fromEntries(retained);
-    if (!deferWrite) persistHistory();
-    return true;
-}
-
-export function recordLeagueProbabilitySnapshots({ league, week, matchups, players, projections, games,
-    scoresUpdatedAt, gamesUpdatedAt, enabled, now = Date.now() }) {
-    if (!enabled || !league?.league_id || !league?.season || !scoresUpdatedAt || !gamesUpdatedAt || now - Math.min(scoresUpdatedAt, gamesUpdatedAt) > 150_000) return;
-    const pairs = new Map();
-    for (const matchup of matchups || []) {
-        if (matchup.matchup_id == null) continue;
-        const pair = pairs.get(matchup.matchup_id) || [];
-        pair.push(matchup);
-        pairs.set(matchup.matchup_id, pair);
+/** One matchup's series from league-wide samples of { at, p: { [matchupId]: p } }. */
+export function matchupProbabilityPoints(samples, matchupId) {
+    const points = [];
+    for (const sample of samples || []) {
+        const p = sample.p?.[matchupId];
+        if (Number.isFinite(sample.at) && Number.isFinite(p) && p >= 0 && p <= 1) points.push({ at: sample.at, p });
     }
-    let changed = false;
-    for (const [matchupId, pair] of pairs) {
-        if (pair.length !== 2) continue;
-        pair.sort((a, b) => a.roster_id - b.roster_id);
-        const [a, b] = pair;
-        const pa = projectMatchup({ matchup: a, players, projections, games });
-        const pb = projectMatchup({ matchup: b, players, projections, games });
-        if (!pa.available || !pb.available) continue;
-        const key = probabilityHistoryKey({ leagueId: league.league_id, season: league.season, week, matchupId, rosterIds: pair.map(m => m.roster_id) });
-        changed = appendProbabilitySnapshot(key, {
-            at: now,
-            p: computeWinProbability({ myCurrent: a.points, oppCurrent: b.points, myProjRemaining: pa.remaining, oppProjRemaining: pb.remaining }),
-            source: `${scoresUpdatedAt}:${gamesUpdatedAt}`,
-            complete: [...pa.bySlot, ...pb.bySlot].every(p => ['DONE', 'EMPTY'].includes(p.phase)),
-        }, true) || changed;
-    }
-    if (changed) persistHistory();
+    return points;
 }
 
 /** Split missing observation windows instead of implying continuous coverage. */
@@ -112,4 +32,24 @@ export function probabilitySegments(points) {
     return segments;
 }
 
-export const emptyProbabilityHistory = () => EMPTY;
+/**
+ * Lay points out with idle time removed: game windows sit side by side, each as
+ * wide as its share of game time. Each returned point gains an `x`.
+ */
+export function layoutProbabilityWindows(points, { left = 12, width = 296, gutter = 10 } = {}) {
+    const groups = [];
+    for (const point of points) {
+        const group = groups.at(-1);
+        if (!group || point.at - group.at(-1).at > WINDOW_GAP_MS) groups.push([point]);
+        else group.push(point);
+    }
+    const spans = groups.map(group => Math.max(group.at(-1).at - group[0].at, MIN_WINDOW_SPAN_MS));
+    const scale = (width - gutter * (groups.length - 1)) / spans.reduce((sum, span) => sum + span, 0);
+    let cursor = left;
+    return groups.map((group, i) => {
+        const x0 = cursor, x1 = cursor + spans[i] * scale;
+        cursor = x1 + gutter;
+        const placed = group.map(point => ({ ...point, x: group.length === 1 ? (x0 + x1) / 2 : x0 + (point.at - group[0].at) * scale }));
+        return { x0, x1, start: group[0].at, points: placed, segments: probabilitySegments(placed) };
+    });
+}

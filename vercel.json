@@ -1,4 +1,10 @@
 {
+    "crons": [
+        {
+            "path": "/api/win-probability-tick",
+            "schedule": "*/5 * * * *"
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",

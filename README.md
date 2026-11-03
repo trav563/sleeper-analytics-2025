@@ -84,9 +84,9 @@ Sleeper stores each dynasty season as its own league. `src/services/sleeperEngin
 
 ## Privacy
 
-- Data is read from Sleeper's **public** API. Nothing about your league is stored on a server.
+- Data is read from Sleeper's **public** API.
 - `localStorage` holds your Sleeper profile, cached playoff odds, cached AI analyses (expired after 7 days), and your saved schedule generator state. **Sign out** clears all of it.
-- The only server-side state is a 24-hour rate-limit counter keyed on IP address.
+- Server-side state is 24-hour rate-limit counters keyed on IP address, plus win-probability history: league ID, scoring settings and each matchup's probabilities, with no names or user IDs. A league is sampled until 30 days after it was last opened, and samples expire after about 180 days.
 - **When you request an AI analysis**, the league's name and settings, every manager's display name and record, your full roster, your opponents' starting lineups, your game log, and recent transactions are sent to Google (fallback: Anthropic) through the Vercel AI Gateway. This is the one place league data leaves Sleeper and this app.
 - Page views are counted with Vercel Web Analytics, with league/team/player IDs stripped from the URL before the beacon is sent (`redactAnalyticsUrl` in `src/App.jsx`).
 
@@ -99,6 +99,7 @@ Server-side only — never exposed to the client. Set them in Vercel, not in a c
 | `AI_GATEWAY_API_KEY` | for AI | Vercel AI Gateway auth (`VERCEL_OIDC_TOKEN` works on Vercel) |
 | `KV_REST_API_URL` | for AI | Redis REST endpoint — durable rate limiting |
 | `KV_REST_API_TOKEN` | for AI | Redis REST token, **write access** |
+| `CRON_SECRET` | for win probability | Vercel cron sends it as a bearer token to `api/win-probability-tick` |
 
 The Redis pair is whatever your provisioning method injects: Vercel's Upstash
 marketplace integration sets `KV_REST_API_URL` / `KV_REST_API_TOKEN`, while a
@@ -108,6 +109,12 @@ issues `INCR`/`EXPIRE`, and a read-only token makes every request fail closed,
 which is indistinguishable from an outage.
 
 The AI endpoint **fails closed**: without Upstash configured it returns 503 rather than falling back to a per-instance limiter that gets weaker as Vercel scales out.
+
+### Win probability sampling
+
+A Vercel cron in `vercel.json` calls `api/win-probability-tick` every 5 minutes, which needs a Pro plan (Hobby cron runs only once a day). Ticks with no game active stop after one ESPN call. Past 1,800 tracked leagues, new leagues aren't added: 9 batches, 30 seconds apart, fit the function's 300-second limit while staying under Sleeper's 1,000 calls per minute.
+
+A free Upstash database is archived if nothing touches it, which fails AI analysis closed, so the tick also writes one key a day, including in the offseason. If AI cards ever all show "temporarily unavailable", check the database's status in Vercel first.
 
 ## Design system
 

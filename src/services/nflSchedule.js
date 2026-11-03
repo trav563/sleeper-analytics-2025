@@ -1,5 +1,6 @@
 import { ALL_NFL_TEAMS, INDOOR_STADIUMS, getByeTeams } from '../utils/nflData';
 import { rateLimitedFetch } from '../utils/rateLimitedFetch';
+import { espnScoreboardUrl, parseGameDetails } from '../lib/espnScoreboard';
 
 // No NFL week has ever had more than 6 teams on bye. A scoreboard implying
 // more than this is a partial response, not a bye-heavy week.
@@ -138,47 +139,10 @@ export const getGameStatuses = async (weekNumber, season) => {
  */
 export const getGameLiveDetails = async (weekNumber, season) => {
     try {
-        const response = await rateLimitedFetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${weekNumber}&seasontype=2${season ? `&dates=${season}` : ''}`);
+        const response = await rateLimitedFetch(espnScoreboardUrl(weekNumber, season));
         if (!response.ok) throw new Error('Game context unavailable');
 
-        const data = await response.json();
-        const events = data.events || [];
-        const detailsMap = {};
-
-        events.forEach((event) => {
-            const competition = event.competitions?.[0];
-            if (!competition) return;
-            const gameStatus = competition.status || event.status;
-            const status = gameStatus?.type?.name || 'STATUS_UNKNOWN';
-            const period = gameStatus?.period ?? 0;
-            const displayClock = gameStatus?.displayClock || '';
-            const gameId = event.id || competition.id || null;
-            const kickoff = event.date || competition.date || null;
-
-            const competitors = competition.competitors || [];
-            competitors.forEach((c) => {
-                let abbr = c.team?.abbreviation;
-                if (abbr === 'WSH') abbr = 'WAS';
-                if (!abbr || !ALL_NFL_TEAMS.includes(abbr)) return;
-
-                const opp = competitors.find((o) => o !== c);
-                let oppAbbr = opp?.team?.abbreviation;
-                if (oppAbbr === 'WSH') oppAbbr = 'WAS';
-
-                detailsMap[abbr] = {
-                    period,
-                    displayClock,
-                    score: Number(c.score) || 0,
-                    statusName: status,
-                    opponent: oppAbbr || null,
-                    isHome: c.homeAway === 'home',
-                    gameId,
-                    kickoff,
-                };
-            });
-        });
-
-        return detailsMap;
+        return parseGameDetails(await response.json());
     } catch (error) {
         console.error('Error fetching game live details:', error);
         throw error;

@@ -2,13 +2,7 @@
 // Regenerate with `npm run update-byes` when a new schedule drops.
 import byeWeeks from '../data/byeWeeks.json';
 
-// List of all 32 NFL teams (Sleeper/Standard abbreviations)
-export const ALL_NFL_TEAMS = [
-    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
-    "DET", "GB", "HOU", "IND", "JAX", "KC", "LAC", "LAR", "LV", "MIA",
-    "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB",
-    "TEN", "WAS"
-];
+export { ALL_NFL_TEAMS } from './nflTeams.js';
 
 /**
  * Bye-week map for a season: { week: [teamAbbr, ...] }.

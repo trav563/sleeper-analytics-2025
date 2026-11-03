@@ -1,4 +1,4 @@
-import { useRecordWinProbabilityHistory } from './useWinProbabilityHistory';
+import { useTrackWinProbability } from './useWinProbabilityHistory';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useEffect, useRef } from 'react';
 
@@ -73,7 +73,7 @@ export function useLeagueData(leagueId) {
     // following Sleeper's PRESEASON display_week.
     const displayWeek = deriveCurrentWeek(league, state);
 
-    const { details: liveDetails, error: gameStatusError, updatedAt: gamesUpdatedAt } = useGameLiveDetails(displayWeek, league?.season);
+    const { details: liveDetails, error: gameStatusError } = useGameLiveDetails(displayWeek, league?.season);
     const gamesActive = Object.values(liveDetails).some(g => ['STATUS_IN_PROGRESS', 'STATUS_HALFTIME', 'STATUS_END_PERIOD'].includes(g.statusName));
 
     // 4. Matchups (Dynamic Cache)
@@ -106,8 +106,7 @@ export function useLeagueData(leagueId) {
         refetchIntervalInBackground: false,
     });
 
-    useRecordWinProbabilityHistory({ league, week: displayWeek, matchups, players, games: liveDetails,
-        scoresUpdatedAt, gamesUpdatedAt, enabled: isLiveWeek && !errorMatchups && !gameStatusError });
+    useTrackWinProbability(leagueId, isLiveWeek);
 
     // Aggregate Loading & Error States.
     // loadingCore excludes the ~5MB players blob so pages can render league

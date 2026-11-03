@@ -11,6 +11,8 @@ import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { computeWinProbability } from '../../../lib/winProbability';
 import { useGameLiveDetails } from '../../dashboard/hooks/useGameLiveDetails';
 import { useWeekProjections } from '../hooks/useWeekProjections';
+import { useWinProbabilitySamples } from '../hooks/useWinProbabilityHistory';
+import { matchupProbabilityPoints } from '../../../lib/winProbabilityHistory';
 import { fetchLeagueMatchups } from '../../../utils/sleeper';
 import { matchupStatus, remainingStarters } from '../../../lib/matchupStatus';
 import { projectMatchup, starterPoints, gamePhase, formatProjection, estimateUnavailableMessage } from '../../../lib/liveProjection';
@@ -143,6 +145,11 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
     const { projections, error: projectionError, loading: projectionsLoading } = useWeekProjections(
         league?.season, week, league?.scoring_settings
     );
+    const { data: probabilitySamples, isLoading: probabilityLoading, error: probabilityError } = useWinProbabilitySamples({
+        leagueId: league?.league_id, season: league?.season, week, enabled: !isHistoricalSeason,
+        live: Object.values(liveDetails || {}).some(game => gamePhase(game) === 'LIVE'),
+    });
+    const probabilityPoints = useMemo(() => matchupProbabilityPoints(probabilitySamples, myMatchup?.matchup_id), [probabilitySamples, myMatchup?.matchup_id]);
     const myProjection = useMemo(() => projectMatchup({ matchup: myMatchup, players, projections, games: liveDetails, isWeekFinal: week > 0 && week <= completedWeek }),
         [myMatchup, players, projections, liveDetails, week, completedWeek]);
     const oppProjection = useMemo(() => projectMatchup({ matchup: oppMatchup, players, projections, games: liveDetails, isWeekFinal: week > 0 && week <= completedWeek }),
@@ -511,10 +518,9 @@ const MatchupDetail = ({ league, rosters, users, players, week, currentNFLWeek, 
                             sub="Recorded trend"
                         >
                             <WinProbabilityChart
-                                leagueId={league?.league_id}
-                                season={league?.season}
-                                week={week}
-                                matchupId={myMatchup.matchup_id}
+                                points={probabilityPoints}
+                                loading={probabilityLoading}
+                                unavailable={!!probabilityError}
                                 canRecord={!isHistoricalSeason && Number(week) === Number(currentNFLWeek)}
                                 complete={[...myProjection.bySlot, ...oppProjection.bySlot].every(p => ['DONE', 'EMPTY'].includes(p.phase))}
                                 myRosterId={myRoster?.roster_id}

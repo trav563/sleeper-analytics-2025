@@ -13,6 +13,8 @@
 // Initial calibration against eleven September 2026 Sleeper screenshots.
 // This approximates their displayed probabilities; it is not outcome validation.
 export const WIN_PROBABILITY_UNCERTAINTY_FACTOR = 0.45;
+// Stored samples are keyed on this; bump it with the calibration so models never mix.
+export const WIN_PROBABILITY_MODEL = 'uncertainty45';
 
 // Abramowitz & Stegun 7.1.26 — error function approximation, max error ~1.5e-7.
 function erf(x) {

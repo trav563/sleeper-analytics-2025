@@ -12,6 +12,9 @@ vi.mock('../features/league/hooks/useWeekProjections', () => ({
 vi.mock('../features/dashboard/hooks/useGameLiveDetails', () => ({
     useGameLiveDetails: () => ({ details: feeds.details }),
 }));
+vi.mock('../features/league/hooks/useWinProbabilityHistory', () => ({
+    useWinProbabilitySamples: () => ({ data: [] }),
+}));
 
 function fixture() {
     feeds.error = null;
