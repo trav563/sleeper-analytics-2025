@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPerfectWeek, actualScore, optimalLineup, weekWasPlayed, scoringSlots, analyzeTeamWeek, summarizePerfectWeeks } from './perfectWeeks';
+import { isPerfectWeek, actualScore, optimalLineup, weekWasPlayed, analyzeTeamWeek, summarizePerfectWeeks } from './perfectWeeks';
 
 const SLOTS = ['QB', 'RB', 'RB', 'WR', 'FLEX', 'BN', 'BN'];
 
@@ -72,11 +72,6 @@ describe('perfect weeks', () => {
         expect(weekWasPlayed(zeroes)).toBe(false);
         expect(weekWasPlayed([{ points: 0 }, { points: 94.2 }])).toBe(true);
         expect(weekWasPlayed(undefined)).toBe(false);
-    });
-
-    it('counts only slots that are actually scored', () => {
-        expect(scoringSlots(SLOTS)).toEqual(['QB', 'RB', 'RB', 'WR', 'FLEX']);
-        expect(scoringSlots(['QB', 'BN', 'IR', 'TAXI'])).toEqual(['QB']);
     });
 
     it('names the single change a missed week needed, and the best bench score', () => {

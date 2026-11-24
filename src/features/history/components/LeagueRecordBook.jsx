@@ -6,6 +6,7 @@ import { Trophy, ArrowDown, TrendingUp, Minimize2, Loader2 } from 'lucide-react'
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import { lineupIsComplete } from '../../../utils/lineupAssignment';
 import PerfectWeeksPanel from './PerfectWeeksPanel';
 
 const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
@@ -147,7 +148,10 @@ const LeagueRecordBook = ({ users, state, leagueId, players }) => {
                                 detail: 'Points'
                             };
                         }
-                        if (m.points < lowestScore.value) {
+                        // An abandoned lineup (Sleeper pads the empty slots with
+                        // "0") is a forfeit, not a low score, so it can't hold
+                        // this record. A full lineup that scored badly still can.
+                        if (m.points < lowestScore.value && lineupIsComplete(m, league.roster_positions)) {
                             const r = Object.values(rosters).find(r => r.roster_id === m.roster_id);
                             const u = findUser(r?.owner_id);
                             lowestScore = {
@@ -156,7 +160,7 @@ const LeagueRecordBook = ({ users, state, leagueId, players }) => {
                                 avatar: u?.avatar,
                                 year: league.season,
                                 week: weekNum,
-                                detail: 'Points'
+                                detail: 'Points · full lineup'
                             };
                         }
                     });

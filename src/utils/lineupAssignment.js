@@ -8,6 +8,31 @@ export function eligibleForSlot(player, slot) {
     return (player.fantasy_positions || [player.position]).some(p => SLOT_ELIGIBILITY[slot]?.includes(p));
 }
 
+/** Slots a lineup must actually fill — bench, IR and taxi are not scored. */
+export function scoringSlots(slots) {
+    return (slots || []).filter(slot => SLOT_ELIGIBILITY[slot]);
+}
+
+/**
+ * Did the manager put a player in every starting slot?
+ *
+ * Sleeper pads `starters` with the string "0" for a slot left empty, so an
+ * abandoned lineup still reports a score — it is just the handful of players
+ * who were in there. Records that rank teams against each other should drop
+ * those weeks rather than treat a forfeit as a performance. A lineup full of
+ * players who happened to score nothing is NOT incomplete and still counts.
+ *
+ * `slots` is optional: without it the "0" check stands on its own, since
+ * Sleeper returns one `starters` entry per starting slot.
+ */
+export function lineupIsComplete(matchup, slots) {
+    const starters = matchup?.starters;
+    if (!Array.isArray(starters) || starters.length === 0) return false;
+    if (starters.some(id => !id || id === '0')) return false;
+    const required = scoringSlots(slots).length;
+    return required === 0 || starters.length >= required;
+}
+
 /** Maximum-weight rectangular assignment (Hungarian algorithm), including empty slots.
  * Fixed assignments preserve kicked-off starters. Every player appears at most once.
  */

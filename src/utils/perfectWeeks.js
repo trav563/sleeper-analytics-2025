@@ -15,7 +15,7 @@
  * any count derived from this is a floor.
  */
 
-import { assignLineup, SLOT_ELIGIBILITY } from './lineupAssignment';
+import { assignLineup, scoringSlots } from './lineupAssignment';
 import { MAX_SCORED_WEEK, DEFAULT_PLAYOFF_WEEK_START } from './rivalries';
 
 /** Scores are reported to the cent, so anything closer than this is equality. */
@@ -23,11 +23,6 @@ export const PERFECT_WEEK_EPSILON = 0.005;
 
 /** How close a miss has to be to be worth showing as a near miss. */
 export const NEAR_MISS_POINTS = 1;
-
-/** Slots a lineup must actually fill — bench, IR and taxi are not scored. */
-export function scoringSlots(slots) {
-    return (slots || []).filter(slot => SLOT_ELIGIBILITY[slot]);
-}
 
 /** What the team scored, or null when any starter's score is missing. */
 export function actualScore(matchup) {
