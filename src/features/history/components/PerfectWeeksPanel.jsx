@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Target } from 'lucide-react';
-import { displayTeamName, avatarUrl } from '../../../utils/nflData';
+import { avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { StatCell } from '../../../components/ui/StatCell';
 import { summarizePerfectWeeks } from '../../../utils/perfectWeeks';
+import { toSeasonViews } from '../seasonViews';
 
 const score = n => n.toFixed(2);
 const whole = n => n.toLocaleString();
@@ -21,11 +22,34 @@ const SubHeading = ({ children }) => (
     <h3 className="font-mono text-2xs uppercase tracking-wider text-text-mute mb-3">{children}</h3>
 );
 
+/**
+ * Kept narrow on purpose: the chart box is clipped so recharts can't park its
+ * wrapper past the right edge and widen the page, which means a wide tooltip
+ * would get sheared when it anchors to the last column.
+ */
+const SeasonTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const { season, perfect, teamWeeks, weeks } = payload[0].payload;
+    return (
+        <div className="max-w-[170px] rounded-lg border border-line-strong bg-bg-2 px-2.5 py-2 shadow-card">
+            <div className="tnum font-mono text-2xs text-text-dim">{season}</div>
+            <div className="tnum text-xs text-text">
+                <span className="font-bold">{perfect}</span> perfect
+            </div>
+            <div className="tnum font-mono text-2xs text-text-mute leading-snug">
+                {whole(teamWeeks)} team-weeks · {weeks} weeks played
+            </div>
+        </div>
+    );
+};
+
 /** Counts per season. One series, so no legend; the axis carries the values. */
 const SeasonChart = ({ rows }) => {
     const peak = Math.max(1, ...rows.map(r => r.perfect));
     return (
-        <div className="h-[180px] w-full" role="img" aria-label={`Perfect weeks by season: ${rows.map(r => `${r.season}, ${r.perfect}`).join('; ')}`}>
+        // overflow-hidden: recharts parks its tooltip wrapper past the right
+        // edge until first hover, which widens the whole page on mobile.
+        <div className="h-[180px] w-full overflow-hidden" role="img" aria-label={`Perfect weeks by season: ${rows.map(r => `${r.season}, ${r.perfect}`).join('; ')}`}>
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="28%">
                     <CartesianGrid stroke="var(--line)" vertical={false} />
@@ -44,18 +68,7 @@ const SeasonChart = ({ rows }) => {
                         width={32}
                         tick={{ fill: 'var(--text-mute)', fontSize: 11 }}
                     />
-                    <Tooltip
-                        cursor={{ fill: 'var(--bg-2)' }}
-                        contentStyle={{
-                            background: 'var(--bg-2)', border: '1px solid var(--line-strong)',
-                            borderRadius: 8, fontSize: 12, color: 'var(--text)',
-                        }}
-                        labelStyle={{ color: 'var(--text-dim)' }}
-                        formatter={(value, _n, item) => [
-                            `${value} of ${whole(item.payload.teamWeeks)} team-weeks · ${item.payload.weeks} weeks played`,
-                            'Perfect',
-                        ]}
-                    />
+                    <Tooltip cursor={{ fill: 'var(--bg-2)' }} content={<SeasonTooltip />} />
                     <Bar dataKey="perfect" fill="var(--signal)" maxBarSize={24} radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
@@ -116,31 +129,7 @@ const NearMissRow = ({ miss }) => (
 const PerfectWeeksPanel = ({ leagueHistory, historicalMatchups, users, players }) => {
     const summary = useMemo(() => {
         if (!leagueHistory?.length || !players || !Object.keys(historicalMatchups || {}).length) return null;
-
-        const seasons = leagueHistory
-            .map(league => {
-                const entry = historicalMatchups[league.league_id];
-                if (!entry) return null;
-                const seasonUsers = entry.users || [];
-                // Prefer current-league users (freshest names); fall back to that
-                // season's users so departed managers still resolve.
-                const findUser = ownerId =>
-                    users?.find(u => u.user_id === ownerId) || seasonUsers.find(u => u.user_id === ownerId);
-                return {
-                    season: league.season,
-                    slots: league.roster_positions,
-                    playoffWeekStart: league.playoff_week_start,
-                    weeks: entry.weeks,
-                    resolveTeam: rosterId => {
-                        const roster = Object.values(league.rosters || {}).find(r => r.roster_id === rosterId);
-                        const user = findUser(roster?.owner_id);
-                        return { key: roster?.owner_id || `roster-${rosterId}`, name: displayTeamName(user), avatar: user?.avatar };
-                    },
-                };
-            })
-            .filter(Boolean);
-
-        return summarizePerfectWeeks(seasons, players);
+        return summarizePerfectWeeks(toSeasonViews(leagueHistory, historicalMatchups, users), players);
     }, [leagueHistory, historicalMatchups, users, players]);
 
     if (!summary) return null;
