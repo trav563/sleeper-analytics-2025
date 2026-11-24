@@ -1,0 +1,1817 @@
+{
+  "generatedAt": "2026-11-24T18:36:07.006Z",
+  "teamWeeks": 1152,
+  "perfectCount": 9,
+  "perfect": [
+    {
+      "season": "2026",
+      "week": 1,
+      "rosterId": 12,
+      "ownerId": "334737372400861184",
+      "manager": "syzygy",
+      "team": "TJ Who's-Yo-Momma",
+      "actual": 130.5,
+      "optimal": 130.5,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Jacoby Brissett",
+        "position": "QB",
+        "points": 18.48
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Jaxson Dart",
+          "position": "QB",
+          "points": 32.6
+        },
+        {
+          "slot": "RB",
+          "name": "Javonte Williams",
+          "position": "RB",
+          "points": 21.7
+        },
+        {
+          "slot": "RB",
+          "name": "Bhayshul Tuten",
+          "position": "RB",
+          "points": 9.3
+        },
+        {
+          "slot": "WR",
+          "name": "Zay Flowers",
+          "position": "WR",
+          "points": 23.5
+        },
+        {
+          "slot": "WR",
+          "name": "Nico Collins",
+          "position": "WR",
+          "points": 17.7
+        },
+        {
+          "slot": "TE",
+          "name": "Tyler Warren",
+          "position": "TE",
+          "points": 8.8
+        },
+        {
+          "slot": "FLEX",
+          "name": "Puka Nacua",
+          "position": "WR",
+          "points": 9.9
+        },
+        {
+          "slot": "K",
+          "name": "Harrison Mevis",
+          "position": "K",
+          "points": 1
+        },
+        {
+          "slot": "DEF",
+          "name": "CHI",
+          "position": "DEF",
+          "points": 6
+        }
+      ]
+    },
+    {
+      "season": "2026",
+      "week": 9,
+      "rosterId": 8,
+      "ownerId": "652917137937088512",
+      "manager": "JD0619",
+      "team": "Extra Buttery Nipple ",
+      "actual": 110.22,
+      "optimal": 110.22,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Joe Milton",
+        "position": "QB",
+        "points": 13.16
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Matthew Stafford",
+          "position": "QB",
+          "points": 13.22
+        },
+        {
+          "slot": "RB",
+          "name": "Rachaad White",
+          "position": "RB",
+          "points": 5.9
+        },
+        {
+          "slot": "RB",
+          "name": "D'Andre Swift",
+          "position": "RB",
+          "points": 3.1
+        },
+        {
+          "slot": "WR",
+          "name": "Christian Watson",
+          "position": "WR",
+          "points": 26.6
+        },
+        {
+          "slot": "WR",
+          "name": "Tee Higgins",
+          "position": "WR",
+          "points": 17.7
+        },
+        {
+          "slot": "TE",
+          "name": "Hunter Henry",
+          "position": "TE",
+          "points": 5
+        },
+        {
+          "slot": "FLEX",
+          "name": "Parker Washington",
+          "position": "WR",
+          "points": 13.1
+        },
+        {
+          "slot": "K",
+          "name": "Will Reichard",
+          "position": "K",
+          "points": 9.6
+        },
+        {
+          "slot": "DEF",
+          "name": "LAR",
+          "position": "DEF",
+          "points": 16
+        }
+      ]
+    },
+    {
+      "season": "2026",
+      "week": 11,
+      "rosterId": 5,
+      "ownerId": "652370850900676608",
+      "manager": "SMcenelly",
+      "team": "Scott & The Semen Suckers",
+      "actual": 145.04,
+      "optimal": 145.04,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Geno Smith",
+        "position": "QB",
+        "points": 25.44
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Justin Herbert",
+          "position": "QB",
+          "points": 26.44
+        },
+        {
+          "slot": "RB",
+          "name": "Breece Hall",
+          "position": "RB",
+          "points": 17.5
+        },
+        {
+          "slot": "RB",
+          "name": "Saquon Barkley",
+          "position": "RB",
+          "points": 13.5
+        },
+        {
+          "slot": "WR",
+          "name": "CeeDee Lamb",
+          "position": "WR",
+          "points": 24.7
+        },
+        {
+          "slot": "WR",
+          "name": "George Pickens",
+          "position": "WR",
+          "points": 20.3
+        },
+        {
+          "slot": "TE",
+          "name": "Dawson Knox",
+          "position": "TE",
+          "points": 4.1
+        },
+        {
+          "slot": "FLEX",
+          "name": "Tetairoa McMillan",
+          "position": "WR",
+          "points": 16.1
+        },
+        {
+          "slot": "K",
+          "name": "Joey Slye",
+          "position": "K",
+          "points": 14.4
+        },
+        {
+          "slot": "DEF",
+          "name": "BUF",
+          "position": "DEF",
+          "points": 8
+        }
+      ]
+    },
+    {
+      "season": "2025",
+      "week": 7,
+      "rosterId": 6,
+      "ownerId": "334738040331177984",
+      "manager": "Trav563",
+      "team": "Gimme them stinkers Gerry",
+      "actual": 139.44,
+      "optimal": 139.44,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Juwan Johnson",
+        "position": "TE",
+        "points": 10.4
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Dillon Gabriel",
+          "position": "QB",
+          "points": 5.84
+        },
+        {
+          "slot": "RB",
+          "name": "Jonathan Taylor",
+          "position": "RB",
+          "points": 32.7
+        },
+        {
+          "slot": "RB",
+          "name": "Bijan Robinson",
+          "position": "RB",
+          "points": 18.2
+        },
+        {
+          "slot": "WR",
+          "name": "Rashee Rice",
+          "position": "WR",
+          "points": 19.7
+        },
+        {
+          "slot": "WR",
+          "name": "Kayshon Boutte",
+          "position": "WR",
+          "points": 12.5
+        },
+        {
+          "slot": "TE",
+          "name": "Trey McBride",
+          "position": "TE",
+          "points": 24.4
+        },
+        {
+          "slot": "FLEX",
+          "name": "De'Von Achane",
+          "position": "RB",
+          "points": 11.3
+        },
+        {
+          "slot": "K",
+          "name": "Jake Bates",
+          "position": "K",
+          "points": 7.8
+        },
+        {
+          "slot": "DEF",
+          "name": "IND",
+          "position": "DEF",
+          "points": 7
+        }
+      ]
+    },
+    {
+      "season": "2025",
+      "week": 17,
+      "rosterId": 1,
+      "ownerId": "456899095420727296",
+      "manager": "nlemieux24",
+      "team": "Saco Rams",
+      "actual": 176.42,
+      "optimal": 176.42,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": false,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Baker Mayfield",
+        "position": "QB",
+        "points": 15.44
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Trevor Lawrence",
+          "position": "QB",
+          "points": 23.12
+        },
+        {
+          "slot": "RB",
+          "name": "Derrick Henry",
+          "position": "RB",
+          "points": 45.6
+        },
+        {
+          "slot": "RB",
+          "name": "Christian McCaffrey",
+          "position": "RB",
+          "points": 26.1
+        },
+        {
+          "slot": "WR",
+          "name": "Chris Olave",
+          "position": "WR",
+          "points": 21.9
+        },
+        {
+          "slot": "WR",
+          "name": "Ja'Marr Chase",
+          "position": "WR",
+          "points": 21.5
+        },
+        {
+          "slot": "TE",
+          "name": "Travis Kelce",
+          "position": "TE",
+          "points": 6.1
+        },
+        {
+          "slot": "FLEX",
+          "name": "Mike Evans",
+          "position": "WR",
+          "points": 10.6
+        },
+        {
+          "slot": "K",
+          "name": "Brandon Aubrey",
+          "position": "K",
+          "points": 16.5
+        },
+        {
+          "slot": "DEF",
+          "name": "DEN",
+          "position": "DEF",
+          "points": 5
+        }
+      ]
+    },
+    {
+      "season": "2024",
+      "week": 14,
+      "rosterId": 1,
+      "ownerId": "456899095420727296",
+      "manager": "nlemieux24",
+      "team": "Saco Rams",
+      "actual": 119.6,
+      "optimal": 119.6,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Kyler Murray",
+        "position": "QB",
+        "points": 17.96
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Baker Mayfield",
+          "position": "QB",
+          "points": 18
+        },
+        {
+          "slot": "RB",
+          "name": "David Montgomery",
+          "position": "RB",
+          "points": 16.9
+        },
+        {
+          "slot": "RB",
+          "name": "Isiah Pacheco",
+          "position": "RB",
+          "points": 7.1
+        },
+        {
+          "slot": "WR",
+          "name": "Ja'Marr Chase",
+          "position": "WR",
+          "points": 38.1
+        },
+        {
+          "slot": "WR",
+          "name": "Ray-Ray McCloud",
+          "position": "WR",
+          "points": 11.1
+        },
+        {
+          "slot": "TE",
+          "name": "T.J. Hockenson",
+          "position": "TE",
+          "points": 6.5
+        },
+        {
+          "slot": "FLEX",
+          "name": "Mike Evans",
+          "position": "WR",
+          "points": 8.9
+        },
+        {
+          "slot": "K",
+          "name": "Brandon Aubrey",
+          "position": "K",
+          "points": 9
+        },
+        {
+          "slot": "DEF",
+          "name": "KC",
+          "position": "DEF",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "season": "2023",
+      "week": 6,
+      "rosterId": 7,
+      "ownerId": "652916982001270784",
+      "manager": "ebbwalton",
+      "team": "Sexual Harressment Panda",
+      "actual": 119.56,
+      "optimal": 119.56,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Christian Kirk",
+        "position": "WR",
+        "points": 12.4
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Josh Allen",
+          "position": "QB",
+          "points": 13.86
+        },
+        {
+          "slot": "RB",
+          "name": "Josh Jacobs",
+          "position": "RB",
+          "points": 10.3
+        },
+        {
+          "slot": "RB",
+          "name": "James Cook III",
+          "position": "RB",
+          "points": 7.1
+        },
+        {
+          "slot": "WR",
+          "name": "Adam Thielen",
+          "position": "WR",
+          "points": 23
+        },
+        {
+          "slot": "WR",
+          "name": "Keenan Allen",
+          "position": "WR",
+          "points": 18
+        },
+        {
+          "slot": "TE",
+          "name": "Dallas Goedert",
+          "position": "TE",
+          "points": 6.7
+        },
+        {
+          "slot": "FLEX",
+          "name": "Jaylen Waddle",
+          "position": "WR",
+          "points": 14.6
+        },
+        {
+          "slot": "K",
+          "name": "Daniel Carlson",
+          "position": "K",
+          "points": 13
+        },
+        {
+          "slot": "DEF",
+          "name": "JAX",
+          "position": "DEF",
+          "points": 13
+        }
+      ]
+    },
+    {
+      "season": "2021",
+      "week": 2,
+      "rosterId": 8,
+      "ownerId": "652917137937088512",
+      "manager": "JD0619",
+      "team": "Turd Ferguson",
+      "actual": 107.1,
+      "optimal": 107.1,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Matthew Stafford",
+        "position": "QB",
+        "points": 17.22
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Jalen Hurts",
+          "position": "QB",
+          "points": 20.8
+        },
+        {
+          "slot": "RB",
+          "name": "David Montgomery",
+          "position": "RB",
+          "points": 9.4
+        },
+        {
+          "slot": "RB",
+          "name": "James Robinson",
+          "position": "RB",
+          "points": 7.9
+        },
+        {
+          "slot": "WR",
+          "name": "Mike Evans",
+          "position": "WR",
+          "points": 22
+        },
+        {
+          "slot": "WR",
+          "name": "Stefon Diggs",
+          "position": "WR",
+          "points": 14
+        },
+        {
+          "slot": "TE",
+          "name": "Mark Andrews",
+          "position": "TE",
+          "points": 8.2
+        },
+        {
+          "slot": "FLEX",
+          "name": "A.J. Brown",
+          "position": "WR",
+          "points": 5.8
+        },
+        {
+          "slot": "K",
+          "name": "Justin Tucker",
+          "position": "K",
+          "points": 7
+        },
+        {
+          "slot": "DEF",
+          "name": "IND",
+          "position": "DEF",
+          "points": 12
+        }
+      ]
+    },
+    {
+      "season": "2021",
+      "week": 7,
+      "rosterId": 6,
+      "ownerId": "334738040331177984",
+      "manager": "Trav563",
+      "team": "I WantTookie'sSocks Again",
+      "actual": 146.18,
+      "optimal": 146.18,
+      "left": 0,
+      "perfect": true,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Teddy Bridgewater",
+        "position": "QB",
+        "points": 13.78
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Lamar Jackson",
+          "position": "QB",
+          "points": 23.08
+        },
+        {
+          "slot": "RB",
+          "name": "D'Andre Swift",
+          "position": "RB",
+          "points": 24.4
+        },
+        {
+          "slot": "RB",
+          "name": "Damien Harris",
+          "position": "RB",
+          "points": 24.3
+        },
+        {
+          "slot": "WR",
+          "name": "Davante Adams",
+          "position": "WR",
+          "points": 16.6
+        },
+        {
+          "slot": "WR",
+          "name": "DJ Moore",
+          "position": "WR",
+          "points": 10.3
+        },
+        {
+          "slot": "TE",
+          "name": "Mike Gesicki",
+          "position": "TE",
+          "points": 18
+        },
+        {
+          "slot": "FLEX",
+          "name": "Jonathan Taylor",
+          "position": "RB",
+          "points": 14.5
+        },
+        {
+          "slot": "K",
+          "name": "Chase McLaughlin",
+          "position": "K",
+          "points": 6
+        },
+        {
+          "slot": "DEF",
+          "name": "NO",
+          "position": "DEF",
+          "points": 9
+        }
+      ]
+    }
+  ],
+  "nearMisses": [
+    {
+      "season": "2026",
+      "week": 6,
+      "rosterId": 3,
+      "ownerId": "652262890186813440",
+      "manager": "desj808",
+      "team": "The Second Sanborn",
+      "actual": 62.08,
+      "optimal": 62.38,
+      "left": 0.3,
+      "perfect": false,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Ka'imi Fairbairn",
+        "position": "K",
+        "points": 11.4
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Patrick Mahomes",
+          "position": "QB",
+          "points": 10.48
+        },
+        {
+          "slot": "RB",
+          "name": "Bucky Irving",
+          "position": "RB",
+          "points": 5.9
+        },
+        {
+          "slot": "RB",
+          "name": "Kimani Vidal",
+          "position": "RB",
+          "points": 5.5
+        },
+        {
+          "slot": "WR",
+          "name": "Marvin Harrison Jr.",
+          "position": "WR",
+          "points": 4.9
+        },
+        {
+          "slot": "WR",
+          "name": "Marvin Mims Jr.",
+          "position": "WR",
+          "points": 2.3
+        },
+        {
+          "slot": "TE",
+          "name": "Tucker Kraft",
+          "position": "TE",
+          "points": 6.2
+        },
+        {
+          "slot": "FLEX",
+          "name": "Mike Washington Jr.",
+          "position": "RB",
+          "points": 5.5
+        },
+        {
+          "slot": "K",
+          "name": "Chase McLaughlin",
+          "position": "K",
+          "points": 18.6
+        },
+        {
+          "slot": "DEF",
+          "name": "SEA",
+          "position": "DEF",
+          "points": 3
+        }
+      ]
+    },
+    {
+      "season": "2021",
+      "week": 13,
+      "rosterId": 6,
+      "ownerId": "334738040331177984",
+      "manager": "Trav563",
+      "team": "I WantTookie'sSocks Again",
+      "actual": 108.62,
+      "optimal": 109.22,
+      "left": 0.6,
+      "perfect": false,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Teddy Bridgewater",
+        "position": "QB",
+        "points": 11.98
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Lamar Jackson",
+          "position": "QB",
+          "points": 16.62
+        },
+        {
+          "slot": "RB",
+          "name": "Jonathan Taylor",
+          "position": "RB",
+          "points": 23.3
+        },
+        {
+          "slot": "RB",
+          "name": "Damien Harris",
+          "position": "RB",
+          "points": 17.1
+        },
+        {
+          "slot": "WR",
+          "name": "Odell Beckham Jr.",
+          "position": "WR",
+          "points": 9.8
+        },
+        {
+          "slot": "WR",
+          "name": "Jerry Jeudy",
+          "position": "WR",
+          "points": 9.7
+        },
+        {
+          "slot": "TE",
+          "name": "Mike Gesicki",
+          "position": "TE",
+          "points": 8.1
+        },
+        {
+          "slot": "FLEX",
+          "name": "Cole Kmet",
+          "position": "TE",
+          "points": 5.6
+        },
+        {
+          "slot": "K",
+          "name": "Greg Zuerlein",
+          "position": "K",
+          "points": 11
+        },
+        {
+          "slot": "DEF",
+          "name": "MIN",
+          "position": "DEF",
+          "points": 8
+        }
+      ]
+    },
+    {
+      "season": "2022",
+      "week": 3,
+      "rosterId": 10,
+      "ownerId": "606550195676729344",
+      "manager": "dereksanborn7",
+      "team": "Smell My Pitts",
+      "actual": 82.78,
+      "optimal": 83.58,
+      "left": 0.8,
+      "perfect": false,
+      "regularSeason": true,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Tua Tagovailoa",
+        "position": "QB",
+        "points": 11.44
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Patrick Mahomes",
+          "position": "QB",
+          "points": 17.08
+        },
+        {
+          "slot": "RB",
+          "name": "Zack Moss",
+          "position": "RB",
+          "points": 5.7
+        },
+        {
+          "slot": "RB",
+          "name": "Joe Mixon",
+          "position": "RB",
+          "points": 5.3
+        },
+        {
+          "slot": "WR",
+          "name": "Drake London",
+          "position": "WR",
+          "points": 12.9
+        },
+        {
+          "slot": "WR",
+          "name": "Brandon Aiyuk",
+          "position": "WR",
+          "points": 11.4
+        },
+        {
+          "slot": "TE",
+          "name": "Kyle Pitts Sr.",
+          "position": "TE",
+          "points": 11.2
+        },
+        {
+          "slot": "FLEX",
+          "name": "Mike Williams",
+          "position": "WR",
+          "points": 8
+        },
+        {
+          "slot": "K",
+          "name": "Tyler Bass",
+          "position": "K",
+          "points": 4
+        },
+        {
+          "slot": "DEF",
+          "name": "TB",
+          "position": "DEF",
+          "points": 8
+        }
+      ]
+    },
+    {
+      "season": "2025",
+      "week": 16,
+      "rosterId": 4,
+      "ownerId": "652268316483756032",
+      "manager": "Tookie23",
+      "team": "Epstein’s Protégée ",
+      "actual": 129.4,
+      "optimal": 130.3,
+      "left": 0.9,
+      "perfect": false,
+      "regularSeason": false,
+      "hadRealOpponent": true,
+      "slotsFilled": 9,
+      "expectedSlots": 9,
+      "reportedMismatch": false,
+      "benchBest": {
+        "name": "Kirk Cousins",
+        "position": "QB",
+        "points": 16.58
+      },
+      "lineup": [
+        {
+          "slot": "QB",
+          "name": "Brock Purdy",
+          "position": "QB",
+          "points": 29.9
+        },
+        {
+          "slot": "RB",
+          "name": "Rhamondre Stevenson",
+          "position": "RB",
+          "points": 16.8
+        },
+        {
+          "slot": "RB",
+          "name": "Tony Pollard",
+          "position": "RB",
+          "points": 9.2
+        },
+        {
+          "slot": "WR",
+          "name": "Alec Pierce",
+          "position": "WR",
+          "points": 22.6
+        },
+        {
+          "slot": "WR",
+          "name": "Isaac TeSlaa",
+          "position": "WR",
+          "points": 13.2
+        },
+        {
+          "slot": "TE",
+          "name": "Darren Waller",
+          "position": "TE",
+          "points": 5.5
+        },
+        {
+          "slot": "FLEX",
+          "name": "DeAndre Hopkins",
+          "position": "WR",
+          "points": 6.1
+        },
+        {
+          "slot": "K",
+          "name": "Cairo Santos",
+          "position": "K",
+          "points": 15
+        },
+        {
+          "slot": "DEF",
+          "name": "HOU",
+          "position": "DEF",
+          "points": 12
+        }
+      ]
+    }
+  ],
+  "reconciliation": [
+    {
+      "season": "2026",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 1691.6,
+      "ppts": 1691.6,
+      "optimalDiff": 0,
+      "actualSum": 1479.9,
+      "fpts": 1479.9,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1681.82,
+      "ppts": 1681.82,
+      "optimalDiff": 0,
+      "actualSum": 1273.08,
+      "fpts": 1273.08,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1312.56,
+      "ppts": 1312.56,
+      "optimalDiff": 0,
+      "actualSum": 1152.46,
+      "fpts": 1152.46,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1170.36,
+      "ppts": 1170.36,
+      "optimalDiff": 0,
+      "actualSum": 907.5,
+      "fpts": 907.5,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1398.52,
+      "ppts": 1398.52,
+      "optimalDiff": 0,
+      "actualSum": 1239.84,
+      "fpts": 1239.84,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 1519.24,
+      "ppts": 1519.24,
+      "optimalDiff": 0,
+      "actualSum": 1080.78,
+      "fpts": 1080.78,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1463.56,
+      "ppts": 1463.56,
+      "optimalDiff": 0,
+      "actualSum": 1178.96,
+      "fpts": 1178.96,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1374.02,
+      "ppts": 1374.02,
+      "optimalDiff": 0,
+      "actualSum": 1155.72,
+      "fpts": 1155.72,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1517.52,
+      "ppts": 1517.52,
+      "optimalDiff": 0,
+      "actualSum": 1216.68,
+      "fpts": 1216.68,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1570.94,
+      "ppts": 1570.94,
+      "optimalDiff": 0,
+      "actualSum": 1282.1,
+      "fpts": 1282.1,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 11,
+      "manager": "Campasano",
+      "optimalSum": 1282.38,
+      "ppts": 1282.38,
+      "optimalDiff": 0,
+      "actualSum": 983.54,
+      "fpts": 983.54,
+      "actualDiff": 0
+    },
+    {
+      "season": "2026",
+      "rosterId": 12,
+      "manager": "syzygy",
+      "optimalSum": 1321.3,
+      "ppts": 1321.3,
+      "optimalDiff": 0,
+      "actualSum": 1114.9,
+      "fpts": 1114.9,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 1898.46,
+      "ppts": 1898.46,
+      "optimalDiff": 0,
+      "actualSum": 1630.7,
+      "fpts": 1630.7,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1839.16,
+      "ppts": 1839.16,
+      "optimalDiff": 0,
+      "actualSum": 1386.72,
+      "fpts": 1386.72,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1756.06,
+      "ppts": 1756.06,
+      "optimalDiff": 0,
+      "actualSum": 1412.84,
+      "fpts": 1412.84,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1311.36,
+      "ppts": 1311.36,
+      "optimalDiff": 0,
+      "actualSum": 1025.8,
+      "fpts": 1025.8,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1721.08,
+      "ppts": 1721.08,
+      "optimalDiff": 0,
+      "actualSum": 1384.46,
+      "fpts": 1384.46,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 2106.4,
+      "ppts": 2106.4,
+      "optimalDiff": 0,
+      "actualSum": 1739.82,
+      "fpts": 1739.82,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1819.78,
+      "ppts": 1819.78,
+      "optimalDiff": 0,
+      "actualSum": 1453.84,
+      "fpts": 1453.84,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1656.52,
+      "ppts": 1656.52,
+      "optimalDiff": 0,
+      "actualSum": 1292.5,
+      "fpts": 1292.5,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1910.36,
+      "ppts": 1910.36,
+      "optimalDiff": 0,
+      "actualSum": 1496.08,
+      "fpts": 1496.08,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1874.18,
+      "ppts": 1874.18,
+      "optimalDiff": 0,
+      "actualSum": 1511.38,
+      "fpts": 1511.38,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 11,
+      "manager": "Campasano",
+      "optimalSum": 1562.96,
+      "ppts": 1562.96,
+      "optimalDiff": 0,
+      "actualSum": 1097.2,
+      "fpts": 1097.2,
+      "actualDiff": 0
+    },
+    {
+      "season": "2025",
+      "rosterId": 12,
+      "manager": "syzygy",
+      "optimalSum": 1661.38,
+      "ppts": 1661.38,
+      "optimalDiff": 0,
+      "actualSum": 1388.2,
+      "fpts": 1388.2,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 1946.12,
+      "ppts": 1946.12,
+      "optimalDiff": 0,
+      "actualSum": 1600.82,
+      "fpts": 1600.82,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1914.18,
+      "ppts": 1914.18,
+      "optimalDiff": 0,
+      "actualSum": 1490.96,
+      "fpts": 1490.96,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1588.44,
+      "ppts": 1588.44,
+      "optimalDiff": 0,
+      "actualSum": 1334.34,
+      "fpts": 1334.34,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1541.24,
+      "ppts": 1541.24,
+      "optimalDiff": 0,
+      "actualSum": 1182.08,
+      "fpts": 1182.08,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1827.68,
+      "ppts": 1827.68,
+      "optimalDiff": 0,
+      "actualSum": 1573.92,
+      "fpts": 1573.92,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 1881.24,
+      "ppts": 1881.24,
+      "optimalDiff": 0,
+      "actualSum": 1567.78,
+      "fpts": 1566.78,
+      "actualDiff": 1
+    },
+    {
+      "season": "2024",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1821.44,
+      "ppts": 1821.44,
+      "optimalDiff": 0,
+      "actualSum": 1549,
+      "fpts": 1548.99,
+      "actualDiff": 0.01
+    },
+    {
+      "season": "2024",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1663.72,
+      "ppts": 1624.8,
+      "optimalDiff": 38.92,
+      "actualSum": 1443.4,
+      "fpts": 1443.4,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1922.98,
+      "ppts": 1922.98,
+      "optimalDiff": 0,
+      "actualSum": 1568.06,
+      "fpts": 1568.06,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1544.6,
+      "ppts": 1544.6,
+      "optimalDiff": 0,
+      "actualSum": 1175.22,
+      "fpts": 1175.22,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 11,
+      "manager": "Campasano",
+      "optimalSum": 1860.82,
+      "ppts": 1860.82,
+      "optimalDiff": 0,
+      "actualSum": 1375.86,
+      "fpts": 1375.86,
+      "actualDiff": 0
+    },
+    {
+      "season": "2024",
+      "rosterId": 12,
+      "manager": "syzygy",
+      "optimalSum": 1743.94,
+      "ppts": 1743.94,
+      "optimalDiff": 0,
+      "actualSum": 1415.3,
+      "fpts": 1415.3,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 2128.26,
+      "ppts": 2128.26,
+      "optimalDiff": 0,
+      "actualSum": 1822.12,
+      "fpts": 1821.12,
+      "actualDiff": 1
+    },
+    {
+      "season": "2023",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1902.18,
+      "ppts": 1902.18,
+      "optimalDiff": 0,
+      "actualSum": 1479.38,
+      "fpts": 1479.38,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1483.42,
+      "ppts": 1483.42,
+      "optimalDiff": 0,
+      "actualSum": 1194.28,
+      "fpts": 1194.28,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1692.02,
+      "ppts": 1692.02,
+      "optimalDiff": 0,
+      "actualSum": 1445.54,
+      "fpts": 1445.54,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1831.84,
+      "ppts": 1831.84,
+      "optimalDiff": 0,
+      "actualSum": 1490.02,
+      "fpts": 1490.02,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 1879.76,
+      "ppts": 1879.76,
+      "optimalDiff": 0,
+      "actualSum": 1466.14,
+      "fpts": 1466.14,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1778.66,
+      "ppts": 1778.66,
+      "optimalDiff": 0,
+      "actualSum": 1491,
+      "fpts": 1490.99,
+      "actualDiff": 0.01
+    },
+    {
+      "season": "2023",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1730.56,
+      "ppts": 1730.56,
+      "optimalDiff": 0,
+      "actualSum": 1486.88,
+      "fpts": 1486.88,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1683.02,
+      "ppts": 1683.02,
+      "optimalDiff": 0,
+      "actualSum": 1239.56,
+      "fpts": 1239.56,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1503.62,
+      "ppts": 1503.82,
+      "optimalDiff": -0.2,
+      "actualSum": 1182.52,
+      "fpts": 1182.52,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 11,
+      "manager": "roster 11",
+      "optimalSum": 1423,
+      "ppts": 1422.99,
+      "optimalDiff": 0.01,
+      "actualSum": 1113.66,
+      "fpts": 1113.66,
+      "actualDiff": 0
+    },
+    {
+      "season": "2023",
+      "rosterId": 12,
+      "manager": "sitsuejc",
+      "optimalSum": 1695.98,
+      "ppts": 1695.98,
+      "optimalDiff": 0,
+      "actualSum": 1253.66,
+      "fpts": 1253.66,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 1905.2,
+      "ppts": 1905.2,
+      "optimalDiff": 0,
+      "actualSum": 1587.04,
+      "fpts": 1587.04,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1470.38,
+      "ppts": 1470.38,
+      "optimalDiff": 0,
+      "actualSum": 1109.86,
+      "fpts": 1109.86,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1704.2,
+      "ppts": 1704.2,
+      "optimalDiff": 0,
+      "actualSum": 1439.14,
+      "fpts": 1439.14,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1677.78,
+      "ppts": 1677.78,
+      "optimalDiff": 0,
+      "actualSum": 1315.78,
+      "fpts": 1315.78,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1777.66,
+      "ppts": 1777.66,
+      "optimalDiff": 0,
+      "actualSum": 1440.18,
+      "fpts": 1440.18,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 1851.16,
+      "ppts": 1851.16,
+      "optimalDiff": 0,
+      "actualSum": 1525.82,
+      "fpts": 1525.82,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1770.42,
+      "ppts": 1770.42,
+      "optimalDiff": 0,
+      "actualSum": 1457.92,
+      "fpts": 1457.92,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1893.94,
+      "ppts": 1893.94,
+      "optimalDiff": 0,
+      "actualSum": 1511.42,
+      "fpts": 1511.42,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1884.98,
+      "ppts": 1884.98,
+      "optimalDiff": 0,
+      "actualSum": 1617.52,
+      "fpts": 1617.52,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1653.54,
+      "ppts": 1653.54,
+      "optimalDiff": 0,
+      "actualSum": 1441.68,
+      "fpts": 1441.68,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 11,
+      "manager": "nspofford",
+      "optimalSum": 1588.22,
+      "ppts": 1588.22,
+      "optimalDiff": 0,
+      "actualSum": 1197.7,
+      "fpts": 1197.7,
+      "actualDiff": 0
+    },
+    {
+      "season": "2022",
+      "rosterId": 12,
+      "manager": "sitsuejc",
+      "optimalSum": 1472.1,
+      "ppts": 1472.1,
+      "optimalDiff": 0,
+      "actualSum": 1005.08,
+      "fpts": 1005.08,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 1,
+      "manager": "nlemieux24",
+      "optimalSum": 1946.34,
+      "ppts": 1946.34,
+      "optimalDiff": 0,
+      "actualSum": 1581.84,
+      "fpts": 1581.84,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 2,
+      "manager": "ghowley",
+      "optimalSum": 1832.34,
+      "ppts": 1830.34,
+      "optimalDiff": 2,
+      "actualSum": 1471.34,
+      "fpts": 1469.34,
+      "actualDiff": 2
+    },
+    {
+      "season": "2021",
+      "rosterId": 3,
+      "manager": "desj808",
+      "optimalSum": 1623.62,
+      "ppts": 1625.72,
+      "optimalDiff": -2.1,
+      "actualSum": 1323.46,
+      "fpts": 1322.46,
+      "actualDiff": 1
+    },
+    {
+      "season": "2021",
+      "rosterId": 4,
+      "manager": "Tookie23",
+      "optimalSum": 1570.3,
+      "ppts": 1569.6,
+      "optimalDiff": 0.7,
+      "actualSum": 1302.8,
+      "fpts": 1302.8,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 5,
+      "manager": "SMcenelly",
+      "optimalSum": 1684.62,
+      "ppts": 1684.62,
+      "optimalDiff": 0,
+      "actualSum": 1414,
+      "fpts": 1414,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 6,
+      "manager": "Trav563",
+      "optimalSum": 1776.92,
+      "ppts": 1776.92,
+      "optimalDiff": 0,
+      "actualSum": 1559.48,
+      "fpts": 1559.48,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 7,
+      "manager": "ebbwalton",
+      "optimalSum": 1792.12,
+      "ppts": 1792.12,
+      "optimalDiff": 0,
+      "actualSum": 1452.92,
+      "fpts": 1452.92,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 8,
+      "manager": "JD0619",
+      "optimalSum": 1978.1,
+      "ppts": 1952.1,
+      "optimalDiff": 26,
+      "actualSum": 1613.58,
+      "fpts": 1613.58,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 9,
+      "manager": "OtisBerringer",
+      "optimalSum": 1707.42,
+      "ppts": 1707.42,
+      "optimalDiff": 0,
+      "actualSum": 1487.68,
+      "fpts": 1487.68,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 10,
+      "manager": "dereksanborn7",
+      "optimalSum": 1980.2,
+      "ppts": 1980.2,
+      "optimalDiff": 0,
+      "actualSum": 1452.08,
+      "fpts": 1452.08,
+      "actualDiff": 0
+    },
+    {
+      "season": "2021",
+      "rosterId": 11,
+      "manager": "nspofford",
+      "optimalSum": 1785.36,
+      "ppts": 1785.46,
+      "optimalDiff": -0.1,
+      "actualSum": 1384.36,
+      "fpts": 1384.46,
+      "actualDiff": -0.1
+    },
+    {
+      "season": "2021",
+      "rosterId": 12,
+      "manager": "dylanrich7",
+      "optimalSum": 1721.98,
+      "ppts": 1720.98,
+      "optimalDiff": 1,
+      "actualSum": 1230.16,
+      "fpts": 1229.16,
+      "actualDiff": 1
+    }
+  ]
+}

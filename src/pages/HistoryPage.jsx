@@ -7,7 +7,7 @@ const HistoryPage = () => {
 
     return (
         <div className="space-y-12">
-            <LeagueRecordBook users={users} state={state} leagueId={league.league_id} />
+            <LeagueRecordBook users={users} state={state} leagueId={league.league_id} players={players} />
 
             <GMPerformance
                 league={league}

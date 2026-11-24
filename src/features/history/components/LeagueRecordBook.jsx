@@ -6,6 +6,7 @@ import { Trophy, ArrowDown, TrendingUp, Minimize2, Loader2 } from 'lucide-react'
 import { displayTeamName, avatarUrl } from '../../../utils/nflData';
 import { Pip } from '../../../components/ui/Pip';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import PerfectWeeksPanel from './PerfectWeeksPanel';
 
 const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
     <section className="rounded-xl bg-bg-1 border border-line p-4 shadow-card">
@@ -47,7 +48,7 @@ const RecordCard = ({ title, icon: Icon, record, tone = 'text-text-dim' }) => (
     </section>
 );
 
-const LeagueRecordBook = ({ users, state, leagueId }) => {
+const LeagueRecordBook = ({ users, state, leagueId, players }) => {
     const { leagueHistory, error: historyError, loadHistory } = useSleeper();
     const [historicalMatchups, setHistoricalMatchups] = useState({}); // league_id -> matchups
     const [loading, setLoading] = useState(false);
@@ -238,6 +239,18 @@ const LeagueRecordBook = ({ users, state, leagueId }) => {
                     </div>
                 ))}
             </div>
+            <div className="rounded-xl bg-bg-1 border border-line p-4 shadow-card space-y-3">
+                <Skeleton className="h-4 w-32" />
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                        <div className="flex-1 space-y-2">
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-3 w-40" />
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 
@@ -274,6 +287,13 @@ const LeagueRecordBook = ({ users, state, leagueId }) => {
                     tone="text-text-dim"
                 />
             </div>
+
+            <PerfectWeeksPanel
+                leagueHistory={leagueHistory}
+                historicalMatchups={historicalMatchups}
+                users={users}
+                players={players}
+            />
         </div>
     );
 };

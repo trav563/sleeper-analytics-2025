@@ -1,0 +1,1153 @@
+season,week,rosterId,manager,team,actual,optimal,left,perfect,regularSeason,hadRealOpponent,benchBestName,benchBestPoints
+2026,1,1,nlemieux24,Saco Rams,100.54,160.60,60.06,false,true,true,Trevor Lawrence,34.10
+2026,1,2,ghowley,"Big Socks, Big Dicker",110.00,147.86,37.86,false,true,true,Chuba Hubbard,22.20
+2026,1,3,desj808,The Second Sanborn,141.76,149.26,7.50,false,true,true,Deshaun Watson,16.00
+2026,1,4,Tookie23,Epstein’s Protégée ,79.10,87.10,8.00,false,true,true,Kirk Cousins,19.80
+2026,1,5,SMcenelly,Scott & The Semen Suckers,102.06,120.18,18.12,false,true,true,Jordan Love,23.48
+2026,1,6,Trav563,Gerry's Sock Hospital 🚑,133.56,179.00,45.44,false,true,true,Jalen Coker,29.80
+2026,1,7,ebbwalton,www.creedthoughts.com,117.06,159.76,42.70,false,true,true,CIN,22.00
+2026,1,8,JD0619,Extra Buttery Nipple ,119.72,141.02,21.30,false,true,true,Parker Washington,16.80
+2026,1,9,OtisBerringer,Tenants Harbor Topers,94.86,137.86,43.00,false,true,true,Jayden Daniels,21.66
+2026,1,10,dereksanborn7,Back2Back,115.92,174.86,58.94,false,true,true,Caleb Williams,41.26
+2026,1,11,Campasano,Team 1 IQ,95.14,138.04,42.90,false,true,true,Bryce Young,37.44
+2026,1,12,syzygy,TJ Who's-Yo-Momma,130.50,130.50,0.00,true,true,true,Jacoby Brissett,18.48
+2026,2,1,nlemieux24,Saco Rams,158.56,177.68,19.12,false,true,true,DeVonta Smith,22.70
+2026,2,2,ghowley,"Big Socks, Big Dicker",97.36,121.56,24.20,false,true,true,MIN,18.00
+2026,2,3,desj808,The Second Sanborn,130.68,138.38,7.70,false,true,true,Deshaun Watson,23.72
+2026,2,4,Tookie23,Epstein’s Protégée ,63.38,82.38,19.00,false,true,true,Kirk Cousins,26.22
+2026,2,5,SMcenelly,Scott & The Semen Suckers,132.90,147.50,14.60,false,true,true,Geno Smith,17.58
+2026,2,6,Trav563,Gerry's Sock Hospital 🚑,113.90,141.18,27.28,false,true,true,Tyler Shough,24.38
+2026,2,7,ebbwalton,www.creedthoughts.com,109.42,133.82,24.40,false,true,true,CIN,11.00
+2026,2,8,JD0619,Extra Buttery Nipple ,103.56,126.28,22.72,false,true,true,Matthew Stafford,34.98
+2026,2,9,OtisBerringer,Tenants Harbor Topers,86.54,136.18,49.64,false,true,true,Joe Burrow,20.18
+2026,2,10,dereksanborn7,Back2Back,98.52,129.42,30.90,false,true,true,Romeo Doubs,11.10
+2026,2,11,Campasano,Team 1 IQ,82.42,124.78,42.36,false,true,true,Jared Goff,37.78
+2026,2,12,syzygy,TJ Who's-Yo-Momma,59.20,75.60,16.40,false,true,true,Keon Coleman,9.30
+2026,3,1,nlemieux24,Saco Rams,161.98,167.88,5.90,false,true,true,DEN,14.00
+2026,3,2,ghowley,"Big Socks, Big Dicker",109.54,144.64,35.10,false,true,true,Michael Wilson,20.40
+2026,3,3,desj808,The Second Sanborn,68.64,99.42,30.78,false,true,true,Marcus Mariota,26.42
+2026,3,4,Tookie23,Epstein’s Protégée ,98.18,117.78,19.60,false,true,true,Kirk Cousins,28.22
+2026,3,5,SMcenelly,Scott & The Semen Suckers,71.88,100.64,28.76,false,true,true,Geno Smith,32.04
+2026,3,6,Trav563,Gerry's Sock Hospital 🚑,125.64,177.50,51.86,false,true,true,Tyler Shough,31.80
+2026,3,7,ebbwalton,www.creedthoughts.com,70.76,111.96,41.20,false,true,true,Sam Darnold,35.66
+2026,3,8,JD0619,Extra Buttery Nipple ,102.02,132.00,29.98,false,true,true,Matthew Stafford,24.90
+2026,3,9,OtisBerringer,Tenants Harbor Topers,134.38,154.88,20.50,false,true,true,Terry McLaurin,16.70
+2026,3,10,dereksanborn7,Back2Back,104.62,141.52,36.90,false,true,true,Kenyon Sadiq,20.00
+2026,3,11,Campasano,Team 1 IQ,78.54,123.84,45.30,false,true,true,Bo Nix,28.14
+2026,3,12,syzygy,TJ Who's-Yo-Momma,115.50,123.50,8.00,false,true,true,Aaron Rodgers,28.68
+2026,4,1,nlemieux24,Saco Rams,103.98,113.78,9.80,false,true,true,Brenton Strange,13.00
+2026,4,2,ghowley,"Big Socks, Big Dicker",126.50,158.58,32.08,false,true,true,C.J. Stroud,27.08
+2026,4,3,desj808,The Second Sanborn,101.90,145.10,43.20,false,true,true,Emanuel Wilson,25.50
+2026,4,4,Tookie23,Epstein’s Protégée ,93.52,114.70,21.18,false,true,true,Kirk Cousins,26.60
+2026,4,5,SMcenelly,Scott & The Semen Suckers,114.68,124.58,9.90,false,true,true,Michael Penix Jr.,14.72
+2026,4,6,Trav563,Gerry's Sock Hospital 🚑,100.68,134.08,33.40,false,true,true,Jake Bates,18.40
+2026,4,7,ebbwalton,www.creedthoughts.com,122.72,133.02,10.30,false,true,true,T.J. Hockenson,18.40
+2026,4,8,JD0619,Extra Buttery Nipple ,94.32,119.12,24.80,false,true,true,Carnell Tate,17.00
+2026,4,9,OtisBerringer,Tenants Harbor Topers,110.42,157.92,47.50,false,true,true,Kyle Monangai,27.50
+2026,4,10,dereksanborn7,Back2Back,129.26,159.36,30.10,false,true,true,Romeo Doubs,20.80
+2026,4,11,Campasano,Team 1 IQ,104.88,119.16,14.28,false,true,true,Bryce Young,25.46
+2026,4,12,syzygy,TJ Who's-Yo-Momma,123.64,156.16,32.52,false,true,true,Aaron Rodgers,27.96
+2026,5,1,nlemieux24,Saco Rams,144.04,159.84,15.80,false,true,true,DeMario Douglas,20.50
+2026,5,2,ghowley,"Big Socks, Big Dicker",92.12,142.24,50.12,false,true,true,Jameis Winston,31.74
+2026,5,3,desj808,The Second Sanborn,112.10,132.80,20.70,false,true,true,Ka'imi Fairbairn,17.90
+2026,5,4,Tookie23,Epstein’s Protégée ,66.46,88.16,21.70,false,true,true,Kirk Cousins,15.72
+2026,5,5,SMcenelly,Scott & The Semen Suckers,101.18,111.08,9.90,false,true,true,Michael Penix Jr.,16.40
+2026,5,6,Trav563,Gerry's Sock Hospital 🚑,90.74,131.08,40.34,false,true,true,Malik Willis,20.88
+2026,5,7,ebbwalton,www.creedthoughts.com,125.40,147.00,21.60,false,true,true,Pat Freiermuth,19.00
+2026,5,8,JD0619,Extra Buttery Nipple ,147.42,157.22,9.80,false,true,true,Jalen Hurts,15.00
+2026,5,9,OtisBerringer,Tenants Harbor Topers,136.50,155.00,18.50,false,true,true,Jayden Daniels,32.26
+2026,5,10,dereksanborn7,Back2Back,142.86,157.56,14.70,false,true,true,Kyle Williams,16.60
+2026,5,11,Campasano,Team 1 IQ,142.54,151.64,9.10,false,true,true,Bo Nix,9.92
+2026,5,12,syzygy,TJ Who's-Yo-Momma,137.58,138.68,1.10,false,true,true,Aaron Rodgers,28.00
+2026,6,1,nlemieux24,Saco Rams,110.74,145.94,35.20,false,true,true,DeVonta Smith,17.00
+2026,6,2,ghowley,"Big Socks, Big Dicker",89.82,122.68,32.86,false,true,true,C.J. Stroud,28.98
+2026,6,3,desj808,The Second Sanborn,62.08,62.38,0.30,false,true,true,Ka'imi Fairbairn,11.40
+2026,6,4,Tookie23,Epstein’s Protégée ,57.86,89.12,31.26,false,true,true,Kirk Cousins,22.52
+2026,6,5,SMcenelly,Scott & The Semen Suckers,101.74,109.10,7.36,false,true,true,Michael Penix Jr.,29.10
+2026,6,6,Trav563,Gerry's Sock Hospital 🚑,106.96,139.26,32.30,false,true,true,Tre Tucker,24.20
+2026,6,7,ebbwalton,www.creedthoughts.com,110.60,120.70,10.10,false,true,true,Keenan Allen,12.20
+2026,6,8,JD0619,Extra Buttery Nipple ,94.28,115.98,21.70,false,true,true,Jahan Dotson,16.20
+2026,6,9,OtisBerringer,Tenants Harbor Topers,104.60,120.10,15.50,false,true,true,Daniel Jones,15.76
+2026,6,10,dereksanborn7,Back2Back,163.90,167.20,3.30,false,true,true,Caleb Williams,18.50
+2026,6,11,Campasano,Team 1 IQ,84.34,102.74,18.40,false,true,true,Chris Boswell,17.90
+2026,6,12,syzygy,TJ Who's-Yo-Momma,95.72,117.12,21.40,false,true,true,Aaron Rodgers,20.02
+2026,7,1,nlemieux24,Saco Rams,97.90,110.50,12.60,false,true,true,Eli Raridon,13.10
+2026,7,2,ghowley,"Big Socks, Big Dicker",99.52,128.28,28.76,false,true,true,Dak Prescott,29.28
+2026,7,3,desj808,The Second Sanborn,112.30,129.72,17.42,false,true,true,Deshaun Watson,18.22
+2026,7,4,Tookie23,Epstein’s Protégée ,88.02,127.60,39.58,false,true,true,Kirk Cousins,24.40
+2026,7,5,SMcenelly,Scott & The Semen Suckers,88.56,119.58,31.02,false,true,true,Geno Smith,29.48
+2026,7,6,Trav563,Gerry's Sock Hospital 🚑,86.82,144.02,57.20,false,true,true,Malik Willis,30.02
+2026,7,7,ebbwalton,www.creedthoughts.com,98.08,107.38,9.30,false,true,true,T.J. Hockenson,11.50
+2026,7,8,JD0619,Extra Buttery Nipple ,95.20,110.00,14.80,false,true,true,Will Reichard,13.70
+2026,7,9,OtisBerringer,Tenants Harbor Topers,114.38,133.58,19.20,false,true,true,Caleb Douglas,20.00
+2026,7,10,dereksanborn7,Back2Back,147.24,157.04,9.80,false,true,true,Caleb Williams,26.12
+2026,7,11,Campasano,Team 1 IQ,86.12,112.68,26.56,false,true,true,Bo Nix,28.18
+2026,7,12,syzygy,TJ Who's-Yo-Momma,109.08,116.88,7.80,false,true,true,Jacoby Brissett,18.48
+2026,8,1,nlemieux24,Saco Rams,157.38,158.88,1.50,false,true,true,Kyler Murray,23.90
+2026,8,2,ghowley,"Big Socks, Big Dicker",138.20,165.40,27.20,false,true,true,Emmett Johnson,22.80
+2026,8,3,desj808,The Second Sanborn,112.24,116.54,4.30,false,true,true,Cam Ward,30.26
+2026,8,4,Tookie23,Epstein’s Protégée ,107.68,127.38,19.70,false,true,true,Jalen Nailor,11.80
+2026,8,5,SMcenelly,Scott & The Semen Suckers,103.22,120.22,17.00,false,true,true,Geno Smith,22.00
+2026,8,6,Trav563,Gerry's Sock Hospital 🚑,63.10,109.64,46.54,false,true,true,Malik Willis,18.64
+2026,8,7,ebbwalton,www.creedthoughts.com,123.16,181.76,58.60,false,true,true,Tyler Allgeier,33.60
+2026,8,8,JD0619,Extra Buttery Nipple ,115.58,128.98,13.40,false,true,true,WAS,14.00
+2026,8,9,OtisBerringer,Tenants Harbor Topers,111.70,123.50,11.80,false,true,true,Jayden Daniels,16.98
+2026,8,10,dereksanborn7,Back2Back,103.26,142.36,39.10,false,true,true,Caleb Williams,15.98
+2026,8,11,Campasano,Team 1 IQ,78.64,95.38,16.74,false,true,true,Bo Nix,23.28
+2026,8,12,syzygy,TJ Who's-Yo-Momma,84.26,100.68,16.42,false,true,true,Sione Vaki,7.50
+2026,9,1,nlemieux24,Saco Rams,159.02,174.14,15.12,false,true,true,Justice Hill,16.70
+2026,9,2,ghowley,"Big Socks, Big Dicker",111.70,160.86,49.16,false,true,true,C.J. Stroud,45.36
+2026,9,3,desj808,The Second Sanborn,102.78,114.38,11.60,false,true,true,Ka'imi Fairbairn,17.80
+2026,9,4,Tookie23,Epstein’s Protégée ,81.04,111.88,30.84,false,true,true,Brock Purdy,29.28
+2026,9,5,SMcenelly,Scott & The Semen Suckers,149.08,158.78,9.70,false,true,true,Michael Penix Jr.,15.48
+2026,9,6,Trav563,Gerry's Sock Hospital 🚑,95.52,143.60,48.08,false,true,true,Kayshon Boutte,26.50
+2026,9,7,ebbwalton,www.creedthoughts.com,73.26,101.76,28.50,false,true,true,Isaiah Likely,13.80
+2026,9,8,JD0619,Extra Buttery Nipple ,110.22,110.22,0.00,true,true,true,Joe Milton,13.16
+2026,9,9,OtisBerringer,Tenants Harbor Topers,94.98,127.56,32.58,false,true,true,Jordan Watkins,16.60
+2026,9,10,dereksanborn7,Back2Back,100.56,129.06,28.50,false,true,true,Luther Burden III,17.20
+2026,9,11,Campasano,Team 1 IQ,67.40,116.84,49.44,false,true,true,Bryce Young,26.34
+2026,9,12,syzygy,TJ Who's-Yo-Momma,102.18,138.38,36.20,false,true,true,Shedeur Sanders,26.68
+2026,10,1,nlemieux24,Saco Rams,165.26,180.46,15.20,false,true,true,Cyrus Allen,11.40
+2026,10,2,ghowley,"Big Socks, Big Dicker",157.92,209.82,51.90,false,true,true,Emmett Johnson,32.10
+2026,10,3,desj808,The Second Sanborn,112.82,116.02,3.20,false,true,true,Cam Ward,23.14
+2026,10,4,Tookie23,Epstein’s Protégée ,87.06,95.96,8.90,false,true,true,Kirk Cousins,19.38
+2026,10,5,SMcenelly,Scott & The Semen Suckers,129.50,141.82,12.32,false,true,true,Justin Herbert,16.26
+2026,10,6,Trav563,Gerry's Sock Hospital 🚑,82.58,109.60,27.02,false,true,true,Drew Lock,19.60
+2026,10,7,ebbwalton,www.creedthoughts.com,136.34,146.84,10.50,false,true,true,DET,12.00
+2026,10,8,JD0619,Extra Buttery Nipple ,105.56,138.46,32.90,false,true,true,Deebo Samuel Sr.,24.40
+2026,10,9,OtisBerringer,Tenants Harbor Topers,133.68,144.98,11.30,false,true,true,Jayden Daniels,26.76
+2026,10,10,dereksanborn7,Back2Back,85.72,110.92,25.20,false,true,true,Omarion Hampton,17.00
+2026,10,11,Campasano,Team 1 IQ,85.82,94.92,9.10,false,true,true,Aaron Jones Sr.,12.00
+2026,10,12,syzygy,TJ Who's-Yo-Momma,85.02,109.62,24.60,false,true,true,J.J. McCarthy,19.12
+2026,11,1,nlemieux24,Saco Rams,120.50,141.90,21.40,false,true,true,Baker Mayfield,23.08
+2026,11,2,ghowley,"Big Socks, Big Dicker",140.40,179.90,39.50,false,true,true,C.J. Stroud,26.46
+2026,11,3,desj808,The Second Sanborn,95.16,108.56,13.40,false,true,true,Fernando Mendoza,28.88
+2026,11,4,Tookie23,Epstein’s Protégée ,85.20,128.30,43.10,false,true,true,Brock Purdy,28.20
+2026,11,5,SMcenelly,Scott & The Semen Suckers,145.04,145.04,0.00,true,true,true,Geno Smith,25.44
+2026,11,6,Trav563,Gerry's Sock Hospital 🚑,81.28,110.28,29.00,false,true,true,Antonio Williams,16.70
+2026,11,7,ebbwalton,www.creedthoughts.com,92.16,119.56,27.40,false,true,true,Jack Bech,18.80
+2026,11,8,JD0619,Extra Buttery Nipple ,67.84,94.74,26.90,false,true,true,Jake Elliott,18.80
+2026,11,9,OtisBerringer,Tenants Harbor Topers,94.64,125.96,31.32,false,true,true,Ladd McConkey,18.20
+2026,11,10,dereksanborn7,Back2Back,90.24,101.64,11.40,false,true,true,Devaughn Vele,11.10
+2026,11,11,Campasano,Team 1 IQ,77.70,102.36,24.66,false,true,true,Jared Goff,24.36
+2026,11,12,syzygy,TJ Who's-Yo-Momma,72.22,114.18,41.96,false,true,true,Ted Hurst III,20.10
+2025,1,1,nlemieux24,Saco Rams,127.48,139.78,12.30,false,true,true,J.J. McCarthy,22.22
+2025,1,2,ghowley,"New Year, Same Socks",95.62,104.62,9.00,false,true,true,Rome Odunze,12.70
+2025,1,3,desj808,The Second Sanborn,113.32,125.32,12.00,false,true,true,Jacory Croskey-Merritt,14.20
+2025,1,4,Tookie23,Epstein’s Protégée ,75.18,109.72,34.54,false,true,true,Justin Fields,29.52
+2025,1,5,SMcenelly,I Suck Prescott’s Dak,104.22,132.82,28.60,false,true,true,Justin Herbert,27.92
+2025,1,6,Trav563,Gimme them stinkers Gerry,117.96,143.88,25.92,false,true,true,Daniel Jones,29.48
+2025,1,7,ebbwalton,EbbyGotHisNipplesButtered,116.26,133.66,17.40,false,true,true,Keenan Allen,16.30
+2025,1,8,JD0619,Buttery Nipple ,93.08,111.08,18.00,false,true,true,Matthew Stafford,12.60
+2025,1,9,OtisBerringer,Tenants Harbor Topers,88.82,101.62,12.80,false,true,true,Kayshon Boutte,13.30
+2025,1,10,dereksanborn7,Back2Back,75.48,103.40,27.92,false,true,true,Caleb Williams,24.20
+2025,1,11,Campasano,Bobby Boucher’s Waterboys,74.74,97.80,23.06,false,true,true,Chris Boswell,15.60
+2025,1,12,syzygy,TJ Who's-yo-momma,90.02,147.16,57.14,false,true,true,Aaron Rodgers,25.66
+2025,2,1,nlemieux24,Saco Rams,123.00,136.50,13.50,false,true,true,Baker Mayfield,18.90
+2025,2,2,ghowley,"New Year, Same Socks",100.84,142.64,41.80,false,true,true,Rome Odunze,28.30
+2025,2,3,desj808,The Second Sanborn,122.38,145.38,23.00,false,true,true,Jake Browning,17.74
+2025,2,4,Tookie23,Epstein’s Protégée ,66.48,112.98,46.50,false,true,true,Spencer Rattler,20.68
+2025,2,5,SMcenelly,I Suck Prescott’s Dak,101.28,113.38,12.10,false,true,true,Justin Herbert,16.78
+2025,2,6,Trav563,Gimme them stinkers Gerry,140.40,153.60,13.20,false,true,true,Russell Wilson,29.30
+2025,2,7,ebbwalton,EbbyGotHisNipplesButtered,98.92,134.70,35.78,false,true,true,Troy Franklin,20.00
+2025,2,8,JD0619,Buttery Nipple ,70.44,84.22,13.78,false,true,true,Matthew Stafford,16.32
+2025,2,9,OtisBerringer,Tenants Harbor Topers,93.50,124.60,31.10,false,true,true,Kenneth Walker III,18.30
+2025,2,10,dereksanborn7,Back2Back,107.90,134.70,26.80,false,true,true,Wan'Dale Robinson,24.20
+2025,2,11,Campasano,Bobby Boucher’s Waterboys,103.26,133.56,30.30,false,true,true,Bryce Young,20.32
+2025,2,12,syzygy,TJ Who's-yo-momma,132.64,140.24,7.60,false,true,true,Bhayshul Tuten,14.40
+2025,3,1,nlemieux24,Saco Rams,113.62,129.42,15.80,false,true,true,DeVonta Smith,16.00
+2025,3,2,ghowley,"New Year, Same Socks",81.14,134.62,53.48,false,true,true,MIN,35.00
+2025,3,3,desj808,The Second Sanborn,88.86,108.86,20.00,false,true,true,Chase McLaughlin,21.60
+2025,3,4,Tookie23,Epstein’s Protégée ,78.96,89.96,11.00,false,true,true,Spencer Rattler,11.72
+2025,3,5,SMcenelly,I Suck Prescott’s Dak,65.50,106.46,40.96,false,true,true,Geno Smith,26.06
+2025,3,6,Trav563,Gimme them stinkers Gerry,138.02,171.12,33.10,false,true,true,Tre Tucker,36.90
+2025,3,7,ebbwalton,EbbyGotHisNipplesButtered,114.52,131.82,17.30,false,true,true,Tory Horton,16.70
+2025,3,8,JD0619,Buttery Nipple ,139.54,169.94,30.40,false,true,true,Hunter Henry,25.00
+2025,3,9,OtisBerringer,Tenants Harbor Topers,112.72,124.82,12.10,false,true,true,Carson Wentz,15.32
+2025,3,10,dereksanborn7,Back2Back,123.32,159.72,36.40,false,true,true,Caleb Williams,29.12
+2025,3,11,Campasano,Bobby Boucher’s Waterboys,78.12,88.82,10.70,false,true,true,Harrison Butker,12.00
+2025,3,12,syzygy,TJ Who's-yo-momma,73.98,102.86,28.88,false,true,true,Tyquan Thornton,15.60
+2025,4,1,nlemieux24,Saco Rams,90.80,107.86,17.06,false,true,true,Baker Mayfield,17.86
+2025,4,2,ghowley,"New Year, Same Socks",87.18,138.36,51.18,false,true,true,Ashton Jeanty,31.50
+2025,4,3,desj808,The Second Sanborn,145.70,156.10,10.40,false,true,true,Chase McLaughlin,18.50
+2025,4,4,Tookie23,Epstein’s Protégée ,94.54,99.84,5.30,false,true,true,Brock Purdy,16.66
+2025,4,5,SMcenelly,I Suck Prescott’s Dak,111.02,136.78,25.76,false,true,true,Jordan Love,25.28
+2025,4,6,Trav563,Gimme them stinkers Gerry,128.08,134.98,6.90,false,true,true,Travis Etienne Jr.,19.00
+2025,4,7,ebbwalton,EbbyGotHisNipplesButtered,137.76,168.16,30.40,false,true,true,Woody Marks,25.90
+2025,4,8,JD0619,Buttery Nipple ,86.70,111.50,24.80,false,true,true,Matthew Stafford,27.40
+2025,4,9,OtisBerringer,Tenants Harbor Topers,78.28,124.50,46.22,false,true,true,Kenny Gainwell,28.40
+2025,4,10,dereksanborn7,Back2Back,130.48,176.52,46.04,false,true,true,Romeo Doubs,26.80
+2025,4,11,Campasano,Bobby Boucher’s Waterboys,70.92,123.24,52.32,false,true,true,Justice Hill,26.20
+2025,4,12,syzygy,TJ Who's-yo-momma,119.96,142.04,22.08,false,true,true,DK Metcalf,21.10
+2025,5,1,nlemieux24,Saco Rams,110.60,136.16,25.56,false,true,true,Baker Mayfield,26.66
+2025,5,2,ghowley,"New Year, Same Socks",105.68,135.46,29.78,false,true,true,C.J. Stroud,28.76
+2025,5,3,desj808,The Second Sanborn,109.52,145.32,35.80,false,true,true,Jacory Croskey-Merritt,25.00
+2025,5,4,Tookie23,Epstein’s Protégée ,124.92,127.92,3.00,false,true,true,Mac Jones,22.18
+2025,5,5,SMcenelly,I Suck Prescott’s Dak,92.44,119.64,27.20,false,true,true,Theo Johnson,18.30
+2025,5,6,Trav563,Gimme them stinkers Gerry,124.66,151.56,26.90,false,true,true,Rico Dowdle,30.90
+2025,5,7,ebbwalton,EbbyGotHisNipplesButtered,96.72,104.62,7.90,false,true,true,Tory Horton,11.40
+2025,5,8,JD0619,Buttery Nipple ,106.92,114.38,7.46,false,true,true,Matthew Stafford,24.56
+2025,5,9,OtisBerringer,Tenants Harbor Topers,131.28,155.04,23.76,false,true,true,Rachaad White,21.10
+2025,5,10,dereksanborn7,Back2Back,74.12,89.92,15.80,false,true,true,Jake Tonges,13.60
+2025,5,11,Campasano,Bobby Boucher’s Waterboys,68.32,97.32,29.00,false,true,true,Bo Nix,17.88
+2025,5,12,syzygy,TJ Who's-yo-momma,112.18,130.34,18.16,false,true,true,Trevor Lawrence,25.24
+2025,6,1,nlemieux24,Saco Rams,117.54,129.44,11.90,false,true,true,Chris Olave,12.80
+2025,6,2,ghowley,"New Year, Same Socks",125.04,151.04,26.00,false,true,true,Sam Darnold,20.00
+2025,6,3,desj808,The Second Sanborn,78.48,107.98,29.50,false,true,true,Kimani Vidal,21.30
+2025,6,4,Tookie23,Epstein’s Protégée ,38.98,61.28,22.30,false,true,true,Tyler Higbee,12.00
+2025,6,5,SMcenelly,I Suck Prescott’s Dak,116.76,124.16,7.40,false,true,true,Jordan Love,14.96
+2025,6,6,Trav563,Gimme them stinkers Gerry,113.58,156.00,42.42,false,true,true,Rico Dowdle,30.90
+2025,6,7,ebbwalton,EbbyGotHisNipplesButtered,99.80,112.92,13.12,false,true,true,Jaylen Waddle,12.82
+2025,6,8,JD0619,Buttery Nipple ,96.32,104.62,8.30,false,true,true,Luke McCaffrey,9.80
+2025,6,9,OtisBerringer,Tenants Harbor Topers,100.54,123.28,22.74,false,true,true,Daniel Jones,22.48
+2025,6,10,dereksanborn7,Back2Back,119.34,130.84,11.50,false,true,true,Caleb Williams,19.88
+2025,6,11,Campasano,Bobby Boucher’s Waterboys,85.96,117.26,31.30,false,true,true,Joe Flacco,18.76
+2025,6,12,syzygy,TJ Who's-yo-momma,86.12,94.30,8.18,false,true,true,Jaxson Dart,23.60
+2025,7,1,nlemieux24,Saco Rams,142.12,179.22,37.10,false,true,true,DeVonta Smith,28.80
+2025,7,2,ghowley,"New Year, Same Socks",73.56,120.66,47.10,false,true,true,Travis Hunter,20.10
+2025,7,3,desj808,The Second Sanborn,92.54,125.54,33.00,false,true,true,Zach Charbonnet,18.50
+2025,7,4,Tookie23,Epstein’s Protégée ,72.64,104.72,32.08,false,true,true,HOU,20.00
+2025,7,5,SMcenelly,I Suck Prescott’s Dak,112.30,118.80,6.50,false,true,true,Jordan Love,11.36
+2025,7,6,Trav563,Gimme them stinkers Gerry,139.44,139.44,0.00,true,true,true,Juwan Johnson,10.40
+2025,7,7,ebbwalton,EbbyGotHisNipplesButtered,93.32,125.92,32.60,false,true,true,Pat Freiermuth,25.60
+2025,7,8,JD0619,Buttery Nipple ,100.34,121.98,21.64,false,true,true,Matthew Stafford,27.38
+2025,7,9,OtisBerringer,Tenants Harbor Topers,116.04,161.02,44.98,false,true,true,Daniel Jones,22.22
+2025,7,10,dereksanborn7,Back2Back,115.18,145.88,30.70,false,true,true,Oronde Gadsden,25.90
+2025,7,11,Campasano,Bobby Boucher’s Waterboys,118.76,133.26,14.50,false,true,true,Joe Flacco,25.98
+2025,7,12,syzygy,TJ Who's-yo-momma,115.46,122.42,6.96,false,true,true,Jaxson Dart,28.42
+2025,8,1,nlemieux24,Saco Rams,93.38,105.88,12.50,false,true,true,Jayden Higgins,11.40
+2025,8,2,ghowley,"New Year, Same Socks",103.02,132.12,29.10,false,true,true,C.J. Stroud,21.72
+2025,8,3,desj808,The Second Sanborn,119.26,135.36,16.10,false,true,true,Isaiah Davis,15.40
+2025,8,4,Tookie23,Epstein’s Protégée ,83.52,88.86,5.34,false,true,true,Justin Fields,20.86
+2025,8,5,SMcenelly,I Suck Prescott’s Dak,148.04,151.66,3.62,false,true,true,Jordan Love,28.30
+2025,8,6,Trav563,Gimme them stinkers Gerry,121.84,147.84,26.00,false,true,true,Harold Fannin Jr.,15.40
+2025,8,7,ebbwalton,EbbyGotHisNipplesButtered,129.52,161.82,32.30,false,true,true,Troy Franklin,23.90
+2025,8,8,JD0619,Buttery Nipple ,89.66,104.06,14.40,false,true,true,Jahan Dotson,10.50
+2025,8,9,OtisBerringer,Tenants Harbor Topers,101.28,128.98,27.70,false,true,true,Chimere Dike,12.90
+2025,8,10,dereksanborn7,Back2Back,86.78,125.78,39.00,false,true,true,Khalil Shakir,17.80
+2025,8,11,Campasano,Bobby Boucher’s Waterboys,66.68,128.32,61.64,false,true,true,Joe Flacco,24.32
+2025,8,12,syzygy,TJ Who's-yo-momma,95.02,111.20,16.18,false,true,true,Tua Tagovailoa,24.20
+2025,9,1,nlemieux24,Saco Rams,164.64,171.44,6.80,false,true,true,J.J. McCarthy,17.92
+2025,9,2,ghowley,"New Year, Same Socks",84.00,119.20,35.20,false,true,true,Cam Little,17.90
+2025,9,3,desj808,The Second Sanborn,79.40,109.40,30.00,false,true,true,Marvin Harrison Jr.,19.10
+2025,9,4,Tookie23,Epstein’s Protégée ,69.10,82.90,13.80,false,true,true,Tyler Higbee,8.80
+2025,9,5,SMcenelly,I Suck Prescott’s Dak,76.60,100.60,24.00,false,true,true,Geno Smith,26.26
+2025,9,6,Trav563,Gimme them stinkers Gerry,100.06,143.54,43.48,false,true,true,Rico Dowdle,27.10
+2025,9,7,ebbwalton,EbbyGotHisNipplesButtered,117.22,134.72,17.50,false,true,true,Sam Darnold,27.20
+2025,9,8,JD0619,Buttery Nipple ,106.74,121.64,14.90,false,true,true,Mark Andrews,15.60
+2025,9,9,OtisBerringer,Tenants Harbor Topers,89.08,133.02,43.94,false,true,true,Colston Loveland,26.80
+2025,9,10,dereksanborn7,Back2Back,122.56,161.30,38.74,false,true,true,Caleb Williams,37.70
+2025,9,11,Campasano,Bobby Boucher’s Waterboys,76.86,125.10,48.24,false,true,true,Joe Flacco,29.70
+2025,9,12,syzygy,TJ Who's-yo-momma,84.54,99.94,15.40,false,true,true,Trevor Lawrence,21.20
+2025,10,1,nlemieux24,Saco Rams,110.32,119.02,8.70,false,true,true,DeVonta Smith,14.90
+2025,10,2,ghowley,"New Year, Same Socks",111.92,129.22,17.30,false,true,true,Rome Odunze,17.60
+2025,10,3,desj808,The Second Sanborn,114.62,146.22,31.60,false,true,true,TreVeyon Henderson,27.50
+2025,10,4,Tookie23,Epstein’s Protégée ,56.26,112.46,56.20,false,true,true,Mac Jones,23.06
+2025,10,5,SMcenelly,I Suck Prescott’s Dak,77.60,98.20,20.60,false,true,true,Emari Demercado,11.90
+2025,10,6,Trav563,Gimme them stinkers Gerry,171.54,200.78,29.24,false,true,true,Dillon Gabriel,20.08
+2025,10,7,ebbwalton,EbbyGotHisNipplesButtered,76.04,111.84,35.80,false,true,true,Tyler Allgeier,17.70
+2025,10,8,JD0619,Buttery Nipple ,76.90,103.60,26.70,false,true,true,Jalen Hurts,11.02
+2025,10,9,OtisBerringer,Tenants Harbor Topers,142.10,148.10,6.00,false,true,true,Dalton Schultz,14.80
+2025,10,10,dereksanborn7,Back2Back,107.50,122.30,14.80,false,true,true,Caleb Williams,25.10
+2025,10,11,Campasano,Bobby Boucher’s Waterboys,70.20,97.20,27.00,false,true,true,Jared Goff,24.80
+2025,10,12,syzygy,TJ Who's-yo-momma,107.98,119.48,11.50,false,true,true,Keon Coleman,12.10
+2025,11,1,nlemieux24,Saco Rams,108.12,133.22,25.10,false,true,true,Travis Kelce,19.60
+2025,11,2,ghowley,"New Year, Same Socks",95.52,143.52,48.00,false,true,true,Michael Wilson,26.00
+2025,11,3,desj808,The Second Sanborn,76.44,91.62,15.18,false,true,true,Marcus Mariota,15.42
+2025,11,4,Tookie23,Epstein’s Protégée ,54.90,58.30,3.40,false,true,true,Justin Fields,18.34
+2025,11,5,SMcenelly,I Suck Prescott’s Dak,92.94,139.36,46.42,false,true,true,George Pickens,24.90
+2025,11,6,Trav563,Gimme them stinkers Gerry,109.52,141.02,31.50,false,true,true,Sean Tucker,33.00
+2025,11,7,ebbwalton,EbbyGotHisNipplesButtered,103.98,124.38,20.40,false,true,true,Chase Brown,15.70
+2025,11,8,JD0619,Buttery Nipple ,70.70,110.70,40.00,false,true,true,Deebo Samuel Sr.,17.20
+2025,11,9,OtisBerringer,Tenants Harbor Topers,91.06,127.74,36.68,false,true,true,Kenny Gainwell,26.00
+2025,11,10,dereksanborn7,Back2Back,117.94,132.64,14.70,false,true,true,Devin Singletary,17.20
+2025,11,11,Campasano,Bobby Boucher’s Waterboys,64.60,102.92,38.32,false,true,true,Bryce Young,31.82
+2025,11,12,syzygy,TJ Who's-yo-momma,86.24,120.62,34.38,false,true,true,CLE,16.00
+2025,12,1,nlemieux24,Saco Rams,107.84,129.24,21.40,false,true,true,Trevor Lawrence,16.14
+2025,12,2,ghowley,"New Year, Same Socks",105.06,130.66,25.60,false,true,true,Jacoby Brissett,18.68
+2025,12,3,desj808,The Second Sanborn,78.18,128.14,49.96,false,true,true,Emanuel Wilson,25.50
+2025,12,4,Tookie23,Epstein’s Protégée ,68.02,74.82,6.80,false,true,true,SF,10.00
+2025,12,5,SMcenelly,I Suck Prescott’s Dak,99.76,108.40,8.64,false,true,true,Jakobi Meyers,13.00
+2025,12,6,Trav563,Gimme them stinkers Gerry,106.42,127.52,21.10,false,true,true,DJ Moore,20.90
+2025,12,7,ebbwalton,EbbyGotHisNipplesButtered,60.82,113.26,52.44,false,true,true,Sam Darnold,17.66
+2025,12,8,JD0619,Buttery Nipple ,113.66,142.96,29.30,false,true,true,Matthew Stafford,22.92
+2025,12,9,OtisBerringer,Tenants Harbor Topers,139.14,182.34,43.20,false,true,true,Jameis Winston,31.74
+2025,12,10,dereksanborn7,Back2Back,144.26,148.96,4.70,false,true,true,Caleb Williams,20.66
+2025,12,11,Campasano,Bobby Boucher’s Waterboys,73.66,106.06,32.40,false,true,true,Harrison Butker,15.00
+2025,12,12,syzygy,TJ Who's-yo-momma,81.44,100.36,18.92,false,true,true,ATL,16.00
+2025,13,1,nlemieux24,Saco Rams,119.46,151.86,32.40,false,true,true,Evan McPherson,24.30
+2025,13,2,ghowley,"New Year, Same Socks",90.70,124.60,33.90,false,true,true,Jameson Williams,23.40
+2025,13,3,desj808,The Second Sanborn,107.24,133.54,26.30,false,true,true,Marcus Mariota,22.26
+2025,13,4,Tookie23,Epstein’s Protégée ,62.72,97.52,34.80,false,true,true,Alec Pierce,15.80
+2025,13,5,SMcenelly,I Suck Prescott’s Dak,100.34,139.46,39.12,false,true,true,Jordan Love,24.76
+2025,13,6,Trav563,Gimme them stinkers Gerry,125.14,150.26,25.12,false,true,true,Tyler Shough,16.36
+2025,13,7,ebbwalton,EbbyGotHisNipplesButtered,73.62,120.12,46.50,false,true,true,Adonai Mitchell,20.20
+2025,13,8,JD0619,Buttery Nipple ,83.30,117.70,34.40,false,true,true,Dontayvion Wicks,25.00
+2025,13,9,OtisBerringer,Tenants Harbor Topers,110.84,133.44,22.60,false,true,true,Joe Burrow,19.24
+2025,13,10,dereksanborn7,Back2Back,86.48,131.78,45.30,false,true,true,Devaughn Vele,19.30
+2025,13,11,Campasano,Bobby Boucher’s Waterboys,61.74,106.64,44.90,false,true,true,Bryce Young,22.54
+2025,13,12,syzygy,TJ Who's-yo-momma,80.16,90.96,10.80,false,true,true,Shedeur Sanders,10.56
+2025,14,1,nlemieux24,Saco Rams,101.78,129.42,27.64,false,true,true,Ryan Flournoy,22.00
+2025,14,2,ghowley,"New Year, Same Socks",127.44,132.44,5.00,false,true,true,Jacoby Brissett,19.04
+2025,14,3,desj808,The Second Sanborn,86.90,97.28,10.38,false,true,true,Cam Ward,11.08
+2025,14,4,Tookie23,Epstein’s Protégée ,79.58,90.08,10.50,false,true,true,HOU,12.00
+2025,14,5,SMcenelly,I Suck Prescott’s Dak,85.66,131.36,45.70,false,true,true,Blake Corum,25.60
+2025,14,6,Trav563,Gimme them stinkers Gerry,103.16,144.86,41.70,false,true,true,Harold Fannin Jr.,21.40
+2025,14,7,ebbwalton,EbbyGotHisNipplesButtered,135.34,141.84,6.50,false,true,true,Sam Darnold,22.26
+2025,14,8,JD0619,Buttery Nipple ,58.20,138.14,79.94,false,true,true,Tee Higgins,24.20
+2025,14,9,OtisBerringer,Tenants Harbor Topers,101.40,141.86,40.46,false,true,true,Joe Burrow,23.36
+2025,14,10,dereksanborn7,Back2Back,100.04,110.44,10.40,false,true,true,Omarion Hampton,13.70
+2025,14,11,Campasano,Bobby Boucher’s Waterboys,83.38,105.46,22.08,false,true,true,Mike Gesicki,17.60
+2025,14,12,syzygy,TJ Who's-yo-momma,122.46,139.46,17.00,false,true,true,Shedeur Sanders,33.46
+2025,15,1,nlemieux24,Saco Rams,117.08,154.00,36.92,false,false,false,Trevor Lawrence,44.30
+2025,15,2,ghowley,"New Year, Same Socks",109.36,148.70,39.34,false,false,true,C.J. Stroud,22.40
+2025,15,3,desj808,The Second Sanborn,114.26,140.50,26.24,false,false,true,Ka'imi Fairbairn,17.00
+2025,15,4,Tookie23,Epstein’s Protégée ,94.50,114.92,20.42,false,false,false,Kirk Cousins,25.92
+2025,15,5,SMcenelly,I Suck Prescott’s Dak,77.50,121.24,43.74,false,false,true,Dawson Knox,17.20
+2025,15,6,Trav563,Gimme them stinkers Gerry,137.00,174.78,37.78,false,false,false,Travis Etienne Jr.,30.00
+2025,15,7,ebbwalton,EbbyGotHisNipplesButtered,135.72,159.82,24.10,false,false,true,Troy Franklin,17.80
+2025,15,8,JD0619,Buttery Nipple ,69.50,83.90,14.40,false,false,true,Matthew Stafford,19.92
+2025,15,9,OtisBerringer,Tenants Harbor Topers,77.60,116.50,38.90,false,false,true,Dalton Schultz,17.60
+2025,15,10,dereksanborn7,Back2Back,141.80,147.60,5.80,false,false,true,Caleb Williams,17.98
+2025,15,11,Campasano,Bobby Boucher’s Waterboys,70.00,118.28,48.28,false,false,false,Bo Nix,29.08
+2025,15,12,syzygy,TJ Who's-yo-momma,115.04,133.64,18.60,false,false,true,Colby Parkinson,22.00
+2025,16,1,nlemieux24,Saco Rams,143.00,184.16,41.16,false,false,true,Trevor Lawrence,31.16
+2025,16,2,ghowley,"New Year, Same Socks",103.72,131.86,28.14,false,false,true,Dak Prescott,19.16
+2025,16,3,desj808,The Second Sanborn,63.40,111.72,48.32,false,false,true,NO,20.00
+2025,16,4,Tookie23,Epstein’s Protégée ,129.40,130.30,0.90,false,false,true,Kirk Cousins,16.58
+2025,16,5,SMcenelly,I Suck Prescott’s Dak,120.20,138.90,18.70,false,false,true,Geno Smith,14.04
+2025,16,6,Trav563,Gimme them stinkers Gerry,100.74,131.22,30.48,false,false,true,Harold Fannin Jr.,17.50
+2025,16,7,ebbwalton,EbbyGotHisNipplesButtered,111.50,134.80,23.30,false,false,true,Sam Darnold,19.50
+2025,16,8,JD0619,Buttery Nipple ,89.50,130.88,41.38,false,false,true,Matthew Stafford,30.88
+2025,16,9,OtisBerringer,Tenants Harbor Topers,124.56,168.46,43.90,false,false,true,Kenny Gainwell,21.30
+2025,16,10,dereksanborn7,Back2Back,93.70,134.70,41.00,false,false,true,Kenneth Walker III,23.90
+2025,16,11,Campasano,Bobby Boucher’s Waterboys,63.88,107.76,43.88,false,false,true,Jared Goff,26.46
+2025,16,12,syzygy,TJ Who's-yo-momma,76.92,120.94,44.02,false,false,true,Zay Flowers,16.70
+2025,17,1,nlemieux24,Saco Rams,176.42,176.42,0.00,true,false,true,Baker Mayfield,15.44
+2025,17,2,ghowley,"New Year, Same Socks",98.88,138.08,39.20,false,false,false,MIN,23.00
+2025,17,3,desj808,The Second Sanborn,70.30,116.54,46.24,false,false,false,Jacory Croskey-Merritt,22.50
+2025,17,4,Tookie23,Epstein’s Protégée ,104.52,114.92,10.40,false,false,true,Kirk Cousins,9.14
+2025,17,5,SMcenelly,I Suck Prescott’s Dak,70.14,105.74,35.60,false,false,true,Chris Godwin Jr.,20.30
+2025,17,6,Trav563,Gimme them stinkers Gerry,125.92,141.72,15.80,false,false,true,Elic Ayomanor,11.70
+2025,17,7,ebbwalton,EbbyGotHisNipplesButtered,84.98,98.38,13.40,false,false,true,Woody Marks,8.00
+2025,17,8,JD0619,Buttery Nipple ,85.36,105.86,20.50,false,false,true,Christian Watson,19.80
+2025,17,9,OtisBerringer,Tenants Harbor Topers,85.80,134.90,49.10,false,false,false,Stefon Diggs,19.10
+2025,17,10,dereksanborn7,Back2Back,99.94,152.04,52.10,false,false,true,Luther Burden III,23.80
+2025,17,11,Campasano,Bobby Boucher’s Waterboys,86.18,117.68,31.50,false,false,true,KaVontae Turpin,15.10
+2025,17,12,syzygy,TJ Who's-yo-momma,102.18,120.88,18.70,false,false,false,Jayden Higgins,15.80
+2024,1,1,nlemieux24,Saco Rams,100.08,144.66,44.58,false,true,true,Baker Mayfield,29.66
+2024,1,2,ghowley,"New Year, Same Socks",111.66,127.96,16.30,false,true,true,Jake Moody,26.00
+2024,1,3,desj808,My Nipples Got Buttered 🧈,81.14,96.54,15.40,false,true,true,Deshaun Watson,9.66
+2024,1,4,Tookie23,Also Gerrys Sock Munchers,65.04,101.14,36.10,false,true,true,Allen Lazard,23.90
+2024,1,5,SMcenelly,Gerry’s Socks,141.70,152.14,10.44,false,true,true,Chris Godwin Jr.,18.30
+2024,1,6,Trav563,Gerry's Sock Munchers,113.72,126.38,12.66,false,true,true,Anthony Richardson Sr.,26.08
+2024,1,7,ebbwalton,The Loch Ness Monsters,101.28,127.48,26.20,false,true,true,Isaiah Likely,21.60
+2024,1,8,JD0619,Buttery Nipple ,119.42,135.00,15.58,false,true,true,Derek Carr,21.30
+2024,1,9,OtisBerringer,The Prince of Purgatory,110.46,136.86,26.40,false,true,true,Jayden Daniels,25.16
+2024,1,10,dereksanborn7,Back2Back,61.32,100.72,39.40,false,true,true,Tua Tagovailoa,18.62
+2024,1,11,Campasano,Gerry’s Sock Muncher 2.0,84.38,133.18,48.80,false,true,true,Chris Boswell,26.00
+2024,1,12,syzygy,TJ Whos-yo-momma,102.88,131.08,28.20,false,true,true,Brian Robinson Jr.,16.40
+2024,2,1,nlemieux24,Saco Rams,114.74,130.14,15.40,false,true,true,Baker Mayfield,16.80
+2024,2,2,ghowley,"New Year, Same Socks",75.60,99.52,23.92,false,true,true,BUF,18.00
+2024,2,3,desj808,My Nipples Got Buttered 🧈,116.84,139.94,23.10,false,true,true,Deshaun Watson,15.44
+2024,2,4,Tookie23,Also Gerrys Sock Munchers,105.76,110.94,5.18,false,true,true,Aaron Rodgers,15.14
+2024,2,5,SMcenelly,Gerry’s Socks,102.90,126.18,23.28,false,true,true,Geno Smith,17.88
+2024,2,6,Trav563,Gerry's Sock Munchers,112.78,140.58,27.80,false,true,true,Rashee Rice,16.00
+2024,2,7,ebbwalton,The Loch Ness Monsters,99.06,124.96,25.90,false,true,true,Braelon Allen,18.60
+2024,2,8,JD0619,Buttery Nipple ,92.02,99.92,7.90,false,true,true,Derek Carr,21.82
+2024,2,9,OtisBerringer,The Prince of Purgatory,92.14,115.52,23.38,false,true,true,Joe Burrow,15.22
+2024,2,10,dereksanborn7,Back2Back,78.60,106.06,27.46,false,true,true,Quentin Johnston,19.60
+2024,2,11,Campasano,Gerry’s Sock Muncher 2.0,82.08,131.28,49.20,false,true,true,Rashid Shaheed,18.90
+2024,2,12,syzygy,TJ Whos-yo-momma,150.90,160.44,9.54,false,true,true,Kirk Cousins,16.54
+2024,3,1,nlemieux24,Saco Rams,123.58,148.80,25.22,false,true,true,Rome Odunze,20.40
+2024,3,2,ghowley,"New Year, Same Socks",145.60,183.86,38.26,false,true,true,Dak Prescott,28.86
+2024,3,3,desj808,My Nipples Got Buttered 🧈,103.68,114.08,10.40,false,true,true,Emanuel Wilson,15.50
+2024,3,4,Tookie23,Also Gerrys Sock Munchers,78.98,101.18,22.20,false,true,true,Aaron Rodgers,21.04
+2024,3,5,SMcenelly,Gerry’s Socks,119.06,149.18,30.12,false,true,true,Malik Willis,25.38
+2024,3,6,Trav563,Gerry's Sock Munchers,117.68,143.98,26.30,false,true,true,Tre Tucker,19.10
+2024,3,7,ebbwalton,The Loch Ness Monsters,83.32,117.22,33.90,false,true,true,Dallas Goedert,21.00
+2024,3,8,JD0619,Buttery Nipple ,54.16,63.66,9.50,false,true,true,Matthew Stafford,12.84
+2024,3,9,OtisBerringer,The Prince of Purgatory,92.26,108.96,16.70,false,true,true,Jayden Daniels,28.06
+2024,3,10,dereksanborn7,Back2Back,108.12,128.52,20.40,false,true,true,Khalil Shakir,16.20
+2024,3,11,Campasano,Gerry’s Sock Muncher 2.0,77.16,120.54,43.38,false,true,true,Amari Cooper,24.10
+2024,3,12,syzygy,TJ Whos-yo-momma,99.10,135.66,36.56,false,true,true,Andy Dalton,24.56
+2024,4,1,nlemieux24,Saco Rams,130.48,162.58,32.10,false,true,true,Justin Fields,29.98
+2024,4,2,ghowley,"New Year, Same Socks",114.04,145.30,31.26,false,true,true,C.J. Stroud,23.50
+2024,4,3,desj808,My Nipples Got Buttered 🧈,86.48,110.98,24.50,false,true,true,Tucker Kraft,13.30
+2024,4,4,Tookie23,Also Gerrys Sock Munchers,111.22,127.82,16.60,false,true,true,ATL,16.00
+2024,4,5,SMcenelly,Gerry’s Socks,96.00,116.26,20.26,false,true,true,Jordan Love,28.16
+2024,4,6,Trav563,Gerry's Sock Munchers,76.84,132.04,55.20,false,true,true,Dontayvion Wicks,22.30
+2024,4,7,ebbwalton,The Loch Ness Monsters,71.60,111.42,39.82,false,true,true,Chase Brown,22.20
+2024,4,8,JD0619,Buttery Nipple ,71.92,100.12,28.20,false,true,true,Taysom Hill,14.40
+2024,4,9,OtisBerringer,The Prince of Purgatory,107.38,136.32,28.94,false,true,true,Jayden Daniels,24.02
+2024,4,10,dereksanborn7,Back2Back,73.98,93.88,19.90,false,true,true,Wan'Dale Robinson,12.60
+2024,4,11,Campasano,Gerry’s Sock Muncher 2.0,110.58,144.78,34.20,false,true,true,Justice Hill,18.60
+2024,4,12,syzygy,TJ Whos-yo-momma,117.90,128.30,10.40,false,true,true,Terry McLaurin,14.70
+2024,5,1,nlemieux24,Saco Rams,144.90,161.60,16.70,false,true,true,Baker Mayfield,23.40
+2024,5,2,ghowley,"New Year, Same Socks",88.54,107.48,18.94,false,true,true,Dak Prescott,15.38
+2024,5,3,desj808,My Nipples Got Buttered 🧈,67.24,92.54,25.30,false,true,true,Tucker Kraft,22.80
+2024,5,4,Tookie23,Also Gerrys Sock Munchers,79.76,92.56,12.80,false,true,true,SF,12.00
+2024,5,5,SMcenelly,Gerry’s Socks,77.76,104.26,26.50,false,true,true,Geno Smith,22.56
+2024,5,6,Trav563,Gerry's Sock Munchers,133.42,154.92,21.50,false,true,true,Jalen Tolbert,18.20
+2024,5,7,ebbwalton,The Loch Ness Monsters,94.34,121.36,27.02,false,true,true,Joe Flacco,25.56
+2024,5,8,JD0619,Buttery Nipple ,85.90,92.00,6.10,false,true,true,Matthew Stafford,12.40
+2024,5,9,OtisBerringer,The Prince of Purgatory,138.08,154.88,16.80,false,true,true,Alec Pierce,20.90
+2024,5,10,dereksanborn7,Back2Back,139.46,148.06,8.60,false,true,true,Brandon Aiyuk,18.70
+2024,5,11,Campasano,Gerry’s Sock Muncher 2.0,107.14,131.34,24.20,false,true,true,Rashid Shaheed,16.60
+2024,5,12,syzygy,TJ Whos-yo-momma,99.94,131.26,31.32,false,true,true,Kirk Cousins,34.36
+2024,6,1,nlemieux24,Saco Rams,107.06,158.70,51.64,false,true,true,Sean Tucker,32.70
+2024,6,2,ghowley,"New Year, Same Socks",110.82,139.78,28.96,false,true,true,Gabe Davis,19.00
+2024,6,3,desj808,My Nipples Got Buttered 🧈,68.92,86.52,17.60,false,true,true,Kimani Vidal,12.10
+2024,6,4,Tookie23,Also Gerrys Sock Munchers,102.60,122.30,19.70,false,true,true,Aaron Rodgers,16.76
+2024,6,5,SMcenelly,Gerry’s Socks,133.92,138.02,4.10,false,true,true,Justin Herbert,12.68
+2024,6,6,Trav563,Gerry's Sock Munchers,81.32,91.82,10.50,false,true,true,NO,10.00
+2024,6,7,ebbwalton,The Loch Ness Monsters,102.90,135.30,32.40,false,true,true,Tyler Allgeier,19.30
+2024,6,8,JD0619,Buttery Nipple ,131.26,153.86,22.60,false,true,true,Joe Mixon,26.20
+2024,6,9,OtisBerringer,The Prince of Purgatory,123.62,145.76,22.14,false,true,true,Jayden Daniels,20.96
+2024,6,10,dereksanborn7,Back2Back,83.44,119.94,36.50,false,true,true,TB,19.00
+2024,6,11,Campasano,Gerry’s Sock Muncher 2.0,120.00,141.10,21.10,false,true,true,Bo Nix,20.74
+2024,6,12,syzygy,TJ Whos-yo-momma,96.00,120.66,24.66,false,true,true,Trevor Lawrence,17.06
+2024,7,1,nlemieux24,Saco Rams,128.40,137.00,8.60,false,true,true,Kyler Murray,20.20
+2024,7,2,ghowley,"New Year, Same Socks",103.04,124.16,21.12,false,true,true,Sam Darnold,16.26
+2024,7,3,desj808,My Nipples Got Buttered 🧈,108.36,120.56,12.20,false,true,true,Cade Otton,13.00
+2024,7,4,Tookie23,Also Gerrys Sock Munchers,39.02,76.08,37.06,false,true,true,Brock Purdy,17.18
+2024,7,5,SMcenelly,Gerry’s Socks,129.90,149.40,19.50,false,true,true,Jonnu Smith,19.10
+2024,7,6,Trav563,Gerry's Sock Munchers,97.44,103.14,5.70,false,true,true,Anthony Richardson Sr.,7.76
+2024,7,7,ebbwalton,The Loch Ness Monsters,95.02,113.62,18.60,false,true,true,Romeo Doubs,13.40
+2024,7,8,JD0619,Buttery Nipple ,133.66,154.36,20.70,false,true,true,LAR,18.00
+2024,7,9,OtisBerringer,The Prince of Purgatory,101.74,152.34,50.60,false,true,true,Rachaad White,26.10
+2024,7,10,dereksanborn7,Back2Back,103.84,112.54,8.70,false,true,true,Jason Myers,12.00
+2024,7,11,Campasano,Gerry’s Sock Muncher 2.0,110.20,147.86,37.66,false,true,true,Russell Wilson,24.86
+2024,7,12,syzygy,TJ Whos-yo-momma,78.58,131.02,52.44,false,true,true,Javonte Williams,24.60
+2024,8,1,nlemieux24,Saco Rams,106.20,129.92,23.72,false,true,true,Cedric Tillman,25.40
+2024,8,2,ghowley,"New Year, Same Socks",103.90,132.20,28.30,false,true,true,Sam Darnold,18.20
+2024,8,3,desj808,My Nipples Got Buttered 🧈,105.58,127.48,21.90,false,true,true,Cade Otton,24.60
+2024,8,4,Tookie23,Also Gerrys Sock Munchers,96.90,142.00,45.10,false,true,true,Rhamondre Stevenson,22.00
+2024,8,5,SMcenelly,Gerry’s Socks,98.84,127.06,28.22,false,true,true,Justin Herbert,24.06
+2024,8,6,Trav563,Gerry's Sock Munchers,136.66,151.06,14.40,false,true,true,Demarcus Robinson,16.50
+2024,8,7,ebbwalton,The Loch Ness Monsters,131.72,136.22,4.50,false,true,true,Jason Sanders,11.00
+2024,8,8,JD0619,Buttery Nipple ,126.24,131.14,4.90,false,true,true,Matthew Stafford,24.76
+2024,8,9,OtisBerringer,The Prince of Purgatory,101.16,139.84,38.68,false,true,true,Jayden Daniels,22.24
+2024,8,10,dereksanborn7,Back2Back,100.94,120.96,20.02,false,true,true,Isaac Guerendo,17.70
+2024,8,11,Campasano,Gerry’s Sock Muncher 2.0,112.86,153.36,40.50,false,true,true,Josh Downs,20.20
+2024,8,12,syzygy,TJ Whos-yo-momma,119.14,127.44,8.30,false,true,true,Trevor Lawrence,22.32
+2024,9,1,nlemieux24,Saco Rams,84.26,124.00,39.74,false,true,true,Baker Mayfield,18.00
+2024,9,2,ghowley,"New Year, Same Socks",91.90,126.20,34.30,false,true,true,Chuba Hubbard,20.20
+2024,9,3,desj808,My Nipples Got Buttered 🧈,91.92,113.32,21.40,false,true,true,Cade Otton,17.70
+2024,9,4,Tookie23,Also Gerrys Sock Munchers,108.24,118.34,10.10,false,true,true,Trey Benson,12.00
+2024,9,5,SMcenelly,Gerry’s Socks,110.08,123.12,13.04,false,true,true,Geno Smith,21.12
+2024,9,6,Trav563,Gerry's Sock Munchers,130.30,166.80,36.50,false,true,true,Demarcus Robinson,24.40
+2024,9,7,ebbwalton,The Loch Ness Monsters,108.70,110.70,2.00,false,true,true,Jason Sanders,9.00
+2024,9,8,JD0619,Buttery Nipple ,104.60,132.70,28.10,false,true,true,LAR,22.00
+2024,9,9,OtisBerringer,The Prince of Purgatory,102.06,118.74,16.68,false,true,true,Joe Burrow,29.14
+2024,9,10,dereksanborn7,Back2Back,60.08,116.54,56.46,false,true,true,Jaxon Smith-Njigba,33.50
+2024,9,11,Campasano,Gerry’s Sock Muncher 2.0,103.38,145.90,42.52,false,true,true,Mike Gesicki,24.50
+2024,9,12,syzygy,TJ Whos-yo-momma,110.58,129.26,18.68,false,true,true,Trevor Lawrence,19.56
+2024,10,1,nlemieux24,Saco Rams,124.24,154.24,30.00,false,true,true,Kyler Murray,27.74
+2024,10,2,ghowley,"New Year, Same Socks",104.74,147.70,42.96,false,true,true,Chuba Hubbard,21.90
+2024,10,3,desj808,My Nipples Got Buttered 🧈,85.54,98.54,13.00,false,true,true,DAL,9.00
+2024,10,4,Tookie23,Also Gerrys Sock Munchers,44.74,87.32,42.58,false,true,true,Calvin Ridley,22.90
+2024,10,5,SMcenelly,Gerry’s Socks,85.46,104.66,19.20,false,true,true,NE,16.00
+2024,10,6,Trav563,Gerry's Sock Munchers,99.80,104.20,4.40,false,true,true,NO,10.00
+2024,10,7,ebbwalton,The Loch Ness Monsters,93.00,105.80,12.80,false,true,true,Joe Flacco,9.88
+2024,10,8,JD0619,Buttery Nipple ,124.08,130.88,6.80,false,true,true,Derek Carr,19.46
+2024,10,9,OtisBerringer,The Prince of Purgatory,127.32,133.22,5.90,false,true,true,Alec Pierce,16.10
+2024,10,10,dereksanborn7,Back2Back,61.10,83.66,22.56,false,true,true,Devaughn Vele,11.90
+2024,10,11,Campasano,Gerry’s Sock Muncher 2.0,94.80,113.60,18.80,false,true,true,Courtland Sutton,16.00
+2024,10,12,syzygy,TJ Whos-yo-momma,75.04,97.50,22.46,false,true,true,Rashod Bateman,14.40
+2024,11,1,nlemieux24,Saco Rams,102.12,112.22,10.10,false,true,true,Austin Ekeler,12.60
+2024,11,2,ghowley,"New Year, Same Socks",105.98,140.74,34.76,false,true,true,Sam Darnold,22.64
+2024,11,3,desj808,My Nipples Got Buttered 🧈,79.44,90.64,11.20,false,true,true,Cooper Rush,14.36
+2024,11,4,Tookie23,Also Gerrys Sock Munchers,92.86,121.56,28.70,false,true,true,Noah Gray,16.30
+2024,11,5,SMcenelly,Gerry’s Socks,141.08,160.18,19.10,false,true,true,Jonnu Smith,25.10
+2024,11,6,Trav563,Gerry's Sock Munchers,85.68,122.08,36.40,false,true,true,Anthony Richardson Sr.,26.08
+2024,11,7,ebbwalton,The Loch Ness Monsters,131.98,139.78,7.80,false,true,true,Jason Sanders,11.00
+2024,11,8,JD0619,Buttery Nipple ,104.64,155.72,51.08,false,true,true,Taysom Hill,36.52
+2024,11,9,OtisBerringer,The Prince of Purgatory,121.14,147.04,25.90,false,true,true,Tee Higgins,25.30
+2024,11,10,dereksanborn7,Back2Back,69.78,93.42,23.64,false,true,true,Tua Tagovailoa,22.52
+2024,11,11,Campasano,Gerry’s Sock Muncher 2.0,126.58,154.48,27.90,false,true,true,Jared Goff,34.58
+2024,11,12,syzygy,TJ Whos-yo-momma,101.70,115.30,13.60,false,true,true,Javonte Williams,16.70
+2024,12,1,nlemieux24,Saco Rams,121.66,129.36,7.70,false,true,true,Luke Schoonmaker,13.00
+2024,12,2,ghowley,"New Year, Same Socks",115.28,136.20,20.92,false,true,true,Sam Darnold,21.10
+2024,12,3,desj808,My Nipples Got Buttered 🧈,97.66,120.66,23.00,false,true,true,Bucky Irving,23.20
+2024,12,4,Tookie23,Also Gerrys Sock Munchers,99.40,133.00,33.60,false,true,true,Noah Gray,20.60
+2024,12,5,SMcenelly,Gerry’s Socks,139.12,152.12,13.00,false,true,true,Jakobi Meyers,17.10
+2024,12,6,Trav563,Gerry's Sock Munchers,122.68,131.88,9.20,false,true,true,Anthony Richardson Sr.,11.98
+2024,12,7,ebbwalton,The Loch Ness Monsters,139.38,146.08,6.70,false,true,true,Jason Sanders,12.00
+2024,12,8,JD0619,Buttery Nipple ,83.46,89.32,5.86,false,true,true,Matthew Stafford,18.22
+2024,12,9,OtisBerringer,The Prince of Purgatory,126.80,140.80,14.00,false,true,true,GB,17.00
+2024,12,10,dereksanborn7,Back2Back,65.08,85.30,20.22,false,true,true,Caleb Williams,26.90
+2024,12,11,Campasano,Gerry’s Sock Muncher 2.0,90.42,108.72,18.30,false,true,true,Bryce Young,15.52
+2024,12,12,syzygy,TJ Whos-yo-momma,85.76,107.86,22.10,false,true,true,Ameer Abdullah,15.00
+2024,13,1,nlemieux24,Saco Rams,93.50,133.30,39.80,false,true,true,Mike Evans,21.80
+2024,13,2,ghowley,"New Year, Same Socks",96.38,140.40,44.02,false,true,true,Sam Darnold,19.60
+2024,13,3,desj808,My Nipples Got Buttered 🧈,126.44,144.94,18.50,false,true,true,Marvin Mims Jr.,18.40
+2024,13,4,Tookie23,Also Gerrys Sock Munchers,72.06,98.70,26.64,false,true,true,Elijah Moore,15.20
+2024,13,5,SMcenelly,Gerry’s Socks,98.98,117.96,18.98,false,true,true,Jordan Love,18.96
+2024,13,6,Trav563,Gerry's Sock Munchers,133.58,184.98,51.40,false,true,true,Jerry Jeudy,36.00
+2024,13,7,ebbwalton,The Loch Ness Monsters,149.42,160.02,10.60,false,true,true,Tua Tagovailoa,25.20
+2024,13,8,JD0619,Buttery Nipple ,108.02,114.72,6.70,false,true,true,Matthew Stafford,15.62
+2024,13,9,OtisBerringer,The Prince of Purgatory,91.14,135.84,44.70,false,true,true,Joe Burrow,17.26
+2024,13,10,dereksanborn7,Back2Back,75.02,110.04,35.02,false,true,true,Caleb Williams,26.14
+2024,13,11,Campasano,Gerry’s Sock Muncher 2.0,64.66,118.96,54.30,false,true,true,Russell Wilson,26.86
+2024,13,12,syzygy,TJ Whos-yo-momma,96.00,127.88,31.88,false,true,true,Jameis Winston,32.98
+2024,14,1,nlemieux24,Saco Rams,119.60,119.60,0.00,true,true,true,Kyler Murray,17.96
+2024,14,2,ghowley,"New Year, Same Socks",123.48,162.68,39.20,false,true,true,Jauan Jennings,24.50
+2024,14,3,desj808,My Nipples Got Buttered 🧈,115.10,131.70,16.60,false,true,true,Isaiah Davis,14.20
+2024,14,4,Tookie23,Also Gerrys Sock Munchers,85.50,108.30,22.80,false,true,true,Davante Adams,21.40
+2024,14,5,SMcenelly,Gerry’s Socks,99.12,107.14,8.02,false,true,true,Jordan Love,14.54
+2024,14,6,Trav563,Gerry's Sock Munchers,125.88,127.38,1.50,false,true,true,Juwan Johnson,12.00
+2024,14,7,ebbwalton,The Loch Ness Monsters,147.28,171.48,24.20,false,true,true,Tua Tagovailoa,23.54
+2024,14,8,JD0619,Buttery Nipple ,104.02,110.32,6.30,false,true,true,Matthew Stafford,20.80
+2024,14,9,OtisBerringer,The Prince of Purgatory,132.76,156.86,24.10,false,true,true,Rachaad White,23.90
+2024,14,10,dereksanborn7,Back2Back,94.46,124.96,30.50,false,true,true,Khalil Shakir,19.10
+2024,14,11,Campasano,Gerry’s Sock Muncher 2.0,91.62,115.72,24.10,false,true,true,Jared Goff,22.02
+2024,14,12,syzygy,TJ Whos-yo-momma,81.78,100.28,18.50,false,true,true,Jalen McMillan,19.90
+2024,15,1,nlemieux24,Saco Rams,124.96,161.62,36.66,false,false,true,Baker Mayfield,28.02
+2024,15,2,ghowley,"New Year, Same Socks",84.44,120.84,36.40,false,false,true,Brian Thomas Jr.,27.50
+2024,15,3,desj808,My Nipples Got Buttered 🧈,121.86,135.36,13.50,false,false,true,Chase McLaughlin,18.00
+2024,15,4,Tookie23,Also Gerrys Sock Munchers,61.58,152.16,90.58,false,false,false,Davante Adams,38.30
+2024,15,5,SMcenelly,Gerry’s Socks,102.40,117.66,15.26,false,false,true,Jordan Love,17.56
+2024,15,6,Trav563,Gerry's Sock Munchers,117.40,161.60,44.20,false,false,false,ATL,21.00
+2024,15,7,ebbwalton,The Loch Ness Monsters,135.68,146.98,11.30,false,false,true,Pat Freiermuth,8.70
+2024,15,8,JD0619,Buttery Nipple ,110.90,121.40,10.50,false,false,true,LAR,12.00
+2024,15,9,OtisBerringer,The Prince of Purgatory,0.00,130.44,130.44,false,false,false,Jahmyr Gibbs,25.90
+2024,15,10,dereksanborn7,Back2Back,90.54,109.68,19.14,false,false,false,Romeo Doubs,17.50
+2024,15,11,Campasano,Gerry’s Sock Muncher 2.0,82.50,135.66,53.16,false,false,true,Jared Goff,40.06
+2024,15,12,syzygy,TJ Whos-yo-momma,83.84,112.88,29.04,false,false,true,Rashod Bateman,21.50
+2024,16,1,nlemieux24,Saco Rams,109.22,149.82,40.60,false,false,true,Tyjae Spears,20.10
+2024,16,2,ghowley,"New Year, Same Socks",144.34,154.34,10.00,false,false,true,C.J. Stroud,16.06
+2024,16,3,desj808,My Nipples Got Buttered 🧈,121.00,133.90,12.90,false,false,true,Cooper Rush,15.28
+2024,16,4,Tookie23,Also Gerrys Sock Munchers,97.52,109.72,12.20,false,false,true,Aaron Rodgers,11.84
+2024,16,5,SMcenelly,Gerry’s Socks,112.46,120.16,7.70,false,false,true,Geno Smith,21.36
+2024,16,6,Trav563,Gerry's Sock Munchers,167.98,173.34,5.36,false,false,true,Anthony Richardson Sr.,20.24
+2024,16,7,ebbwalton,The Loch Ness Monsters,136.36,156.70,20.34,false,false,true,Gus Edwards,19.60
+2024,16,8,JD0619,Buttery Nipple ,114.04,119.90,5.86,false,false,true,LAR,9.00
+2024,16,9,OtisBerringer,The Prince of Purgatory,115.48,176.32,60.84,false,false,true,Jayden Daniels,34.42
+2024,16,10,dereksanborn7,Back2Back,78.26,89.06,10.80,false,false,true,Drake Maye,15.44
+2024,16,11,Campasano,Gerry’s Sock Muncher 2.0,92.34,121.42,29.08,false,false,true,Bryce Young,27.12
+2024,16,12,syzygy,TJ Whos-yo-momma,101.98,124.18,22.20,false,false,true,Xavier Worthy,17.00
+2024,17,1,nlemieux24,Saco Rams,147.56,151.56,4.00,false,false,true,Kyler Murray,16.04
+2024,17,2,ghowley,"New Year, Same Socks",114.48,140.08,25.60,false,false,false,J.K. Dobbins,14.80
+2024,17,3,desj808,My Nipples Got Buttered 🧈,100.20,144.80,44.60,false,false,false,Marvin Mims Jr.,25.20
+2024,17,4,Tookie23,Also Gerrys Sock Munchers,83.78,105.28,21.50,false,false,true,Michael Pittman Jr.,21.40
+2024,17,5,SMcenelly,Gerry’s Socks,96.24,124.04,27.80,false,false,false,Ricky Pearsall,24.70
+2024,17,6,Trav563,Gerry's Sock Munchers,151.72,164.62,12.90,false,false,true,Jerry Jeudy,15.40
+2024,17,7,ebbwalton,The Loch Ness Monsters,88.38,117.88,29.50,false,false,false,Adam Thielen,25.50
+2024,17,8,JD0619,Buttery Nipple ,72.46,89.16,16.70,false,false,true,LAR,14.00
+2024,17,9,OtisBerringer,The Prince of Purgatory,145.98,177.48,31.50,false,false,true,Joe Burrow,36.98
+2024,17,10,dereksanborn7,Back2Back,107.58,123.78,16.20,false,false,true,Wan'Dale Robinson,15.60
+2024,17,11,Campasano,Gerry’s Sock Muncher 2.0,128.56,154.72,26.16,false,false,true,Jared Goff,25.82
+2024,17,12,syzygy,TJ Whos-yo-momma,85.16,113.06,27.90,false,false,true,Jalen McMillan,20.50
+2023,1,1,nlemieux24,Saco Rams,111.44,131.60,20.16,false,true,true,Michael Pittman Jr.,19.70
+2023,1,2,ghowley,We’re on to 2024,78.72,102.88,24.16,false,true,true,Kyren Williams,17.40
+2023,1,3,desj808,Josh Reynolds 👑,154.36,170.06,15.70,false,true,true,Joshua Kelley,15.10
+2023,1,4,Tookie23,Rugg’s driving school,130.00,153.80,23.80,false,true,true,Brock Purdy,14.80
+2023,1,5,SMcenelly,Lamb > Ram,87.56,125.74,38.18,false,true,true,Jakobi Meyers,24.60
+2023,1,6,Trav563,A TEAM WITH NO NAME,67.86,101.12,33.26,false,true,true,Anthony Richardson Sr.,20.92
+2023,1,7,ebbwalton,Sexual Harressment Panda,60.14,108.64,48.50,false,true,true,Tyler Allgeier,22.90
+2023,1,8,JD0619,Buttery Nipple ,71.40,94.12,22.72,false,true,true,Baker Mayfield,16.02
+2023,1,9,OtisBerringer,The Jets,32.98,82.28,49.30,false,true,true,NYJ,21.00
+2023,1,10,dereksanborn7, ,61.24,123.44,62.20,false,true,true,Brandon Aiyuk,28.90
+2023,1,11,roster 11,Team 11,79.82,94.08,14.26,false,true,true,Russell Wilson,15.18
+2023,1,12,sitsuejc,commission deez nutz,94.64,121.14,26.50,false,true,true,Puka Nacua,16.90
+2023,2,1,nlemieux24,Saco Rams,129.84,154.64,24.80,false,true,true,Jerome Ford,22.60
+2023,2,2,ghowley,We’re on to 2024,115.20,138.80,23.60,false,true,true,C.J. Stroud,19.46
+2023,2,3,desj808,Josh Reynolds 👑,90.10,106.20,16.10,false,true,true,Marvin Mims Jr.,19.30
+2023,2,4,Tookie23,Rugg’s driving school,124.74,133.94,9.20,false,true,true,Brock Purdy,13.74
+2023,2,5,SMcenelly,Lamb > Ram,124.70,141.02,16.32,false,true,true,Geno Smith,23.12
+2023,2,6,Trav563,A TEAM WITH NO NAME,91.38,133.98,42.60,false,true,true,D'Andre Swift,25.60
+2023,2,7,ebbwalton,Sexual Harressment Panda,99.36,133.42,34.06,false,true,true,James Cook III,17.90
+2023,2,8,JD0619,Buttery Nipple ,108.62,130.32,21.70,false,true,true,Baker Mayfield,18.38
+2023,2,9,OtisBerringer,The Jets,104.58,145.44,40.86,false,true,true,Tyler Lockett,21.90
+2023,2,10,dereksanborn7, ,97.90,124.50,26.60,false,true,true,PIT,29.00
+2023,2,11,roster 11,Team 11,91.52,99.72,8.20,false,true,true,Russell Wilson,24.92
+2023,2,12,sitsuejc,commission deez nutz,68.04,144.46,76.42,false,true,true,Brian Robinson Jr.,27.90
+2023,3,1,nlemieux24,Saco Rams,149.26,166.36,17.10,false,true,true,Tank Dell,23.00
+2023,3,2,ghowley,We’re on to 2024,98.66,140.80,42.14,false,true,true,C.J. Stroud,20.60
+2023,3,3,desj808,Josh Reynolds 👑,101.66,120.06,18.40,false,true,true,Jimmy Garoppolo,17.66
+2023,3,4,Tookie23,Rugg’s driving school,129.30,136.00,6.70,false,true,true,Michael Gallup,12.20
+2023,3,5,SMcenelly,Lamb > Ram,89.80,105.80,16.00,false,true,true,Jordan Love,24.26
+2023,3,6,Trav563,A TEAM WITH NO NAME,124.28,173.88,49.60,false,true,true,De'Von Achane,49.30
+2023,3,7,ebbwalton,Sexual Harressment Panda,102.38,147.68,45.30,false,true,true,Adam Thielen,26.00
+2023,3,8,JD0619,Buttery Nipple ,119.28,127.28,8.00,false,true,true,Joshua Palmer,11.60
+2023,3,9,OtisBerringer,The Jets,73.66,101.06,27.40,false,true,true,Rondale Moore,14.20
+2023,3,10,dereksanborn7, ,117.88,136.56,18.68,false,true,true,Tua Tagovailoa,28.36
+2023,3,11,roster 11,Team 11,109.82,129.92,20.10,false,true,true,Sam LaPorta,18.40
+2023,3,12,sitsuejc,commission deez nutz,92.68,106.98,14.30,false,true,true,Alexander Mattison,15.00
+2023,4,1,nlemieux24,Saco Rams,149.90,174.40,24.50,false,true,true,DJ Moore,23.10
+2023,4,2,ghowley,We’re on to 2024,110.54,153.14,42.60,false,true,true,Michael Wilson,23.10
+2023,4,3,desj808,Josh Reynolds 👑,87.74,103.40,15.66,false,true,true,Riley Patterson,10.00
+2023,4,4,Tookie23,Rugg’s driving school,71.52,108.02,36.50,false,true,true,Allen Lazard,13.60
+2023,4,5,SMcenelly,Lamb > Ram,77.58,98.18,20.60,false,true,true,Jordan Love,16.64
+2023,4,6,Trav563,A TEAM WITH NO NAME,105.44,155.00,49.56,false,true,true,SEA,32.00
+2023,4,7,ebbwalton,Sexual Harressment Panda,128.90,142.20,13.30,false,true,true,Romeo Doubs,14.00
+2023,4,8,JD0619,Buttery Nipple ,135.46,162.06,26.60,false,true,true,Baker Mayfield,22.94
+2023,4,9,OtisBerringer,The Jets,95.58,127.78,32.20,false,true,true,Curtis Samuel,14.70
+2023,4,10,dereksanborn7, ,93.32,95.98,2.66,false,true,true,Tua Tagovailoa,12.98
+2023,4,11,roster 11,Team 11,61.30,95.92,34.62,false,true,true,Russell Wilson,22.22
+2023,4,12,sitsuejc,commission deez nutz,88.96,130.78,41.82,false,true,true,Nico Collins,32.30
+2023,5,1,nlemieux24,Saco Rams,191.68,205.08,13.40,false,true,true,DeAndre Hopkins,18.00
+2023,5,2,ghowley,We’re on to 2024,89.66,118.66,29.00,false,true,true,Jaleel McLaughlin,16.40
+2023,5,3,desj808,Josh Reynolds 👑,52.44,106.42,53.98,false,true,true,CIN,17.00
+2023,5,4,Tookie23,Rugg’s driving school,98.58,109.98,11.40,false,true,true,Daniel Jones,7.16
+2023,5,5,SMcenelly,Lamb > Ram,104.18,113.08,8.90,false,true,true,Tutu Atwell,7.90
+2023,5,6,Trav563,A TEAM WITH NO NAME,130.74,162.22,31.48,false,true,true,Sam Howell,25.42
+2023,5,7,ebbwalton,Sexual Harressment Panda,125.06,135.06,10.00,false,true,true,AJ Dillon,13.60
+2023,5,8,JD0619,Buttery Nipple ,101.62,107.42,5.80,false,true,true,Matthew Stafford,16.88
+2023,5,9,OtisBerringer,The Jets,102.88,121.88,19.00,false,true,true,Dalton Schultz,16.00
+2023,5,10,dereksanborn7, ,111.02,124.62,13.60,false,true,true,Tua Tagovailoa,16.92
+2023,5,11,roster 11,Team 11,85.44,126.64,41.20,false,true,true,George Kittle,26.20
+2023,5,12,sitsuejc,commission deez nutz,94.36,102.56,8.20,false,true,true,Trevor Lawrence,12.70
+2023,6,1,nlemieux24,Saco Rams,78.22,108.72,30.50,false,true,true,Derek Carr,16.32
+2023,6,2,ghowley,We’re on to 2024,95.68,110.38,14.70,false,true,true,Chuba Hubbard,15.50
+2023,6,3,desj808,Josh Reynolds 👑,78.70,99.20,20.50,false,true,true,CIN,12.00
+2023,6,4,Tookie23,Rugg’s driving school,94.30,107.40,13.10,false,true,true,Kareem Hunt,14.60
+2023,6,5,SMcenelly,Lamb > Ram,99.68,121.28,21.60,false,true,true,KC,15.00
+2023,6,6,Trav563,A TEAM WITH NO NAME,115.02,124.04,9.02,false,true,true,Sam Howell,18.34
+2023,6,7,ebbwalton,Sexual Harressment Panda,119.56,119.56,0.00,true,true,true,Christian Kirk,12.40
+2023,6,8,JD0619,Buttery Nipple ,97.70,105.86,8.16,false,true,true,Matthew Stafford,13.24
+2023,6,9,OtisBerringer,The Jets,114.90,147.60,32.70,false,true,true,MIN,23.00
+2023,6,10,dereksanborn7, ,87.44,112.88,25.44,false,true,true,Tua Tagovailoa,21.48
+2023,6,11,roster 11,Team 11,65.92,81.72,15.80,false,true,true,Desmond Ridder,16.08
+2023,6,12,sitsuejc,commission deez nutz,85.04,105.74,20.70,false,true,true,Trevor Lawrence,14.74
+2023,7,1,nlemieux24,Saco Rams,113.50,138.40,24.90,false,true,true,Christian McCaffrey,20.10
+2023,7,2,ghowley,We’re on to 2024,75.00,104.70,29.70,false,true,true,Rashee Rice,14.50
+2023,7,3,desj808,Josh Reynolds 👑,56.90,76.44,19.54,false,true,true,Joshua Dobbs,15.14
+2023,7,4,Tookie23,Rugg’s driving school,51.48,82.98,31.50,false,true,true,Courtland Sutton,16.60
+2023,7,5,SMcenelly,Lamb > Ram,100.36,135.88,35.52,false,true,true,D'Onta Foreman,31.50
+2023,7,6,Trav563,A TEAM WITH NO NAME,144.78,148.38,3.60,false,true,true,Rhamondre Stevenson,11.50
+2023,7,7,ebbwalton,Sexual Harressment Panda,109.60,137.70,28.10,false,true,true,Gus Edwards,20.90
+2023,7,8,JD0619,Buttery Nipple ,110.56,129.56,19.00,false,true,true,Derek Carr,16.44
+2023,7,9,OtisBerringer,The Jets,95.90,124.40,28.50,false,true,true,Josh Downs,21.00
+2023,7,10,dereksanborn7, ,89.86,102.56,12.70,false,true,true,Kendrick Bourne,12.30
+2023,7,11,roster 11,Team 11,69.26,97.46,28.20,false,true,true,BAL,16.00
+2023,7,12,sitsuejc,commission deez nutz,120.42,132.62,12.20,false,true,true,Trevor Lawrence,18.06
+2023,8,1,nlemieux24,Saco Rams,132.98,173.02,40.04,false,true,true,DeAndre Hopkins,32.80
+2023,8,2,ghowley,We’re on to 2024,101.70,129.26,27.56,false,true,true,Dak Prescott,28.06
+2023,8,3,desj808,Josh Reynolds 👑,81.32,110.52,29.20,false,true,true,Riley Patterson,16.00
+2023,8,4,Tookie23,Rugg’s driving school,78.20,98.40,20.20,false,true,true,Kareem Hunt,13.20
+2023,8,5,SMcenelly,Lamb > Ram,132.52,155.32,22.80,false,true,true,Chris Godwin Jr.,15.30
+2023,8,6,Trav563,A TEAM WITH NO NAME,111.48,148.28,36.80,false,true,true,Sam Howell,29.98
+2023,8,7,ebbwalton,Sexual Harressment Panda,110.66,135.56,24.90,false,true,true,Gus Edwards,27.40
+2023,8,8,JD0619,Buttery Nipple ,118.16,138.72,20.56,false,true,true,Taysom Hill,21.96
+2023,8,9,OtisBerringer,The Jets,118.02,171.62,53.60,false,true,true,Rashid Shaheed,22.80
+2023,8,10,dereksanborn7, ,66.00,94.86,28.86,false,true,true,Tua Tagovailoa,20.76
+2023,8,11,roster 11,Team 11,94.18,111.96,17.78,false,true,true,David Njoku,15.70
+2023,8,12,sitsuejc,commission deez nutz,82.56,113.66,31.10,false,true,true,Javonte Williams,17.30
+2023,9,1,nlemieux24,Saco Rams,106.60,117.90,11.30,false,true,true,Mike Evans,10.70
+2023,9,2,ghowley,We’re on to 2024,125.66,177.60,51.94,false,true,true,C.J. Stroud,40.80
+2023,9,3,desj808,Josh Reynolds 👑,66.22,90.12,23.90,false,true,true,Joshua Dobbs,21.92
+2023,9,4,Tookie23,Rugg’s driving school,82.62,85.40,2.78,false,true,true,Tyson Bagent,14.80
+2023,9,5,SMcenelly,Lamb > Ram,73.14,130.22,57.08,false,true,true,Rachaad White,25.90
+2023,9,6,Trav563,A TEAM WITH NO NAME,81.08,118.20,37.12,false,true,true,Cole Kmet,20.50
+2023,9,7,ebbwalton,Sexual Harressment Panda,126.92,142.82,15.90,false,true,true,Gus Edwards,17.20
+2023,9,8,JD0619,Buttery Nipple ,132.18,146.60,14.42,false,true,true,Taysom Hill,18.62
+2023,9,9,OtisBerringer,The Jets,102.72,132.32,29.60,false,true,true,Jake Ferguson,18.60
+2023,9,10,dereksanborn7, ,68.72,72.10,3.38,false,true,true,Patrick Mahomes,14.80
+2023,9,11,roster 11,Team 11,68.62,91.42,22.80,false,true,true,BAL,16.00
+2023,9,12,sitsuejc,commission deez nutz,57.02,84.90,27.88,false,true,true,Alexander Mattison,16.30
+2023,10,1,nlemieux24,Saco Rams,143.56,162.72,19.16,false,true,true,Mike Evans,23.30
+2023,10,2,ghowley,We’re on to 2024,120.56,150.46,29.90,false,true,true,Jaylen Warren,18.00
+2023,10,3,desj808,Josh Reynolds 👑,97.12,98.22,1.10,false,true,true,Deshaun Watson,15.22
+2023,10,4,Tookie23,Rugg’s driving school,96.94,130.74,33.80,false,true,true,Brandin Cooks,27.80
+2023,10,5,SMcenelly,Lamb > Ram,130.52,152.92,22.40,false,true,true,Geno Smith,24.06
+2023,10,6,Trav563,A TEAM WITH NO NAME,86.42,110.58,24.16,false,true,true,Sam Howell,23.18
+2023,10,7,ebbwalton,Sexual Harressment Panda,94.58,101.38,6.80,false,true,true,Romeo Doubs,10.60
+2023,10,8,JD0619,Buttery Nipple ,66.50,71.60,5.10,false,true,true,James Conner,7.30
+2023,10,9,OtisBerringer,The Jets,106.58,127.48,20.90,false,true,true,Zach Wilson,12.92
+2023,10,10,dereksanborn7, ,87.54,114.24,26.70,false,true,true,Latavius Murray,13.90
+2023,10,11,roster 11,Team 11,79.10,97.22,18.12,false,true,true,Jared Goff,21.12
+2023,10,12,sitsuejc,commission deez nutz,74.70,132.80,58.10,false,true,true,Brian Robinson Jr.,24.70
+2023,11,1,nlemieux24,Saco Rams,112.66,136.26,23.60,false,true,true,Justin Fields,20.16
+2023,11,2,ghowley,We’re on to 2024,111.76,122.36,10.60,false,true,true,C.J. Stroud,15.34
+2023,11,3,desj808,Josh Reynolds 👑,100.34,105.84,5.50,false,true,true,Tucker Kraft,4.20
+2023,11,4,Tookie23,Rugg’s driving school,113.42,120.32,6.90,false,true,true,CHI,9.00
+2023,11,5,SMcenelly,Lamb > Ram,129.30,139.60,10.30,false,true,true,Jordan Love,18.88
+2023,11,6,Trav563,A TEAM WITH NO NAME,75.56,103.76,28.20,false,true,true,Sam Howell,17.74
+2023,11,7,ebbwalton,Sexual Harressment Panda,113.10,124.20,11.10,false,true,true,Romeo Doubs,13.80
+2023,11,8,JD0619,Buttery Nipple ,75.50,99.40,23.90,false,true,true,Salvon Ahmed,10.60
+2023,11,9,OtisBerringer,The Jets,66.64,106.34,39.70,false,true,true,Darius Slayton,16.20
+2023,11,10,dereksanborn7, ,80.88,113.44,32.56,false,true,true,Tommy DeVito,22.54
+2023,11,11,roster 11,Team 11,71.24,84.06,12.82,false,true,true,Russell Wilson,14.46
+2023,11,12,sitsuejc,commission deez nutz,111.08,129.38,18.30,false,true,true,Devin Singletary,18.80
+2023,12,1,nlemieux24,Saco Rams,144.44,158.14,13.70,false,true,true,DJ Moore,16.90
+2023,12,2,ghowley,We’re on to 2024,145.84,188.44,42.60,false,true,true,C.J. Stroud,30.86
+2023,12,3,desj808,Josh Reynolds 👑,76.00,89.88,13.88,false,true,true,Jake Browning,10.98
+2023,12,4,Tookie23,Rugg’s driving school,127.16,137.66,10.50,false,true,true,Calvin Ridley,19.40
+2023,12,5,SMcenelly,Lamb > Ram,92.08,124.22,32.14,false,true,true,Jordan Love,26.62
+2023,12,6,Trav563,A TEAM WITH NO NAME,106.98,131.60,24.62,false,true,true,Rashee Rice,20.70
+2023,12,7,ebbwalton,Sexual Harressment Panda,127.86,138.56,10.70,false,true,true,Christian Kirk,10.90
+2023,12,8,JD0619,Buttery Nipple ,105.30,129.70,24.40,false,true,true,Matthew Stafford,23.36
+2023,12,9,OtisBerringer,The Jets,57.84,96.54,38.70,false,true,true,Curtis Samuel,14.50
+2023,12,10,dereksanborn7, ,57.62,93.92,36.30,false,true,true,Patrick Mahomes,20.82
+2023,12,11,roster 11,Team 11,83.28,105.38,22.10,false,true,true,Russell Wilson,14.76
+2023,12,12,sitsuejc,commission deez nutz,77.86,118.96,41.10,false,true,true,Zay Flowers,20.70
+2023,13,1,nlemieux24,Saco Rams,134.02,143.10,9.08,false,true,true,Jerome Ford,12.70
+2023,13,2,ghowley,We’re on to 2024,114.86,159.66,44.80,false,true,true,Chuba Hubbard,22.40
+2023,13,3,desj808,Josh Reynolds 👑,102.86,121.56,18.70,false,true,true,Zay Jones,10.30
+2023,13,4,Tookie23,Rugg’s driving school,147.16,150.26,3.10,false,true,true,Courtland Sutton,14.70
+2023,13,5,SMcenelly,Lamb > Ram,104.38,133.36,28.98,false,true,true,Geno Smith,29.96
+2023,13,6,Trav563,A TEAM WITH NO NAME,111.88,135.68,23.80,false,true,true,Trey McBride,18.90
+2023,13,7,ebbwalton,Sexual Harressment Panda,81.36,90.06,8.70,false,true,true,Romeo Doubs,9.20
+2023,13,8,JD0619,Buttery Nipple ,150.62,176.86,26.24,false,true,true,Matthew Stafford,22.96
+2023,13,9,OtisBerringer,The Jets,76.18,92.08,15.90,false,true,true,Jake Ferguson,16.70
+2023,13,10,dereksanborn7, ,72.50,78.90,6.40,false,true,true,Patrick Mahomes,13.00
+2023,13,11,roster 11,Team 11,94.72,103.42,8.70,false,true,true,Russell Wilson,15.84
+2023,13,12,sitsuejc,commission deez nutz,128.82,158.42,29.60,false,true,true,Nico Collins,29.60
+2023,14,1,nlemieux24,Saco Rams,124.02,157.92,33.90,false,true,true,DJ Moore,23.80
+2023,14,2,ghowley,We’re on to 2024,95.54,105.04,9.50,false,true,true,Diontae Johnson,13.20
+2023,14,3,desj808,Josh Reynolds 👑,48.52,85.50,36.98,false,true,true,Jake Browning,23.70
+2023,14,4,Tookie23,Rugg’s driving school,100.12,137.12,37.00,false,true,true,Hunter Henry,17.50
+2023,14,5,SMcenelly,Lamb > Ram,144.22,155.22,11.00,false,true,true,DEN,16.00
+2023,14,6,Trav563,A TEAM WITH NO NAME,113.24,133.04,19.80,false,true,true,Odell Beckham Jr.,17.70
+2023,14,7,ebbwalton,Sexual Harressment Panda,91.52,121.82,30.30,false,true,true,Joe Flacco,19.34
+2023,14,8,JD0619,Buttery Nipple ,93.98,111.06,17.08,false,true,true,Matthew Stafford,23.66
+2023,14,9,OtisBerringer,The Jets,91.10,106.20,15.10,false,true,true,Josh Reynolds,11.90
+2023,14,10,dereksanborn7, ,90.60,115.62,25.02,false,true,true,Tommy DeVito,17.42
+2023,14,11,roster 11,Team 11,59.44,104.08,44.64,false,true,true,David Njoku,24.10
+2023,14,12,sitsuejc,commission deez nutz,77.48,113.58,36.10,false,true,true,MIN,21.00
+2023,15,1,nlemieux24,Saco Rams,133.34,173.64,40.30,false,false,false,Baker Mayfield,28.04
+2023,15,2,ghowley,We’re on to 2024,98.96,141.82,42.86,false,false,true,Aidan O'Connell,25.92
+2023,15,3,desj808,Josh Reynolds 👑,95.66,105.76,10.10,false,false,false,Tucker Kraft,13.70
+2023,15,4,Tookie23,Rugg’s driving school,88.08,115.28,27.20,false,false,true,Hunter Henry,16.10
+2023,15,5,SMcenelly,Lamb > Ram,104.46,125.44,20.98,false,false,true,Chris Godwin Jr.,20.50
+2023,15,6,Trav563,A TEAM WITH NO NAME,94.64,123.64,29.00,false,false,true,Tre Tucker,19.20
+2023,15,7,ebbwalton,Sexual Harressment Panda,116.26,143.32,27.06,false,false,false,Joe Flacco,15.86
+2023,15,8,JD0619,Buttery Nipple ,89.82,120.42,30.60,false,false,true,Derek Carr,20.32
+2023,15,9,OtisBerringer,The Jets,120.50,142.30,21.80,false,false,true,Ty Chandler,23.20
+2023,15,10,dereksanborn7, ,76.16,94.20,18.04,false,false,true,Patrick Mahomes,15.70
+2023,15,11,roster 11,Team 11,115.82,145.02,29.20,false,false,false,David Njoku,21.40
+2023,15,12,sitsuejc,commission deez nutz,75.36,128.46,53.10,false,false,true,Terry McLaurin,23.10
+2023,16,1,nlemieux24,Saco Rams,113.60,140.70,27.10,false,false,true,Baker Mayfield,19.82
+2023,16,2,ghowley,We’re on to 2024,94.52,138.82,44.30,false,false,true,Cameron Dicker,21.00
+2023,16,3,desj808,Josh Reynolds 👑,86.50,105.20,18.70,false,false,true,DJ Chark,23.80
+2023,16,4,Tookie23,Rugg’s driving school,81.58,145.84,64.26,false,false,true,Calvin Ridley,22.80
+2023,16,5,SMcenelly,Lamb > Ram,140.58,181.86,41.28,false,false,true,George Pickens,32.50
+2023,16,6,Trav563,A TEAM WITH NO NAME,75.28,92.68,17.40,false,false,true,Greg Dortch,11.50
+2023,16,7,ebbwalton,Sexual Harressment Panda,106.18,134.88,28.70,false,false,true,Joe Flacco,24.82
+2023,16,8,JD0619,Buttery Nipple ,106.04,118.06,12.02,false,false,true,Derek Carr,24.96
+2023,16,9,OtisBerringer,The Jets,93.44,121.14,27.70,false,false,true,Chris Rodriguez Jr.,19.00
+2023,16,10,dereksanborn7, ,80.20,91.50,11.30,false,false,true,TB,18.00
+2023,16,11,roster 11,Team 11,120.18,161.12,40.94,false,false,true,Russell Wilson,21.52
+2023,16,12,sitsuejc,commission deez nutz,96.94,113.44,16.50,false,false,true,Zamir White,14.50
+2023,17,1,nlemieux24,Saco Rams,95.32,174.32,79.00,false,false,true,Davante Adams,31.10
+2023,17,2,ghowley,We’re on to 2024,113.00,160.26,47.26,false,false,true,Isiah Pacheco,26.00
+2023,17,3,desj808,Josh Reynolds 👑,93.38,104.28,10.90,false,false,true,Noah Fant,8.40
+2023,17,4,Tookie23,Rugg’s driving school,58.70,91.90,33.20,false,false,false,Taylor Heinicke,15.12
+2023,17,5,SMcenelly,Lamb > Ram,150.04,162.74,12.70,false,false,true,Geno Smith,15.90
+2023,17,6,Trav563,A TEAM WITH NO NAME,139.84,165.14,25.30,false,false,false,De'Von Achane,21.70
+2023,17,7,ebbwalton,Sexual Harressment Panda,75.96,107.76,31.80,false,false,true,Joe Flacco,20.66
+2023,17,8,JD0619,Buttery Nipple ,109.28,135.42,26.14,false,false,false,Najee Harris,24.20
+2023,17,9,OtisBerringer,The Jets,80.36,104.46,24.10,false,false,false,Darius Slayton,18.60
+2023,17,10,dereksanborn7, ,65.40,99.88,34.48,false,false,true,Wan'Dale Robinson,16.90
+2023,17,11,roster 11,Team 11,46.64,93.44,46.80,false,false,true,Justice Hill,19.70
+2023,17,12,sitsuejc,commission deez nutz,91.06,125.76,34.70,false,false,true,Zay Flowers,18.10
+2022,1,1,nlemieux24,Saco Rams,101.52,126.52,25.00,false,true,true,Devin Duvernay,19.40
+2022,1,2,ghowley,Big Dak Energy,115.46,147.28,31.82,false,true,true,BUF,17.00
+2022,1,3,desj808,Griddy Griddy Bang Bang,126.40,145.50,19.10,false,true,true,Dontrell Hilliard,20.40
+2022,1,4,Tookie23,Commish cannot be trusted,87.48,99.66,12.18,false,true,true,Mitchell Trubisky,12.66
+2022,1,5,SMcenelly,Uncle Gigi,104.46,113.76,9.30,false,true,true,Jared Goff,14.50
+2022,1,6,Trav563,TaySwiftWantsGerrysSocks,139.02,164.92,25.90,false,true,true,Carson Wentz,27.72
+2022,1,7,ebbwalton,Sexual Harressment Panda,101.28,117.98,16.70,false,true,true,Christian Kirk,14.70
+2022,1,8,JD0619,Buttery Nipple ,123.22,154.72,31.50,false,true,true,James Robinson,19.40
+2022,1,9,OtisBerringer,Dark Vader,102.12,120.04,17.92,false,true,true,Ryan Tannehill,19.34
+2022,1,10,dereksanborn7,Smell My Pitts,105.10,132.20,27.10,false,true,true,PIT,28.00
+2022,1,11,nspofford,Denver Broncos,92.50,137.06,44.56,false,true,true,Jameis Winston,21.66
+2022,1,12,sitsuejc,Rizzo's Backwash,79.98,111.28,31.30,false,true,true,Robbie Chosen,18.70
+2022,2,1,nlemieux24,Saco Rams,97.08,102.48,5.40,false,true,true,Daniel Jones,13.14
+2022,2,2,ghowley,Big Dak Energy,75.70,100.30,24.60,false,true,true,BUF,19.00
+2022,2,3,desj808,Griddy Griddy Bang Bang,124.20,140.86,16.66,false,true,true,Jimmy Garoppolo,16.66
+2022,2,4,Tookie23,Commish cannot be trusted,111.00,144.66,33.66,false,true,true,Tony Pollard,17.80
+2022,2,5,SMcenelly,Uncle Gigi,75.66,105.84,30.18,false,true,true,Jared Goff,26.04
+2022,2,6,Trav563,TaySwiftWantsGerrysSocks,102.82,127.82,25.00,false,true,true,Carson Wentz,26.78
+2022,2,7,ebbwalton,Sexual Harressment Panda,120.18,152.88,32.70,false,true,true,Christian Kirk,22.80
+2022,2,8,JD0619,Buttery Nipple ,139.72,163.42,23.70,false,true,true,Nelson Agholor,20.00
+2022,2,9,OtisBerringer,Dark Vader,92.26,108.06,15.80,false,true,true,Curtis Samuel,19.40
+2022,2,10,dereksanborn7,Smell My Pitts,131.80,157.76,25.96,false,true,true,Tua Tagovailoa,38.86
+2022,2,11,nspofford,Denver Broncos,86.66,107.76,21.10,false,true,true,Jahan Dotson,15.90
+2022,2,12,sitsuejc,Rizzo's Backwash,101.88,112.28,10.40,false,true,true,Trevor Lawrence,18.50
+2022,3,1,nlemieux24,Saco Rams,90.66,108.74,18.08,false,true,true,Marquise Brown,21.00
+2022,3,2,ghowley,Big Dak Energy,97.08,122.18,25.10,false,true,true,Khalil Herbert,29.90
+2022,3,3,desj808,Griddy Griddy Bang Bang,60.64,126.80,66.16,false,true,true,Zay Jones,19.50
+2022,3,4,Tookie23,Commish cannot be trusted,82.20,139.70,57.50,false,true,true,Devin Singletary,19.60
+2022,3,5,SMcenelly,Uncle Gigi,99.28,103.44,4.16,false,true,true,Mac Jones,15.94
+2022,3,6,Trav563,TaySwiftWantsGerrysSocks,96.72,99.22,2.50,false,true,true,Marcus Mariota,13.56
+2022,3,7,ebbwalton,Sexual Harressment Panda,94.10,115.00,20.90,false,true,true,Romeo Doubs,16.30
+2022,3,8,JD0619,Buttery Nipple ,111.80,149.10,37.30,false,true,true,Jamaal Williams,23.70
+2022,3,9,OtisBerringer,Dark Vader,98.90,119.90,21.00,false,true,true,Ryan Tannehill,17.76
+2022,3,10,dereksanborn7,Smell My Pitts,82.78,83.58,0.80,false,true,true,Tua Tagovailoa,11.44
+2022,3,11,nspofford,Denver Broncos,98.10,157.92,59.82,false,true,true,DeVonta Smith,26.90
+2022,3,12,sitsuejc,Rizzo's Backwash,85.92,136.58,50.66,false,true,true,Trevor Lawrence,25.18
+2022,4,1,nlemieux24,Saco Rams,153.68,169.68,16.00,false,true,true,Daniel Jones,21.64
+2022,4,2,ghowley,Big Dak Energy,88.14,131.12,42.98,false,true,true,Clyde Edwards-Helaire,21.90
+2022,4,3,desj808,Griddy Griddy Bang Bang,115.26,118.56,3.30,false,true,true,Jimmy Garoppolo,13.86
+2022,4,4,Tookie23,Commish cannot be trusted,120.84,144.50,23.66,false,true,true,Tom Brady,24.40
+2022,4,5,SMcenelly,Uncle Gigi,110.40,133.02,22.62,false,true,true,Jared Goff,33.22
+2022,4,6,Trav563,TaySwiftWantsGerrysSocks,68.66,90.56,21.90,false,true,true,Jerry Jeudy,13.30
+2022,4,7,ebbwalton,Sexual Harressment Panda,111.32,158.82,47.50,false,true,true,Rashaad Penny,28.20
+2022,4,8,JD0619,Buttery Nipple ,95.06,122.76,27.70,false,true,true,Jamaal Williams,23.40
+2022,4,9,OtisBerringer,Dark Vader,119.08,135.18,16.10,false,true,true,Ryan Tannehill,14.38
+2022,4,10,dereksanborn7,Smell My Pitts,110.26,118.86,8.60,false,true,true,Jody Fortson,7.50
+2022,4,11,nspofford,Denver Broncos,98.28,147.68,49.40,false,true,true,Mo Alie-Cox,23.50
+2022,4,12,sitsuejc,Rizzo's Backwash,81.52,118.02,36.50,false,true,true,NYG,18.00
+2022,5,1,nlemieux24,Saco Rams,102.90,118.60,15.70,false,true,true,Justin Fields,15.02
+2022,5,2,ghowley,Big Dak Energy,93.28,129.58,36.30,false,true,true,BUF,13.00
+2022,5,3,desj808,Griddy Griddy Bang Bang,99.04,129.04,30.00,false,true,true,Joshua Kelley,15.20
+2022,5,4,Tookie23,Commish cannot be trusted,95.28,132.14,36.86,false,true,true,Tom Brady,19.74
+2022,5,5,SMcenelly,Uncle Gigi,119.62,167.12,47.50,false,true,true,Geno Smith,24.02
+2022,5,6,Trav563,TaySwiftWantsGerrysSocks,116.96,136.46,19.50,false,true,true,Carson Wentz,18.86
+2022,5,7,ebbwalton,Sexual Harressment Panda,109.96,129.26,19.30,false,true,true,Marquez Valdes-Scantling,12.00
+2022,5,8,JD0619,Buttery Nipple ,110.26,168.24,57.98,false,true,true,Taysom Hill,33.08
+2022,5,9,OtisBerringer,Dark Vader,127.78,153.78,26.00,false,true,true,Tyler Lockett,24.90
+2022,5,10,dereksanborn7,Smell My Pitts,93.38,94.58,1.20,false,true,true,A.J. Green,3.50
+2022,5,11,nspofford,Denver Broncos,88.86,107.30,18.44,false,true,true,Zach Wilson,14.60
+2022,5,12,sitsuejc,Rizzo's Backwash,80.24,94.44,14.20,false,true,true,Kirk Cousins,22.24
+2022,6,1,nlemieux24,Saco Rams,130.48,156.70,26.22,false,true,true,Michael Pittman Jr.,19.90
+2022,6,2,ghowley,Big Dak Energy,68.08,123.06,54.98,false,true,true,Matt Ryan,27.16
+2022,6,3,desj808,Griddy Griddy Bang Bang,81.84,95.54,13.70,false,true,true,Noah Fant,7.50
+2022,6,4,Tookie23,Commish cannot be trusted,84.24,107.92,23.68,false,true,true,Hunter Henry,14.10
+2022,6,5,SMcenelly,Uncle Gigi,111.58,137.18,25.60,false,true,true,JuJu Smith-Schuster,19.80
+2022,6,6,Trav563,TaySwiftWantsGerrysSocks,112.50,138.66,26.16,false,true,true,Marcus Mariota,24.16
+2022,6,7,ebbwalton,Sexual Harressment Panda,99.16,101.76,2.60,false,true,true,Donovan Peoples-Jones,9.60
+2022,6,8,JD0619,Buttery Nipple ,102.20,115.70,13.50,false,true,true,Matthew Stafford,11.82
+2022,6,9,OtisBerringer,Dark Vader,102.10,111.80,9.70,false,true,true,Tee Higgins,7.70
+2022,6,10,dereksanborn7,Smell My Pitts,99.02,108.52,9.50,false,true,true,Wan'Dale Robinson,11.20
+2022,6,11,nspofford,Denver Broncos,93.02,107.92,14.90,false,true,true,Allen Robinson,14.80
+2022,6,12,sitsuejc,Rizzo's Backwash,53.20,100.60,47.40,false,true,true,Trevor Lawrence,24.90
+2022,7,1,nlemieux24,Saco Rams,124.96,161.98,37.02,false,true,true,Daniel Jones,28.78
+2022,7,2,ghowley,Big Dak Energy,82.98,93.38,10.40,false,true,true,Khalil Herbert,15.20
+2022,7,3,desj808,Griddy Griddy Bang Bang,84.82,106.42,21.60,false,true,true,Keaontay Ingram,10.70
+2022,7,4,Tookie23,Commish cannot be trusted,98.30,125.46,27.16,false,true,true,Raheem Mostert,18.90
+2022,7,5,SMcenelly,Uncle Gigi,92.22,137.52,45.30,false,true,true,JuJu Smith-Schuster,21.90
+2022,7,6,Trav563,TaySwiftWantsGerrysSocks,119.30,125.66,6.36,false,true,true,Parris Campbell,18.00
+2022,7,7,ebbwalton,Sexual Harressment Panda,110.40,134.00,23.60,false,true,true,Gus Edwards,18.60
+2022,7,8,JD0619,Buttery Nipple ,58.14,77.96,19.82,false,true,true,Taysom Hill,9.62
+2022,7,9,OtisBerringer,Dark Vader,139.84,151.14,11.30,false,true,true,Juwan Johnson,17.70
+2022,7,10,dereksanborn7,Smell My Pitts,93.62,104.92,11.30,false,true,true,Tua Tagovailoa,15.94
+2022,7,11,nspofford,Denver Broncos,66.82,75.84,9.02,false,true,true,Zach Wilson,7.24
+2022,7,12,sitsuejc,Rizzo's Backwash,70.94,123.10,52.16,false,true,true,Mecole Hardman Jr.,26.00
+2022,8,1,nlemieux24,Saco Rams,142.30,158.30,16.00,false,true,true,Justin Fields,26.04
+2022,8,2,ghowley,Big Dak Energy,83.20,113.44,30.24,false,true,true,Tyler Conklin,22.90
+2022,8,3,desj808,Griddy Griddy Bang Bang,119.80,127.42,7.62,false,true,true,Jacoby Brissett,19.32
+2022,8,4,Tookie23,Commish cannot be trusted,110.10,141.90,31.80,false,true,true,Aaron Jones Sr.,17.70
+2022,8,5,SMcenelly,Uncle Gigi,119.18,141.18,22.00,false,true,true,Jakobi Meyers,16.50
+2022,8,6,Trav563,TaySwiftWantsGerrysSocks,113.02,134.72,21.70,false,true,true,Marcus Mariota,22.42
+2022,8,7,ebbwalton,Sexual Harressment Panda,95.02,127.32,32.30,false,true,true,Isaiah Likely,16.70
+2022,8,8,JD0619,Buttery Nipple ,144.00,146.98,2.98,false,true,true,Taylor Heinicke,22.06
+2022,8,9,OtisBerringer,Dark Vader,165.48,178.08,12.60,false,true,true,Rondale Moore,19.90
+2022,8,10,dereksanborn7,Smell My Pitts,108.58,121.98,13.40,false,true,true,Kenyan Drake,14.70
+2022,8,11,nspofford,Denver Broncos,100.24,123.24,23.00,false,true,true,Zach Wilson,16.40
+2022,8,12,sitsuejc,Rizzo's Backwash,60.34,98.38,38.04,false,true,true,Kirk Cousins,22.48
+2022,9,1,nlemieux24,Saco Rams,82.20,119.82,37.62,false,true,true,Justin Fields,42.72
+2022,9,2,ghowley,Big Dak Energy,31.90,40.10,8.20,false,true,true,James Mitchell,7.80
+2022,9,3,desj808,Griddy Griddy Bang Bang,86.62,98.72,12.10,false,true,true,Noah Fant,12.10
+2022,9,4,Tookie23,Commish cannot be trusted,68.44,80.70,12.26,false,true,true,Tom Brady,15.20
+2022,9,5,SMcenelly,Uncle Gigi,82.60,103.90,21.30,false,true,true,Geno Smith,20.80
+2022,9,6,Trav563,TaySwiftWantsGerrysSocks,129.32,147.22,17.90,false,true,true,Cole Kmet,19.50
+2022,9,7,ebbwalton,Sexual Harressment Panda,121.80,126.30,4.50,false,true,true,Isaiah Likely,8.90
+2022,9,8,JD0619,Buttery Nipple ,85.52,101.02,15.50,false,true,true,Joshua Palmer,14.60
+2022,9,9,OtisBerringer,Dark Vader,140.14,158.84,18.70,false,true,true,Curtis Samuel,15.60
+2022,9,10,dereksanborn7,Smell My Pitts,147.14,158.54,11.40,false,true,true,Tua Tagovailoa,23.08
+2022,9,11,nspofford,Denver Broncos,81.18,87.18,6.00,false,true,true,Ryan Succop,11.00
+2022,9,12,sitsuejc,Rizzo's Backwash,82.00,93.96,11.96,false,true,true,Derek Carr,18.36
+2022,10,1,nlemieux24,Saco Rams,102.68,118.28,15.60,false,true,true,Daniel Jones,18.28
+2022,10,2,ghowley,Big Dak Energy,74.20,90.20,16.00,false,true,true,Kenny Pickett,19.06
+2022,10,3,desj808,Griddy Griddy Bang Bang,112.10,114.68,2.58,false,true,true,Jacoby Brissett,16.48
+2022,10,4,Tookie23,Commish cannot be trusted,96.12,105.26,9.14,false,true,true,Aaron Rodgers,18.36
+2022,10,5,SMcenelly,Uncle Gigi,122.54,157.30,34.76,false,true,true,Jeff Wilson,21.30
+2022,10,6,Trav563,TaySwiftWantsGerrysSocks,105.74,157.84,52.10,false,true,true,Nick Westbrook-Ikhine,26.40
+2022,10,7,ebbwalton,Sexual Harressment Panda,99.90,115.80,15.90,false,true,true,Marquez Valdes-Scantling,13.50
+2022,10,8,JD0619,Buttery Nipple ,81.70,129.40,47.70,false,true,true,Christian Watson,30.70
+2022,10,9,OtisBerringer,Dark Vader,71.46,113.00,41.54,false,true,true,Ryan Tannehill,19.40
+2022,10,10,dereksanborn7,Smell My Pitts,97.04,119.14,22.10,false,true,true,Tua Tagovailoa,23.40
+2022,10,11,nspofford,Denver Broncos,75.04,82.74,7.70,false,true,true,Laviska Shenault,13.40
+2022,10,12,sitsuejc,Rizzo's Backwash,74.48,89.96,15.48,false,true,true,Trevor Lawrence,20.96
+2022,11,1,nlemieux24,Saco Rams,119.62,146.84,27.22,false,true,true,Najee Harris,25.60
+2022,11,2,ghowley,Big Dak Energy,76.54,84.74,8.20,false,true,true,Kenny Pickett,16.00
+2022,11,3,desj808,Griddy Griddy Bang Bang,79.52,106.12,26.60,false,true,true,Jacoby Brissett,24.86
+2022,11,4,Tookie23,Commish cannot be trusted,101.38,131.38,30.00,false,true,true,Tony Pollard,33.90
+2022,11,5,SMcenelly,Uncle Gigi,82.10,93.40,11.30,false,true,true,Tutu Atwell,12.70
+2022,11,6,Trav563,TaySwiftWantsGerrysSocks,132.56,145.84,13.28,false,true,true,Marcus Mariota,17.74
+2022,11,7,ebbwalton,Sexual Harressment Panda,73.08,92.98,19.90,false,true,true,Donovan Peoples-Jones,14.60
+2022,11,8,JD0619,Buttery Nipple ,123.20,153.00,29.80,false,true,true,Joshua Palmer,26.60
+2022,11,9,OtisBerringer,Dark Vader,103.96,126.66,22.70,false,true,true,Andy Dalton,22.20
+2022,11,10,dereksanborn7,Smell My Pitts,78.96,119.66,40.70,false,true,true,Austin Hooper,17.60
+2022,11,11,nspofford,Denver Broncos,105.40,139.98,34.58,false,true,true,Amari Cooper,27.30
+2022,11,12,sitsuejc,Rizzo's Backwash,43.20,76.88,33.68,false,true,true,Derek Carr,20.28
+2022,12,1,nlemieux24,Saco Rams,120.34,147.14,26.80,false,true,true,DJ Moore,18.30
+2022,12,2,ghowley,Big Dak Energy,60.44,77.04,16.60,false,true,true,Kenny Pickett,12.16
+2022,12,3,desj808,Griddy Griddy Bang Bang,105.52,115.52,10.00,false,true,true,Zay Jones,22.00
+2022,12,4,Tookie23,Commish cannot be trusted,90.34,119.44,29.10,false,true,true,Hunter Henry,13.80
+2022,12,5,SMcenelly,Uncle Gigi,122.46,124.46,2.00,false,true,true,Mac Jones,22.28
+2022,12,6,Trav563,TaySwiftWantsGerrysSocks,115.86,133.56,17.70,false,true,true,Samaje Perine,17.30
+2022,12,7,ebbwalton,Sexual Harressment Panda,137.22,154.22,17.00,false,true,true,AJ Dillon,16.30
+2022,12,8,JD0619,Buttery Nipple ,113.32,140.32,27.00,false,true,true,Christian Watson,19.00
+2022,12,9,OtisBerringer,Dark Vader,136.90,146.00,9.10,false,true,true,Ryan Tannehill,12.54
+2022,12,10,dereksanborn7,Smell My Pitts,108.40,119.50,11.10,false,true,true,Tua Tagovailoa,15.96
+2022,12,11,nspofford,Denver Broncos,59.90,85.20,25.30,false,true,true,Sam Darnold,15.86
+2022,12,12,sitsuejc,Rizzo's Backwash,90.06,117.64,27.58,false,true,true,Trevor Lawrence,22.94
+2022,13,1,nlemieux24,Saco Rams,98.06,124.46,26.40,false,true,true,Ezekiel Elliott,16.60
+2022,13,2,ghowley,Big Dak Energy,69.10,106.30,37.20,false,true,true,Alec Pierce,16.60
+2022,13,3,desj808,Griddy Griddy Bang Bang,134.04,154.68,20.64,false,true,true,Tyler Huntley,15.58
+2022,13,4,Tookie23,Commish cannot be trusted,102.94,122.04,19.10,false,true,true,Michael Gallup,16.30
+2022,13,5,SMcenelly,Uncle Gigi,103.30,115.28,11.98,false,true,true,Geno Smith,21.98
+2022,13,6,Trav563,TaySwiftWantsGerrysSocks,100.54,137.88,37.34,false,true,true,D'Andre Swift,19.10
+2022,13,7,ebbwalton,Sexual Harressment Panda,81.92,126.12,44.20,false,true,true,AJ Dillon,19.40
+2022,13,8,JD0619,Buttery Nipple ,124.50,170.44,45.94,false,true,true,Christian Watson,22.90
+2022,13,9,OtisBerringer,Dark Vader,115.74,155.24,39.50,false,true,true,Michael Badgley,19.00
+2022,13,10,dereksanborn7,Smell My Pitts,71.42,78.62,7.20,false,true,true,Tua Tagovailoa,12.80
+2022,13,11,nspofford,Denver Broncos,84.80,109.20,24.40,false,true,true,Jahan Dotson,13.90
+2022,13,12,sitsuejc,Rizzo's Backwash,64.22,115.06,50.84,false,true,true,DK Metcalf,22.70
+2022,14,1,nlemieux24,Saco Rams,120.56,145.66,25.10,false,true,true,Daniel Jones,19.36
+2022,14,2,ghowley,Big Dak Energy,93.76,111.66,17.90,false,true,true,Chig Okonkwo,15.50
+2022,14,3,desj808,Griddy Griddy Bang Bang,109.34,124.34,15.00,false,true,true,DJ Chark,18.40
+2022,14,4,Tookie23,Commish cannot be trusted,67.12,83.02,15.90,false,true,true,SF,12.00
+2022,14,5,SMcenelly,Uncle Gigi,94.78,144.26,49.48,false,true,true,NE,21.00
+2022,14,6,Trav563,TaySwiftWantsGerrysSocks,72.80,110.80,38.00,false,true,true,Jerry Jeudy,29.30
+2022,14,7,ebbwalton,Sexual Harressment Panda,102.58,117.98,15.40,false,true,true,Donovan Peoples-Jones,15.40
+2022,14,8,JD0619,Buttery Nipple ,98.78,100.88,2.10,false,true,true,Joshua Palmer,7.30
+2022,14,9,OtisBerringer,Dark Vader,101.76,107.26,5.50,false,true,true,Ryan Tannehill,16.76
+2022,14,10,dereksanborn7,Smell My Pitts,114.18,135.68,21.50,false,true,true,Marquise Goodwin,17.80
+2022,14,11,nspofford,Denver Broncos,66.90,119.20,52.30,false,true,true,Russell Wilson,25.58
+2022,14,12,sitsuejc,Rizzo's Backwash,37.10,83.92,46.82,false,true,true,Trevor Lawrence,33.42
+2022,15,1,nlemieux24,Saco Rams,107.28,131.78,24.50,false,false,false,Latavius Murray,20.70
+2022,15,2,ghowley,Big Dak Energy,78.14,98.14,20.00,false,false,false,Jaylen Warren,11.40
+2022,15,3,desj808,Griddy Griddy Bang Bang,84.14,135.74,51.60,false,false,true,Zay Jones,31.90
+2022,15,4,Tookie23,Commish cannot be trusted,48.96,97.38,48.42,false,false,true,Aaron Jones Sr.,17.60
+2022,15,5,SMcenelly,Uncle Gigi,114.52,138.22,23.70,false,false,true,Dawson Knox,18.80
+2022,15,6,Trav563,TaySwiftWantsGerrysSocks,84.08,112.38,28.30,false,false,false,Rhamondre Stevenson,23.80
+2022,15,7,ebbwalton,Sexual Harressment Panda,127.76,160.06,32.30,false,false,true,Tyler Allgeier,22.10
+2022,15,8,JD0619,Buttery Nipple ,111.80,151.70,39.90,false,false,true,IND,24.00
+2022,15,9,OtisBerringer,Dark Vader,106.00,150.30,44.30,false,false,true,Juwan Johnson,20.70
+2022,15,10,dereksanborn7,Smell My Pitts,75.44,89.64,14.20,false,false,true,Tua Tagovailoa,17.06
+2022,15,11,nspofford,Denver Broncos,130.28,163.28,33.00,false,false,true,K.J. Osborn,26.70
+2022,15,12,sitsuejc,Rizzo's Backwash,106.70,132.40,25.70,false,false,false,Trevor Lawrence,25.82
+2022,16,1,nlemieux24,Saco Rams,124.36,151.90,27.54,false,false,true,Gardner Minshew II,20.70
+2022,16,2,ghowley,Big Dak Energy,92.78,124.68,31.90,false,false,true,Tyler Higbee,25.90
+2022,16,3,desj808,Griddy Griddy Bang Bang,89.90,112.00,22.10,false,false,true,Baker Mayfield,16.40
+2022,16,4,Tookie23,Commish cannot be trusted,76.64,106.42,29.78,false,false,true,Devin Singletary,19.50
+2022,16,5,SMcenelly,Uncle Gigi,118.40,174.10,55.70,false,false,true,D'Onta Foreman,22.50
+2022,16,6,Trav563,TaySwiftWantsGerrysSocks,64.76,93.96,29.20,false,false,true,Jerry Jeudy,14.70
+2022,16,7,ebbwalton,Sexual Harressment Panda,118.48,134.98,16.50,false,false,true,James Cook III,17.30
+2022,16,8,JD0619,Buttery Nipple ,3.60,109.94,106.34,false,false,true,James Conner,21.50
+2022,16,9,OtisBerringer,Dark Vader,16.60,125.10,108.50,false,false,true,Joe Burrow,23.50
+2022,16,10,dereksanborn7,Smell My Pitts,78.86,111.06,32.20,false,false,true,Kendrick Bourne,21.90
+2022,16,11,nspofford,Denver Broncos,120.90,146.90,26.00,false,false,true,Sam Darnold,21.90
+2022,16,12,sitsuejc,Rizzo's Backwash,126.26,136.36,10.10,false,false,true,Trevor Lawrence,17.26
+2022,17,1,nlemieux24,Saco Rams,119.40,170.38,50.98,false,false,true,Daniel Jones,36.18
+2022,17,2,ghowley,Big Dak Energy,61.78,82.38,20.60,false,false,true,Jaylen Warren,11.30
+2022,17,3,desj808,Griddy Griddy Bang Bang,84.86,94.16,9.30,false,false,false,Tyler Huntley,9.60
+2022,17,4,Tookie23,Commish cannot be trusted,78.16,122.48,44.32,false,false,true,Tom Brady,37.68
+2022,17,5,SMcenelly,Uncle Gigi,82.78,109.98,27.20,false,false,true,Mac Jones,16.26
+2022,17,6,Trav563,TaySwiftWantsGerrysSocks,138.26,162.26,24.00,false,false,true,SEA,18.00
+2022,17,7,ebbwalton,Sexual Harressment Panda,108.32,116.72,8.40,false,false,true,Robert Woods,12.40
+2022,17,8,JD0619,Buttery Nipple ,3.60,146.66,143.06,false,false,false,Mike Evans,43.70
+2022,17,9,OtisBerringer,Dark Vader,75.88,100.28,24.40,false,false,false,CLE,13.00
+2022,17,10,dereksanborn7,Smell My Pitts,90.72,115.02,24.30,false,false,true,Richie James,17.10
+2022,17,11,nspofford,Denver Broncos,115.80,125.98,10.18,false,false,false,Russell Wilson,22.58
+2022,17,12,sitsuejc,Rizzo's Backwash,75.10,108.48,33.38,false,false,true,GB,24.00
+2021,1,1,nlemieux24,Better than Goodell,113.98,133.28,19.30,false,true,true,Juwan Johnson,15.60
+2021,1,2,ghowley,Bikini Bottom FC,140.82,172.72,31.90,false,true,true,Rob Gronkowski,25.00
+2021,1,3,desj808,Koo D'Etat,88.88,123.58,34.70,false,true,true,Daniel Jones,20.38
+2021,1,4,Tookie23,Nice Rack,94.06,126.96,32.90,false,true,true,Marquise Brown,16.40
+2021,1,5,SMcenelly,McKitty,63.32,91.34,28.02,false,true,true,Jarvis Landry,16.90
+2021,1,6,Trav563,I WantTookie'sSocks Again,82.00,124.82,42.82,false,true,true,Jared Goff,28.92
+2021,1,7,ebbwalton,Skywalker Daycare ,120.60,141.40,20.80,false,true,true,Corey Davis,24.20
+2021,1,8,JD0619,Turd Ferguson,97.24,142.96,45.72,false,true,true,Jalen Hurts,27.76
+2021,1,9,OtisBerringer,Bran the Broken,122.96,135.06,12.10,false,true,true,Joe Burrow,18.64
+2021,1,10,dereksanborn7,Show Me Mercy,110.98,160.08,49.10,false,true,true,Mike Williams,18.20
+2021,1,11,nspofford,Best Worst 2,147.46,155.12,7.66,false,true,true,Jameis Winston,29.62
+2021,1,12,dylanrich7,dylanrich7,107.28,126.70,19.42,false,true,true,Derek Carr,23.00
+2021,2,1,nlemieux24,Better than Goodell,109.98,127.80,17.82,false,true,true,Tyrod Taylor,16.50
+2021,2,2,ghowley,Bikini Bottom FC,112.68,139.30,26.62,false,true,true,J.D. McKissic,17.80
+2021,2,3,desj808,Koo D'Etat,122.62,152.26,29.64,false,true,true,Daniel Jones,29.46
+2021,2,4,Tookie23,Nice Rack,122.04,143.74,21.70,false,true,true,Marquise Brown,20.30
+2021,2,5,SMcenelly,McKitty,120.50,125.30,4.80,false,true,true,Justin Herbert,14.72
+2021,2,6,Trav563,I WantTookie'sSocks Again,116.36,121.76,5.40,false,true,true,Teddy Bridgewater,21.22
+2021,2,7,ebbwalton,Skywalker Daycare ,96.26,105.56,9.30,false,true,true,Quintez Cephus,14.30
+2021,2,8,JD0619,Turd Ferguson,107.10,107.10,0.00,true,true,true,Matthew Stafford,17.22
+2021,2,9,OtisBerringer,Bran the Broken,139.90,173.40,33.50,false,true,true,Tony Pollard,21.50
+2021,2,10,dereksanborn7,Show Me Mercy,108.72,145.92,37.20,false,true,true,Henry Ruggs,20.00
+2021,2,11,nspofford,Best Worst 2,66.92,112.82,45.90,false,true,true,Cordarrelle Patterson,20.40
+2021,2,12,dylanrich7,dylanrich7,100.62,162.46,61.84,false,true,true,Kirk Cousins,24.26
+2021,3,1,nlemieux24,Better than Goodell,115.08,138.98,23.90,false,true,true,Emmanuel Sanders,23.90
+2021,3,2,ghowley,Bikini Bottom FC,95.32,138.32,43.00,false,true,true,Ja'Marr Chase,20.50
+2021,3,3,desj808,Koo D'Etat,91.34,109.64,18.30,false,true,true,Baker Mayfield,16.94
+2021,3,4,Tookie23,Nice Rack,93.98,116.88,22.90,false,true,true,Nyheim Miller-Hines,16.40
+2021,3,5,SMcenelly,McKitty,92.74,124.64,31.90,false,true,true,Justin Herbert,30.84
+2021,3,6,Trav563,I WantTookie'sSocks Again,141.58,151.78,10.20,false,true,true,Tim Patrick,12.30
+2021,3,7,ebbwalton,Skywalker Daycare ,150.92,163.22,12.30,false,true,true,Hunter Renfrow,16.20
+2021,3,8,JD0619,Turd Ferguson,109.94,148.52,38.58,false,true,true,Matthew Stafford,29.52
+2021,3,9,OtisBerringer,Bran the Broken,106.34,122.94,16.60,false,true,true,Joe Burrow,17.58
+2021,3,10,dereksanborn7,Show Me Mercy,131.00,148.70,17.70,false,true,true,Kendrick Bourne,18.60
+2021,3,11,nspofford,Best Worst 2,77.02,95.56,18.54,false,true,true,Sam Darnold,23.26
+2021,3,12,dylanrich7,dylanrich7,68.16,109.92,41.76,false,true,true,Kirk Cousins,24.12
+2021,4,1,nlemieux24,Better than Goodell,162.60,175.12,12.52,false,true,true,Matt Ryan,29.02
+2021,4,2,ghowley,Bikini Bottom FC,117.42,136.42,19.00,false,true,true,Trey Lance,20.38
+2021,4,3,desj808,Koo D'Etat,76.60,116.88,40.28,false,true,true,Daniel Jones,26.78
+2021,4,4,Tookie23,Nice Rack,72.96,96.96,24.00,false,true,true,Marquise Brown,17.10
+2021,4,5,SMcenelly,McKitty,96.28,120.82,24.54,false,true,true,Aaron Rodgers,24.12
+2021,4,6,Trav563,I WantTookie'sSocks Again,116.34,124.24,7.90,false,true,true,Jared Goff,13.76
+2021,4,7,ebbwalton,Skywalker Daycare ,96.72,120.22,23.50,false,true,true,Corey Davis,18.10
+2021,4,8,JD0619,Turd Ferguson,117.10,161.54,44.44,false,true,true,Jalen Hurts,27.18
+2021,4,9,OtisBerringer,Bran the Broken,96.12,119.22,23.10,false,true,true,Joe Burrow,22.32
+2021,4,10,dereksanborn7,Show Me Mercy,96.72,141.42,44.70,false,true,true,DeVante Parker,15.70
+2021,4,11,nspofford,Best Worst 2,120.16,142.04,21.88,false,true,true,Sam Darnold,31.54
+2021,4,12,dylanrich7,dylanrich7,98.72,120.86,22.14,false,true,true,Trevor Lawrence,17.76
+2021,5,1,nlemieux24,Better than Goodell,118.78,157.08,38.30,false,true,true,Matt Ryan,21.58
+2021,5,2,ghowley,Bikini Bottom FC,133.28,172.98,39.70,false,true,true,Myles Gaskin,26.90
+2021,5,3,desj808,Koo D'Etat,86.42,125.90,39.48,false,true,true,Baker Mayfield,22.00
+2021,5,4,Tookie23,Nice Rack,141.54,149.74,8.20,false,true,true,Tommy Tremble,8.20
+2021,5,5,SMcenelly,McKitty,82.86,132.22,49.36,false,true,true,Justin Herbert,42.82
+2021,5,6,Trav563,I WantTookie'sSocks Again,158.18,168.78,10.60,false,true,true,Teddy Bridgewater,18.62
+2021,5,7,ebbwalton,Skywalker Daycare ,125.40,152.60,27.20,false,true,true,Robert Woods,21.00
+2021,5,8,JD0619,Turd Ferguson,130.60,170.02,39.42,false,true,true,Antonio Brown,27.90
+2021,5,9,OtisBerringer,Bran the Broken,126.56,142.58,16.02,false,true,true,Carson Wentz,21.58
+2021,5,10,dereksanborn7,Show Me Mercy,121.58,151.78,30.20,false,true,true,Kadarius Toney,24.60
+2021,5,11,nspofford,Best Worst 2,100.58,139.16,38.58,false,true,true,Jameis Winston,24.76
+2021,5,12,dylanrich7,dylanrich7,70.80,125.92,55.12,false,true,true,Alexander Mattison,21.80
+2021,6,1,nlemieux24,Better than Goodell,117.78,148.04,30.26,false,true,true,Khalil Herbert,18.20
+2021,6,2,ghowley,Bikini Bottom FC,83.30,109.70,26.40,false,true,true,LV,14.00
+2021,6,3,desj808,Koo D'Etat,117.68,135.86,18.18,false,true,true,Chris Evans,14.20
+2021,6,4,Tookie23,Nice Rack,84.88,96.38,11.50,false,true,true,Justin Fields,13.26
+2021,6,5,SMcenelly,McKitty,87.60,107.70,20.10,false,true,true,Aaron Rodgers,23.70
+2021,6,6,Trav563,I WantTookie'sSocks Again,109.38,119.86,10.48,false,true,true,Teddy Bridgewater,17.26
+2021,6,7,ebbwalton,Skywalker Daycare ,94.52,146.52,52.00,false,true,true,Adam Thielen,24.30
+2021,6,8,JD0619,Turd Ferguson,128.44,146.30,17.86,false,true,true,Jalen Hurts,25.00
+2021,6,9,OtisBerringer,Bran the Broken,113.66,130.44,16.78,false,true,true,Joe Burrow,22.84
+2021,6,10,dereksanborn7,Show Me Mercy,105.28,163.78,58.50,false,true,true,Joe Mixon,22.80
+2021,6,11,nspofford,Best Worst 2,103.38,124.98,21.60,false,true,true,K.J. Osborn,16.80
+2021,6,12,dylanrich7,dylanrich7,111.52,141.22,29.70,false,true,true,Derek Carr,20.54
+2021,7,1,nlemieux24,Better than Goodell,71.70,125.00,53.30,false,true,true,D'Ernest Johnson,23.80
+2021,7,2,ghowley,Bikini Bottom FC,115.78,136.78,21.00,false,true,true,Myles Gaskin,15.70
+2021,7,3,desj808,Koo D'Etat,79.42,82.92,3.50,false,true,true,Ricky Seals-Jones,8.10
+2021,7,4,Tookie23,Nice Rack,98.74,108.44,9.70,false,true,true,Allen Lazard,14.50
+2021,7,5,SMcenelly,McKitty,99.56,115.46,15.90,false,true,true,Mac Jones,22.18
+2021,7,6,Trav563,I WantTookie'sSocks Again,146.18,146.18,0.00,true,true,true,Teddy Bridgewater,13.78
+2021,7,7,ebbwalton,Skywalker Daycare ,67.40,85.60,18.20,false,true,true,Christian Kirk,13.00
+2021,7,8,JD0619,Turd Ferguson,128.26,133.56,5.30,false,true,true,Jalen Hurts,22.54
+2021,7,9,OtisBerringer,Bran the Broken,99.44,124.14,24.70,false,true,true,Joe Burrow,26.64
+2021,7,10,dereksanborn7,Show Me Mercy,97.64,152.44,54.80,false,true,true,Tua Tagovailoa,26.54
+2021,7,11,nspofford,Best Worst 2,78.48,108.18,29.70,false,true,true,C.J. Uzomah,22.60
+2021,7,12,dylanrich7,dylanrich7,116.02,142.32,26.30,false,true,true,Graham Gano,15.00
+2021,8,1,nlemieux24,Better than Goodell,132.80,157.70,24.90,false,true,true,Tyler Lockett,20.20
+2021,8,2,ghowley,Bikini Bottom FC,97.04,115.76,18.72,false,true,true,Cedrick Wilson,17.30
+2021,8,3,desj808,Koo D'Etat,110.68,131.18,20.50,false,true,true,Jimmy Garoppolo,27.28
+2021,8,4,Tookie23,Nice Rack,62.70,86.60,23.90,false,true,true,Justin Fields,23.30
+2021,8,5,SMcenelly,McKitty,125.62,129.42,3.80,false,true,true,Ty Johnson,17.10
+2021,8,6,Trav563,I WantTookie'sSocks Again,90.02,118.12,28.10,false,true,true,Michael Carter,27.70
+2021,8,7,ebbwalton,Skywalker Daycare ,118.86,139.56,20.70,false,true,true,Boston Scott,18.00
+2021,8,8,JD0619,Turd Ferguson,107.10,123.60,16.50,false,true,true,Jordan Howard,17.70
+2021,8,9,OtisBerringer,Bran the Broken,94.06,108.16,14.10,false,true,true,Joe Burrow,19.26
+2021,8,10,dereksanborn7,Show Me Mercy,96.60,136.30,39.70,false,true,true,Elijah Mitchell,19.70
+2021,8,11,nspofford,Best Worst 2,71.04,98.96,27.92,false,true,true,Melvin Gordon,16.70
+2021,8,12,dylanrich7,dylanrich7,65.00,78.46,13.46,false,true,true,Trevor Lawrence,12.62
+2021,9,1,nlemieux24,Better than Goodell,107.52,133.42,25.90,false,true,true,Matt Ryan,28.52
+2021,9,2,ghowley,Bikini Bottom FC,99.28,110.78,11.50,false,true,true,Ben Roethlisberger,16.20
+2021,9,3,desj808,Koo D'Etat,65.10,93.64,28.54,false,true,true,Jimmy Garoppolo,19.34
+2021,9,4,Tookie23,Nice Rack,95.74,127.94,32.20,false,true,true,Nyheim Miller-Hines,18.80
+2021,9,5,SMcenelly,McKitty,100.24,107.74,7.50,false,true,true,TEN,16.00
+2021,9,6,Trav563,I WantTookie'sSocks Again,116.24,133.64,17.40,false,true,true,Teddy Bridgewater,21.86
+2021,9,7,ebbwalton,Skywalker Daycare ,97.36,105.36,8.00,false,true,true,Donovan Peoples-Jones,15.60
+2021,9,8,JD0619,Turd Ferguson,104.06,125.18,21.12,false,true,true,Jalen Hurts,16.68
+2021,9,9,OtisBerringer,Bran the Broken,70.08,87.88,17.80,false,true,true,Carson Wentz,24.18
+2021,9,10,dereksanborn7,Show Me Mercy,94.44,108.94,14.50,false,true,true,Brandon Aiyuk,14.70
+2021,9,11,nspofford,Best Worst 2,62.28,113.90,51.62,false,true,true,Darnell Mooney,19.10
+2021,9,12,dylanrich7,dylanrich7,73.98,120.38,46.40,false,true,true,Elijah Moore,23.90
+2021,10,1,nlemieux24,Better than Goodell,96.82,129.22,32.40,false,true,true,Antonio Gibson,20.80
+2021,10,2,ghowley,Bikini Bottom FC,98.44,125.84,27.40,false,true,true,Tyler Conklin,14.60
+2021,10,3,desj808,Koo D'Etat,88.62,109.18,20.56,false,true,true,Jimmy Garoppolo,15.38
+2021,10,4,Tookie23,Nice Rack,72.70,83.40,10.70,false,true,true,CAR,13.00
+2021,10,5,SMcenelly,McKitty,93.30,108.62,15.32,false,true,true,Mac Jones,19.92
+2021,10,6,Trav563,I WantTookie'sSocks Again,77.82,92.32,14.50,false,true,true,Michael Carter,16.20
+2021,10,7,ebbwalton,Skywalker Daycare ,105.80,122.20,16.40,false,true,true,Boston Scott,11.50
+2021,10,8,JD0619,Turd Ferguson,116.62,137.92,21.30,false,true,true,Jalen Hurts,17.62
+2021,10,9,OtisBerringer,Bran the Broken,77.10,81.60,4.50,false,true,true,Larry Rountree,7.00
+2021,10,10,dereksanborn7,Show Me Mercy,116.04,162.94,46.90,false,true,true,Darrel Williams,24.90
+2021,10,11,nspofford,Best Worst 2,91.34,124.64,33.30,false,true,true,Mark Ingram,18.80
+2021,10,12,dylanrich7,dylanrich7,89.26,126.14,36.88,false,true,true,Rhamondre Stevenson,25.40
+2021,11,1,nlemieux24,Better than Goodell,124.44,138.54,14.10,false,true,true,Evan McPherson,20.00
+2021,11,2,ghowley,Bikini Bottom FC,81.34,128.60,47.26,false,true,true,Aaron Rodgers,32.50
+2021,11,3,desj808,Koo D'Etat,95.64,99.54,3.90,false,true,true,DAL,9.00
+2021,11,4,Tookie23,Nice Rack,89.98,111.88,21.90,false,true,true,Clyde Edwards-Helaire,14.60
+2021,11,5,SMcenelly,McKitty,96.48,133.48,37.00,false,true,true,Justin Herbert,34.28
+2021,11,6,Trav563,I WantTookie'sSocks Again,140.68,144.78,4.10,false,true,true,Anthony Firkser,11.10
+2021,11,7,ebbwalton,Skywalker Daycare ,89.66,117.56,27.90,false,true,true,Marquez Valdes-Scantling,20.30
+2021,11,8,JD0619,Turd Ferguson,133.18,144.38,11.20,false,true,true,Adam Trautman,14.30
+2021,11,9,OtisBerringer,Bran the Broken,75.42,94.74,19.32,false,true,true,Rondale Moore,10.60
+2021,11,10,dereksanborn7,Show Me Mercy,75.00,131.72,56.72,false,true,true,Brandon Aiyuk,18.00
+2021,11,11,nspofford,Best Worst 2,114.28,120.28,6.00,false,true,true,Jake Elliott,19.00
+2021,11,12,dylanrich7,dylanrich7,112.74,151.94,39.20,false,true,true,Elijah Moore,25.60
+2021,12,1,nlemieux24,Better than Goodell,85.52,120.52,35.00,false,true,true,Russell Gage,15.20
+2021,12,2,ghowley,Bikini Bottom FC,111.68,126.28,14.60,false,true,true,Dak Prescott,25.30
+2021,12,3,desj808,Koo D'Etat,90.76,106.74,15.98,false,true,true,CIN,20.00
+2021,12,4,Tookie23,Nice Rack,67.54,70.54,3.00,false,true,true,Matt Gay,8.00
+2021,12,5,SMcenelly,McKitty,120.82,134.40,13.58,false,true,true,Mac Jones,21.50
+2021,12,6,Trav563,I WantTookie'sSocks Again,72.90,110.36,37.46,false,true,true,Odell Beckham Jr.,16.60
+2021,12,7,ebbwalton,Skywalker Daycare ,111.00,134.70,23.70,false,true,true,Adam Thielen,20.70
+2021,12,8,JD0619,Turd Ferguson,76.26,114.18,37.92,false,true,true,Matthew Stafford,20.98
+2021,12,9,OtisBerringer,Bran the Broken,121.70,130.34,8.64,false,true,true,Carson Wentz,19.34
+2021,12,10,dereksanborn7,Show Me Mercy,90.00,136.10,46.10,false,true,true,Elijah Mitchell,25.30
+2021,12,11,nspofford,Best Worst 2,103.38,148.68,45.30,false,true,true,Cordarrelle Patterson,26.50
+2021,12,12,dylanrich7,dylanrich7,79.02,95.12,16.10,false,true,true,Derek Carr,20.02
+2021,13,1,nlemieux24,Better than Goodell,113.82,134.12,20.30,false,true,true,Russell Gage,15.50
+2021,13,2,ghowley,Bikini Bottom FC,69.52,84.72,15.20,false,true,true,Dustin Hopkins,10.00
+2021,13,3,desj808,Koo D'Etat,102.46,126.46,24.00,false,true,true,Amon-Ra St. Brown,19.80
+2021,13,4,Tookie23,Nice Rack,102.42,112.22,9.80,false,true,true,Lil'Jordan Humphrey,11.90
+2021,13,5,SMcenelly,McKitty,100.38,113.48,13.10,false,true,true,Evan Engram,8.10
+2021,13,6,Trav563,I WantTookie'sSocks Again,108.62,109.22,0.60,false,true,true,Teddy Bridgewater,11.98
+2021,13,7,ebbwalton,Skywalker Daycare ,107.00,127.50,20.50,false,true,true,Mike Davis,14.90
+2021,13,8,JD0619,Turd Ferguson,120.70,157.76,37.06,false,true,true,LAC,22.00
+2021,13,9,OtisBerringer,Bran the Broken,129.42,136.70,7.28,false,true,true,Kenny Gainwell,17.20
+2021,13,10,dereksanborn7,Show Me Mercy,96.26,120.06,23.80,false,true,true,Devonta Freeman,18.20
+2021,13,11,nspofford,Best Worst 2,103.44,132.84,29.40,false,true,true,Zach Wilson,21.04
+2021,13,12,dylanrich7,dylanrich7,88.10,115.20,27.10,false,true,true,Alexander Mattison,19.90
+2021,14,1,nlemieux24,Better than Goodell,111.02,127.52,16.50,false,true,true,Rashod Bateman,13.80
+2021,14,2,ghowley,Bikini Bottom FC,115.44,134.14,18.70,false,true,true,Robbie Chosen,17.90
+2021,14,3,desj808,Koo D'Etat,107.24,109.84,2.60,false,true,true,Baker Mayfield,15.00
+2021,14,4,Tookie23,Nice Rack,103.52,138.62,35.10,false,true,true,Allen Lazard,17.90
+2021,14,5,SMcenelly,McKitty,134.30,140.00,5.70,false,true,true,Brandin Cooks,14.10
+2021,14,6,Trav563,I WantTookie'sSocks Again,83.18,111.06,27.88,false,true,true,Odell Beckham Jr.,16.70
+2021,14,7,ebbwalton,Skywalker Daycare ,71.42,130.12,58.70,false,true,true,Rashaad Penny,26.30
+2021,14,8,JD0619,Turd Ferguson,136.98,165.08,28.10,false,true,true,Taysom Hill,24.30
+2021,14,9,OtisBerringer,Bran the Broken,114.92,120.22,5.30,false,true,true,Ryan Tannehill,16.54
+2021,14,10,dereksanborn7,Show Me Mercy,111.82,120.02,8.20,false,true,true,A.J. Green,13.70
+2021,14,11,nspofford,Best Worst 2,144.60,168.20,23.60,false,true,true,Melvin Gordon,23.10
+2021,14,12,dylanrich7,dylanrich7,48.94,105.34,56.40,false,true,true,Matt Prater,16.00
+2021,15,1,nlemieux24,Better than Goodell,96.58,139.14,42.56,false,false,true,Russell Gage,19.10
+2021,15,2,ghowley,Bikini Bottom FC,105.02,127.22,22.20,false,false,false,Cam Newton,21.34
+2021,15,3,desj808,Koo D'Etat,94.90,126.70,31.80,false,false,true,Tyler Huntley,35.90
+2021,15,4,Tookie23,Nice Rack,65.16,98.90,33.74,false,false,true,Devin Singletary,16.10
+2021,15,5,SMcenelly,McKitty,62.14,100.64,38.50,false,false,true,Brandin Cooks,25.70
+2021,15,6,Trav563,I WantTookie'sSocks Again,86.62,110.32,23.70,false,false,true,NO,19.00
+2021,15,7,ebbwalton,Skywalker Daycare ,107.10,132.50,25.40,false,false,false,Christian Kirk,19.90
+2021,15,8,JD0619,Turd Ferguson,102.56,141.40,38.84,false,false,false,Jalen Hurts,25.64
+2021,15,9,OtisBerringer,Bran the Broken,65.98,86.08,20.10,false,false,true,Josh Reynolds,15.80
+2021,15,10,dereksanborn7,Show Me Mercy,92.70,159.60,66.90,false,false,false,Hunter Henry,22.70
+2021,15,11,nspofford,Best Worst 2,52.04,80.20,28.16,false,false,true,Zach Wilson,11.00
+2021,15,12,dylanrich7,dylanrich7,56.78,98.20,41.42,false,false,true,Gabe Davis,23.00
+2021,16,1,nlemieux24,Better than Goodell,91.00,109.00,18.00,false,false,true,Jeff Wilson,13.20
+2021,16,2,ghowley,Bikini Bottom FC,124.58,147.60,23.02,false,false,true,Dak Prescott,30.30
+2021,16,3,desj808,Koo D'Etat,121.98,141.48,19.50,false,false,true,Jaylen Waddle,20.20
+2021,16,4,Tookie23,Nice Rack,81.08,122.88,41.80,false,false,true,Nick Chubb,25.90
+2021,16,5,SMcenelly,McKitty,75.74,90.74,15.00,false,false,true,Evan Engram,9.70
+2021,16,6,Trav563,I WantTookie'sSocks Again,144.26,150.06,5.80,false,false,true,Michael Carter,13.40
+2021,16,7,ebbwalton,Skywalker Daycare ,85.06,118.66,33.60,false,false,true,Rashaad Penny,19.50
+2021,16,8,JD0619,Turd Ferguson,82.38,143.36,60.98,false,false,true,A.J. Brown,26.00
+2021,16,9,OtisBerringer,Bran the Broken,133.30,142.00,8.70,false,false,true,Carson Wentz,17.40
+2021,16,10,dereksanborn7,Show Me Mercy,118.32,127.22,8.90,false,false,true,Darrel Williams,10.00
+2021,16,11,nspofford,Best Worst 2,68.84,128.98,60.14,false,false,true,Zach Wilson,23.18
+2021,16,12,dylanrich7,dylanrich7,50.50,98.60,48.10,false,false,true,Tyler Boyd,16.00
+2021,17,1,nlemieux24,Better than Goodell,132.62,149.12,16.50,false,false,true,D'Onta Foreman,19.20
+2021,17,2,ghowley,Bikini Bottom FC,154.82,160.46,5.64,false,false,true,Dak Prescott,20.04
+2021,17,3,desj808,Koo D'Etat,89.78,104.70,14.92,false,false,true,Dontrell Hilliard,15.30
+2021,17,4,Tookie23,Nice Rack,68.10,118.00,49.90,false,false,true,Devin Singletary,23.00
+2021,17,5,SMcenelly,McKitty,99.68,121.18,21.50,false,false,true,Mac Jones,22.28
+2021,17,6,Trav563,I WantTookie'sSocks Again,101.60,107.10,5.50,false,false,false,Anthony Firkser,9.90
+2021,17,7,ebbwalton,Skywalker Daycare ,128.40,169.40,41.00,false,false,true,Rashaad Penny,31.50
+2021,17,8,JD0619,Turd Ferguson,114.16,128.44,14.28,false,false,true,Taysom Hill,17.38
+2021,17,9,OtisBerringer,Bran the Broken,100.24,112.44,12.20,false,false,false,Ryan Tannehill,12.50
+2021,17,10,dereksanborn7,Show Me Mercy,107.86,132.26,24.40,false,false,true,Darrel Williams,24.20
+2021,17,11,nspofford,Best Worst 2,89.54,116.74,27.20,false,false,false,Zach Wilson,13.36
+2021,17,12,dylanrich7,dylanrich7,78.10,111.90,33.80,false,false,false,Matt Prater,15.00
